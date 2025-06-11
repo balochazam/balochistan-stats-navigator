@@ -86,7 +86,7 @@ export const ScheduleFormSelect = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedFormId) {
+    if (!selectedFormId || selectedFormId === 'no-forms') {
       toast({
         title: "Validation Error",
         description: "Please select a form to add",
@@ -140,7 +140,7 @@ export const ScheduleFormSelect = ({
           </SelectTrigger>
           <SelectContent>
             {availableForms.length === 0 ? (
-              <SelectItem value="" disabled>
+              <SelectItem value="no-forms" disabled>
                 No available forms
               </SelectItem>
             ) : (

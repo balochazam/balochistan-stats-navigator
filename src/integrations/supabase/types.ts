@@ -355,51 +355,34 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string
-          department_id: string
           description: string | null
           end_date: string
           id: string
           name: string
           start_date: string
-          status: string
           updated_at: string
-          year: number
         }
         Insert: {
           created_at?: string
           created_by: string
-          department_id: string
           description?: string | null
           end_date: string
           id?: string
           name: string
           start_date: string
-          status?: string
           updated_at?: string
-          year: number
         }
         Update: {
           created_at?: string
           created_by?: string
-          department_id?: string
           description?: string | null
           end_date?: string
           id?: string
           name?: string
           start_date?: string
-          status?: string
           updated_at?: string
-          year?: number
         }
-        Relationships: [
-          {
-            foreignKeyName: "schedules_department_id_fkey"
-            columns: ["department_id"]
-            isOneToOne: false
-            referencedRelation: "departments"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Views: {

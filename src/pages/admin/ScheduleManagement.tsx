@@ -5,9 +5,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Calendar, Plus, Edit2, Trash2, Users, Shield, FileText } from 'lucide-react';
+import { Calendar, Plus, Edit2, Trash2, FileText, Shield } from 'lucide-react';
 import { ScheduleDialog } from '@/components/schedules/ScheduleDialog';
 import { ScheduleFormsDialog } from '@/components/schedules/ScheduleFormsDialog';
 
@@ -15,29 +14,17 @@ interface Schedule {
   id: string;
   name: string;
   description: string | null;
-  year: number;
   start_date: string;
   end_date: string;
-  status: string;
-  department_id: string;
   created_by: string;
   created_at: string;
   updated_at: string;
-  department?: {
-    name: string;
-  };
-}
-
-interface Department {
-  id: string;
-  name: string;
 }
 
 export const ScheduleManagement = () => {
   const { profile } = useAuth();
   const { toast } = useToast();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
-  const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isFormsDialogOpen, setIsFormsDialogOpen] = useState(false);
@@ -47,7 +34,6 @@ export const ScheduleManagement = () => {
   useEffect(() => {
     if (profile?.role === 'admin') {
       fetchSchedules();
-      fetchDepartments();
     }
   }, [profile]);
 
@@ -55,10 +41,7 @@ export const ScheduleManagement = () => {
     try {
       const { data, error } = await supabase
         .from('schedules')
-        .select(`
-          *,
-          department:departments(name)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -75,23 +58,6 @@ export const ScheduleManagement = () => {
       console.error('Error in fetchSchedules:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchDepartments = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('departments')
-        .select('id, name')
-        .order('name');
-
-      if (error) {
-        console.error('Error fetching departments:', error);
-      } else {
-        setDepartments(data || []);
-      }
-    } catch (error) {
-      console.error('Error in fetchDepartments:', error);
     }
   };
 
@@ -144,15 +110,6 @@ export const ScheduleManagement = () => {
     fetchSchedules();
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'bg-green-100 text-green-800';
-      case 'completed': return 'bg-blue-100 text-blue-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
   if (profile?.role !== 'admin') {
     return (
       <DashboardLayout>
@@ -193,7 +150,7 @@ export const ScheduleManagement = () => {
                   Schedule Management
                 </CardTitle>
                 <CardDescription>
-                  Create and manage data collection schedules. Each schedule organizes forms for a specific time period and department.
+                  Create and manage organization-wide data collection schedules. Each schedule can include forms from all departments for a specific time period.
                 </CardDescription>
               </div>
               <Button onClick={handleCreateSchedule}>
@@ -213,18 +170,6 @@ export const ScheduleManagement = () => {
                     <div className="flex items-center space-x-3 mb-2">
                       <Calendar className="h-5 w-5 text-gray-500" />
                       <h3 className="text-lg font-semibold">{schedule.name}</h3>
-                      <Badge className={getStatusColor(schedule.status)}>
-                        {schedule.status}
-                      </Badge>
-                      <Badge variant="outline">
-                        Year {schedule.year}
-                      </Badge>
-                      {schedule.department && (
-                        <Badge variant="secondary" className="flex items-center">
-                          <Users className="h-3 w-3 mr-1" />
-                          {schedule.department.name}
-                        </Badge>
-                      )}
                     </div>
                     {schedule.description && (
                       <p className="text-gray-600 mb-2 ml-8">{schedule.description}</p>
@@ -289,7 +234,6 @@ export const ScheduleManagement = () => {
           }}
           onSave={handleScheduleSaved}
           editingSchedule={editingSchedule}
-          departments={departments}
         />
 
         <ScheduleFormsDialog

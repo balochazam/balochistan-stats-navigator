@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Plus, Trash2, FileText } from 'lucide-react';
@@ -14,7 +15,6 @@ import { ScheduleFormSelect } from './ScheduleFormSelect';
 interface Schedule {
   id: string;
   name: string;
-  department_id: string;
 }
 
 interface ScheduleForm {
@@ -25,6 +25,9 @@ interface ScheduleForm {
   due_date: string | null;
   form?: {
     name: string;
+    department?: {
+      name: string;
+    };
   };
 }
 
@@ -58,7 +61,10 @@ export const ScheduleFormsDialog = ({
         .from('schedule_forms')
         .select(`
           *,
-          form:forms(name)
+          form:forms(
+            name,
+            department:departments(name)
+          )
         `)
         .eq('schedule_id', schedule.id)
         .order('created_at');
@@ -179,10 +185,15 @@ export const ScheduleFormsDialog = ({
                       <div className="flex items-center space-x-3">
                         <FileText className="h-5 w-5 text-gray-500" />
                         <h4 className="font-semibold">{scheduleForm.form?.name}</h4>
+                        {scheduleForm.form?.department && (
+                          <Badge variant="secondary">
+                            {scheduleForm.form.department.name}
+                          </Badge>
+                        )}
                         {scheduleForm.is_required && (
-                          <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">
+                          <Badge variant="destructive">
                             Required
-                          </span>
+                          </Badge>
                         )}
                       </div>
                       

@@ -10,12 +10,14 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface Schedule {
   id: string;
-  department_id: string;
 }
 
 interface Form {
   id: string;
   name: string;
+  department?: {
+    name: string;
+  };
 }
 
 interface ScheduleFormSelectProps {
@@ -42,7 +44,7 @@ export const ScheduleFormSelect = ({
 
   const fetchAvailableForms = async () => {
     try {
-      // Get forms from the same department that are not already in this schedule
+      // Get forms that are not already in this schedule
       const { data: existingFormIds } = await supabase
         .from('schedule_forms')
         .select('form_id')
@@ -52,8 +54,11 @@ export const ScheduleFormSelect = ({
 
       let query = supabase
         .from('forms')
-        .select('id, name')
-        .eq('department_id', schedule.department_id)
+        .select(`
+          id, 
+          name,
+          department:departments(name)
+        `)
         .eq('is_active', true)
         .order('name');
 
@@ -136,12 +141,12 @@ export const ScheduleFormSelect = ({
           <SelectContent>
             {availableForms.length === 0 ? (
               <SelectItem value="" disabled>
-                No available forms in this department
+                No available forms
               </SelectItem>
             ) : (
               availableForms.map((form) => (
                 <SelectItem key={form.id} value={form.id}>
-                  {form.name}
+                  {form.name} {form.department && `(${form.department.name})`}
                 </SelectItem>
               ))
             )}

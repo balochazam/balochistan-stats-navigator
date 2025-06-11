@@ -100,13 +100,10 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
       return;
     }
 
-    // Only allow valid number characters: digits, decimal point, and minus sign
-    const numericRegex = /^-?(\d+\.?\d*|\.\d+)$/;
+    // Simple validation: only allow digits, one decimal point, and minus sign at the start
+    const isValidNumber = /^-?\d*\.?\d*$/.test(value);
     
-    // Allow partial input during typing (like "-", ".", "12.")
-    const partialRegex = /^-?(\d*\.?\d*)?$/;
-    
-    if (partialRegex.test(value)) {
+    if (isValidNumber) {
       handleFieldChange(fieldName, value);
     }
   };

@@ -99,21 +99,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           return;
         }
 
-        console.log('Initial session:', !!initialSession);
+        console.log('Initial session found:', !!initialSession);
 
         if (mounted) {
           setSession(initialSession);
           setUser(initialSession?.user ?? null);
 
           if (initialSession?.user) {
-            console.log('Initial session found, fetching profile...');
+            console.log('User found in initial session, fetching profile...');
             const profileData = await fetchProfile(initialSession.user.id);
             if (mounted) {
               setProfile(profileData);
             }
           }
           
-          console.log('Setting loading to false after initialization');
+          console.log('Initialization complete, setting loading to false');
           setLoading(false);
         }
       } catch (error) {
@@ -128,30 +128,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       async (event, session) => {
         if (!mounted) return;
         
-        console.log('Auth state changed:', event, session?.user?.id);
+        console.log('Auth state changed:', event, !!session?.user);
+        
         setSession(session);
         setUser(session?.user ?? null);
 
-        if (session?.user && event === 'SIGNED_IN') {
-          console.log('User signed in, fetching profile...');
+        if (session?.user && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
+          console.log('User authenticated, fetching profile...');
           const profileData = await fetchProfile(session.user.id);
           if (mounted) {
             setProfile(profileData);
-            setLoading(false);
           }
         } else if (!session?.user) {
           console.log('No user session, clearing profile');
           if (mounted) {
             setProfile(null);
-            setLoading(false);
           }
-        } else if (event === 'TOKEN_REFRESHED') {
-          // Don't change loading state on token refresh
-          console.log('Token refreshed');
-        } else {
-          if (mounted) {
-            setLoading(false);
-          }
+        }
+
+        // Always set loading to false after handling auth state change
+        // except for token refresh which shouldn't affect loading state
+        if (mounted && event !== 'TOKEN_REFRESHED') {
+          console.log('Setting loading to false after auth state change');
+          setLoading(false);
         }
       }
     );

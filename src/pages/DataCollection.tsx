@@ -45,7 +45,8 @@ export const DataCollection = () => {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [scheduleForms, setScheduleForms] = useState<ScheduleForm[]>([]);
   const [submissions, setSubmissions] = useState<FormSubmission[]>([]);
-  const [selectedForm, setSelectedForm] = useState<ScheduleForm | null>(null);
+  const [selectedScheduleForm, setSelectedScheduleForm] = useState<ScheduleForm | null>(null);
+  const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -71,11 +72,11 @@ export const DataCollection = () => {
 
       setSchedules(schedulesData || []);
 
-      // Get forms for these schedules that match user's department
-      if (schedulesData && schedulesData.length > 0 && profile?.department_id) {
+      // For admins, get all forms. For others, get forms from their department
+      if (schedulesData && schedulesData.length > 0) {
         const scheduleIds = schedulesData.map(s => s.id);
         
-        const { data: formsData, error: formsError } = await supabase
+        let formsQuery = supabase
           .from('schedule_forms')
           .select(`
             *,
@@ -86,8 +87,14 @@ export const DataCollection = () => {
               department_id
             )
           `)
-          .in('schedule_id', scheduleIds)
-          .eq('form.department_id', profile.department_id);
+          .in('schedule_id', scheduleIds);
+
+        // If not admin, filter by department
+        if (profile?.role !== 'admin' && profile?.department_id) {
+          formsQuery = formsQuery.eq('form.department_id', profile.department_id);
+        }
+
+        const { data: formsData, error: formsError } = await formsQuery;
 
         if (formsError) throw formsError;
 
@@ -124,12 +131,21 @@ export const DataCollection = () => {
   };
 
   const handleFormSubmitted = () => {
-    setSelectedForm(null);
+    setSelectedScheduleForm(null);
+    setSelectedSchedule(null);
     fetchUserSubmissions();
     toast({
       title: "Success",
       description: "Form submitted successfully",
     });
+  };
+
+  const handleSelectForm = (scheduleForm: ScheduleForm) => {
+    const schedule = schedules.find(s => s.id === scheduleForm.schedule_id);
+    if (schedule) {
+      setSelectedScheduleForm(scheduleForm);
+      setSelectedSchedule(schedule);
+    }
   };
 
   const isFormSubmitted = (formId: string, scheduleId: string) => {
@@ -173,13 +189,17 @@ export const DataCollection = () => {
     );
   }
 
-  if (selectedForm) {
+  if (selectedScheduleForm && selectedSchedule) {
     return (
       <DashboardLayout>
         <DataEntryForm
-          scheduleForm={selectedForm}
+          schedule={selectedSchedule}
+          scheduleForm={selectedScheduleForm}
           onSubmitted={handleFormSubmitted}
-          onCancel={() => setSelectedForm(null)}
+          onCancel={() => {
+            setSelectedScheduleForm(null);
+            setSelectedSchedule(null);
+          }}
         />
       </DashboardLayout>
     );
@@ -193,6 +213,9 @@ export const DataCollection = () => {
             <CardTitle className="flex items-center">
               <FileText className="h-5 w-5 mr-2" />
               Data Collection
+              {profile?.role === 'admin' && (
+                <Badge variant="secondary" className="ml-2">Admin Access - All Forms</Badge>
+              )}
             </CardTitle>
             <CardDescription>
               Complete forms for active data collection schedules
@@ -276,7 +299,7 @@ export const DataCollection = () => {
                           <div>
                             {schedule.status === 'collection' && scheduleStatus === 'active' && (
                               <button
-                                onClick={() => setSelectedForm(scheduleForm)}
+                                onClick={() => handleSelectForm(scheduleForm)}
                                 disabled={isSubmitted}
                                 className={`px-4 py-2 rounded-md text-sm font-medium ${
                                   isSubmitted

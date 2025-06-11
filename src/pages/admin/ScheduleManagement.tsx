@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Calendar, Plus, Edit2, Trash2, FileText, Shield, Play, Pause, CheckCircle } from 'lucide-react';
 import { ScheduleDialog } from '@/components/schedules/ScheduleDialog';
 import { ScheduleFormsDialog } from '@/components/schedules/ScheduleFormsDialog';
+import { ScheduleDataCollectionDialog } from '@/components/schedules/ScheduleDataCollectionDialog';
 
 interface Schedule {
   id: string;
@@ -56,8 +56,10 @@ export const ScheduleManagement = () => {
   const [loading, setLoading] = useState(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isFormsDialogOpen, setIsFormsDialogOpen] = useState(false);
+  const [isDataCollectionDialogOpen, setIsDataCollectionDialogOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
   const [selectedScheduleForForms, setSelectedScheduleForForms] = useState<Schedule | null>(null);
+  const [selectedScheduleForDataCollection, setSelectedScheduleForDataCollection] = useState<Schedule | null>(null);
 
   useEffect(() => {
     if (profile?.role === 'admin') {
@@ -102,6 +104,11 @@ export const ScheduleManagement = () => {
   const handleManageForms = (schedule: Schedule) => {
     setSelectedScheduleForForms(schedule);
     setIsFormsDialogOpen(true);
+  };
+
+  const handleDataCollection = (schedule: Schedule) => {
+    setSelectedScheduleForDataCollection(schedule);
+    setIsDataCollectionDialogOpen(true);
   };
 
   const handleStatusChange = async (scheduleId: string, newStatus: string) => {
@@ -269,6 +276,14 @@ export const ScheduleManagement = () => {
                     <Button
                       variant="outline"
                       size="sm"
+                      onClick={() => handleDataCollection(schedule)}
+                    >
+                      <FileText className="h-4 w-4 mr-1" />
+                      View Data Collection
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => handleStatusChange(schedule.id, getNextStatus(schedule.status))}
                     >
                       {getStatusAction(schedule.status)}
@@ -336,6 +351,15 @@ export const ScheduleManagement = () => {
             setSelectedScheduleForForms(null);
           }}
           schedule={selectedScheduleForForms}
+        />
+
+        <ScheduleDataCollectionDialog
+          isOpen={isDataCollectionDialogOpen}
+          onClose={() => {
+            setIsDataCollectionDialogOpen(false);
+            setSelectedScheduleForDataCollection(null);
+          }}
+          schedule={selectedScheduleForDataCollection}
         />
       </div>
     </DashboardLayout>

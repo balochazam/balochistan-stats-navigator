@@ -5,8 +5,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { FileText, Plus, Shield, Edit, Trash2 } from 'lucide-react';
+import { FileText, Plus, Edit2, Trash2, Users, Shield } from 'lucide-react';
 import { FormBuilderDialog } from '@/components/forms/FormBuilderDialog';
 
 interface Form {
@@ -38,7 +39,7 @@ export const FormManagement = () => {
   const [forms, setForms] = useState<Form[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isFormBuilderOpen, setIsFormBuilderOpen] = useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingForm, setEditingForm] = useState<Form | null>(null);
 
   useEffect(() => {
@@ -50,6 +51,7 @@ export const FormManagement = () => {
 
   const fetchForms = async () => {
     try {
+      // Updated query to properly join with profiles table
       const { data, error } = await supabase
         .from('forms')
         .select(`
@@ -68,6 +70,7 @@ export const FormManagement = () => {
           variant: "destructive",
         });
       } else {
+        console.log('Forms fetched successfully:', data);
         setForms(data || []);
       }
     } catch (error) {
@@ -96,12 +99,12 @@ export const FormManagement = () => {
 
   const handleCreateForm = () => {
     setEditingForm(null);
-    setIsFormBuilderOpen(true);
+    setIsCreateDialogOpen(true);
   };
 
   const handleEditForm = (form: Form) => {
     setEditingForm(form);
-    setIsFormBuilderOpen(true);
+    setIsCreateDialogOpen(true);
   };
 
   const handleDeleteForm = async (formId: string) => {
@@ -133,7 +136,7 @@ export const FormManagement = () => {
   };
 
   const handleFormSaved = () => {
-    setIsFormBuilderOpen(false);
+    setIsCreateDialogOpen(false);
     setEditingForm(null);
     fetchForms();
   };
@@ -189,46 +192,55 @@ export const FormManagement = () => {
           </CardHeader>
         </Card>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid gap-4">
           {forms.map((form) => (
-            <Card key={form.id} className="hover:shadow-md transition-shadow">
-              <CardHeader>
-                <div className="flex items-start justify-between">
+            <Card key={form.id}>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
                   <div className="flex-1">
-                    <CardTitle className="text-lg">{form.name}</CardTitle>
+                    <div className="flex items-center space-x-3">
+                      <FileText className="h-5 w-5 text-gray-500" />
+                      <h3 className="text-lg font-semibold">{form.name}</h3>
+                      {form.department && (
+                        <Badge variant="secondary" className="flex items-center">
+                          <Users className="h-3 w-3 mr-1" />
+                          {form.department.name}
+                        </Badge>
+                      )}
+                      {!form.department && (
+                        <Badge variant="outline">All Departments</Badge>
+                      )}
+                    </div>
                     {form.description && (
-                      <CardDescription className="mt-1">
-                        {form.description}
-                      </CardDescription>
+                      <p className="text-gray-600 mt-2 ml-8">{form.description}</p>
                     )}
+                    <div className="text-xs text-gray-500 mt-2 ml-8 space-x-4">
+                      <span>Created: {new Date(form.created_at).toLocaleDateString()}</span>
+                      {form.creator && (
+                        <span>By: {form.creator.full_name || form.creator.email}</span>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex space-x-1">
+
+                  <div className="flex items-center space-x-2">
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
                       onClick={() => handleEditForm(form)}
                     >
-                      <Edit className="h-4 w-4" />
+                      <Edit2 className="h-4 w-4 mr-1" />
+                      Edit
                     </Button>
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
                       onClick={() => handleDeleteForm(form.id)}
+                      className="text-red-600 hover:text-red-800"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Delete
                     </Button>
                   </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2 text-sm text-muted-foreground">
-                  {form.department && (
-                    <div>Department: {form.department.name}</div>
-                  )}
-                  {form.creator && (
-                    <div>Created by: {form.creator.full_name || form.creator.email}</div>
-                  )}
-                  <div>Created: {new Date(form.created_at).toLocaleDateString()}</div>
                 </div>
               </CardContent>
             </Card>
@@ -239,16 +251,19 @@ export const FormManagement = () => {
           <Card>
             <CardContent className="text-center py-8">
               <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600 mb-2">No forms created yet</p>
-              <p className="text-sm text-gray-500">Create your first form to start collecting data</p>
+              <p className="text-gray-600 mb-4">No forms found</p>
+              <Button onClick={handleCreateForm}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Your First Form
+              </Button>
             </CardContent>
           </Card>
         )}
 
         <FormBuilderDialog
-          isOpen={isFormBuilderOpen}
+          isOpen={isCreateDialogOpen}
           onClose={() => {
-            setIsFormBuilderOpen(false);
+            setIsCreateDialogOpen(false);
             setEditingForm(null);
           }}
           onSave={handleFormSaved}

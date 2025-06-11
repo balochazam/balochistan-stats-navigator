@@ -10,6 +10,7 @@ import { AuthPage } from "./components/auth/AuthPage";
 import { Profile } from "./pages/Profile";
 import { UserManagement } from "./pages/admin/UserManagement";
 import { DepartmentManagement } from "./pages/admin/DepartmentManagement";
+import { DataBankManagement } from "./pages/admin/DataBankManagement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -38,6 +39,7 @@ const App = () => {
               <Route path="/profile" element={<Profile />} />
               <Route path="/admin/users" element={<UserManagement />} />
               <Route path="/admin/departments" element={<DepartmentManagement />} />
+              <Route path="/admin/databanks" element={<DataBankManagement />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

@@ -9,6 +9,105 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      data_bank_entries: {
+        Row: {
+          created_at: string
+          created_by: string
+          data_bank_id: string
+          id: string
+          is_active: boolean
+          key: string
+          metadata: Json | null
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          data_bank_id: string
+          id?: string
+          is_active?: boolean
+          key: string
+          metadata?: Json | null
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          data_bank_id?: string
+          id?: string
+          is_active?: boolean
+          key?: string
+          metadata?: Json | null
+          updated_at?: string
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "data_bank_entries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "data_bank_entries_data_bank_id_fkey"
+            columns: ["data_bank_id"]
+            isOneToOne: false
+            referencedRelation: "data_banks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      data_banks: {
+        Row: {
+          created_at: string
+          created_by: string
+          department_id: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          department_id?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          department_id?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "data_banks_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "data_banks_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       departments: {
         Row: {
           created_at: string | null

@@ -5,8 +5,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Calendar, Plus, Edit2, Trash2, FileText, Shield } from 'lucide-react';
+import { Calendar, Plus, Edit2, Trash2, FileText, Shield, Play, Pause, CheckCircle } from 'lucide-react';
 import { ScheduleDialog } from '@/components/schedules/ScheduleDialog';
 import { ScheduleFormsDialog } from '@/components/schedules/ScheduleFormsDialog';
 
@@ -16,10 +17,37 @@ interface Schedule {
   description: string | null;
   start_date: string;
   end_date: string;
+  status: string;
   created_by: string;
   created_at: string;
   updated_at: string;
 }
+
+const getStatusIcon = (status: string) => {
+  switch (status) {
+    case 'open':
+      return <Play className="h-3 w-3" />;
+    case 'collection':
+      return <Pause className="h-3 w-3" />;
+    case 'published':
+      return <CheckCircle className="h-3 w-3" />;
+    default:
+      return <Play className="h-3 w-3" />;
+  }
+};
+
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'open':
+      return 'bg-green-500';
+    case 'collection':
+      return 'bg-yellow-500';
+    case 'published':
+      return 'bg-blue-500';
+    default:
+      return 'bg-gray-500';
+  }
+};
 
 export const ScheduleManagement = () => {
   const { profile } = useAuth();
@@ -76,6 +104,33 @@ export const ScheduleManagement = () => {
     setIsFormsDialogOpen(true);
   };
 
+  const handleStatusChange = async (scheduleId: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('schedules')
+        .update({ 
+          status: newStatus,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', scheduleId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `Schedule status updated to ${newStatus}`,
+      });
+      fetchSchedules();
+    } catch (error) {
+      console.error('Error updating schedule status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update schedule status",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleDeleteSchedule = async (scheduleId: string) => {
     if (!confirm('Are you sure you want to delete this schedule? This action cannot be undone.')) {
       return;
@@ -108,6 +163,32 @@ export const ScheduleManagement = () => {
     setIsCreateDialogOpen(false);
     setEditingSchedule(null);
     fetchSchedules();
+  };
+
+  const getNextStatus = (currentStatus: string) => {
+    switch (currentStatus) {
+      case 'open':
+        return 'collection';
+      case 'collection':
+        return 'published';
+      case 'published':
+        return 'open';
+      default:
+        return 'open';
+    }
+  };
+
+  const getStatusAction = (status: string) => {
+    switch (status) {
+      case 'open':
+        return 'Start Collection';
+      case 'collection':
+        return 'Mark Published';
+      case 'published':
+        return 'Reopen';
+      default:
+        return 'Start Collection';
+    }
   };
 
   if (profile?.role !== 'admin') {
@@ -170,6 +251,10 @@ export const ScheduleManagement = () => {
                     <div className="flex items-center space-x-3 mb-2">
                       <Calendar className="h-5 w-5 text-gray-500" />
                       <h3 className="text-lg font-semibold">{schedule.name}</h3>
+                      <Badge className={`${getStatusColor(schedule.status)} text-white flex items-center space-x-1`}>
+                        {getStatusIcon(schedule.status)}
+                        <span className="capitalize">{schedule.status}</span>
+                      </Badge>
                     </div>
                     {schedule.description && (
                       <p className="text-gray-600 mb-2 ml-8">{schedule.description}</p>
@@ -184,7 +269,15 @@ export const ScheduleManagement = () => {
                     <Button
                       variant="outline"
                       size="sm"
+                      onClick={() => handleStatusChange(schedule.id, getNextStatus(schedule.status))}
+                    >
+                      {getStatusAction(schedule.status)}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => handleManageForms(schedule)}
+                      disabled={schedule.status === 'published'}
                     >
                       <FileText className="h-4 w-4 mr-1" />
                       Manage Forms

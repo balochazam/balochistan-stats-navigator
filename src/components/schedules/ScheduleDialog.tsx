@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -15,6 +16,7 @@ interface Schedule {
   description: string | null;
   start_date: string;
   end_date: string;
+  status: string;
 }
 
 interface ScheduleDialogProps {
@@ -37,7 +39,8 @@ export const ScheduleDialog = ({
     name: '',
     description: '',
     start_date: '',
-    end_date: ''
+    end_date: '',
+    status: 'open'
   });
 
   useEffect(() => {
@@ -46,14 +49,16 @@ export const ScheduleDialog = ({
         name: editingSchedule.name,
         description: editingSchedule.description || '',
         start_date: editingSchedule.start_date,
-        end_date: editingSchedule.end_date
+        end_date: editingSchedule.end_date,
+        status: editingSchedule.status
       });
     } else {
       setFormData({
         name: '',
         description: '',
         start_date: '',
-        end_date: ''
+        end_date: '',
+        status: 'open'
       });
     }
   }, [editingSchedule, isOpen]);
@@ -90,6 +95,7 @@ export const ScheduleDialog = ({
             description: formData.description || null,
             start_date: formData.start_date,
             end_date: formData.end_date,
+            status: formData.status,
             updated_at: new Date().toISOString()
           })
           .eq('id', editingSchedule.id);
@@ -103,6 +109,7 @@ export const ScheduleDialog = ({
             description: formData.description || null,
             start_date: formData.start_date,
             end_date: formData.end_date,
+            status: formData.status,
             created_by: profile.id
           });
 
@@ -148,7 +155,7 @@ export const ScheduleDialog = ({
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="start_date">Start Date *</Label>
               <Input
@@ -169,6 +176,24 @@ export const ScheduleDialog = ({
                 onChange={(e) => setFormData(prev => ({ ...prev, end_date: e.target.value }))}
                 required
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="status">Status *</Label>
+              <Select
+                value={formData.status}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="open">Open</SelectItem>
+                  <SelectItem value="collection">Collection</SelectItem>
+                  <SelectItem value="published">Published</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

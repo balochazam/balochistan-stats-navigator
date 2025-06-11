@@ -1,0 +1,261 @@
+
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { FileText, Plus, Shield, Edit, Trash2 } from 'lucide-react';
+import { FormBuilderDialog } from '@/components/forms/FormBuilderDialog';
+
+interface Form {
+  id: string;
+  name: string;
+  description: string | null;
+  department_id: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  is_active: boolean;
+  department?: {
+    name: string;
+  };
+  creator?: {
+    full_name: string | null;
+    email: string;
+  };
+}
+
+interface Department {
+  id: string;
+  name: string;
+}
+
+export const FormManagement = () => {
+  const { profile } = useAuth();
+  const { toast } = useToast();
+  const [forms, setForms] = useState<Form[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isFormBuilderOpen, setIsFormBuilderOpen] = useState(false);
+  const [editingForm, setEditingForm] = useState<Form | null>(null);
+
+  useEffect(() => {
+    if (profile?.role === 'admin') {
+      fetchForms();
+      fetchDepartments();
+    }
+  }, [profile]);
+
+  const fetchForms = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('forms')
+        .select(`
+          *,
+          department:departments(name),
+          creator:profiles!forms_created_by_fkey(full_name, email)
+        `)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching forms:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch forms",
+          variant: "destructive",
+        });
+      } else {
+        setForms(data || []);
+      }
+    } catch (error) {
+      console.error('Error in fetchForms:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchDepartments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('departments')
+        .select('id, name')
+        .order('name');
+
+      if (error) {
+        console.error('Error fetching departments:', error);
+      } else {
+        setDepartments(data || []);
+      }
+    } catch (error) {
+      console.error('Error in fetchDepartments:', error);
+    }
+  };
+
+  const handleCreateForm = () => {
+    setEditingForm(null);
+    setIsFormBuilderOpen(true);
+  };
+
+  const handleEditForm = (form: Form) => {
+    setEditingForm(form);
+    setIsFormBuilderOpen(true);
+  };
+
+  const handleDeleteForm = async (formId: string) => {
+    if (!confirm('Are you sure you want to delete this form? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('forms')
+        .update({ is_active: false })
+        .eq('id', formId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Form deleted successfully",
+      });
+      fetchForms();
+    } catch (error) {
+      console.error('Error deleting form:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete form",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleFormSaved = () => {
+    setIsFormBuilderOpen(false);
+    setEditingForm(null);
+    fetchForms();
+  };
+
+  if (profile?.role !== 'admin') {
+    return (
+      <DashboardLayout>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Shield className="h-5 w-5 mr-2" />
+              Access Denied
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p>You need admin privileges to access this page.</p>
+          </CardContent>
+        </Card>
+      </DashboardLayout>
+    );
+  }
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">Loading forms...</div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  return (
+    <DashboardLayout>
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center">
+                  <FileText className="h-5 w-5 mr-2" />
+                  Form Management
+                </CardTitle>
+                <CardDescription>
+                  Create and manage dynamic forms for data collection
+                </CardDescription>
+              </div>
+              <Button onClick={handleCreateForm}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Form
+              </Button>
+            </div>
+          </CardHeader>
+        </Card>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {forms.map((form) => (
+            <Card key={form.id} className="hover:shadow-md transition-shadow">
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <CardTitle className="text-lg">{form.name}</CardTitle>
+                    {form.description && (
+                      <CardDescription className="mt-1">
+                        {form.description}
+                      </CardDescription>
+                    )}
+                  </div>
+                  <div className="flex space-x-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEditForm(form)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteForm(form.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  {form.department && (
+                    <div>Department: {form.department.name}</div>
+                  )}
+                  {form.creator && (
+                    <div>Created by: {form.creator.full_name || form.creator.email}</div>
+                  )}
+                  <div>Created: {new Date(form.created_at).toLocaleDateString()}</div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {forms.length === 0 && (
+          <Card>
+            <CardContent className="text-center py-8">
+              <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600 mb-2">No forms created yet</p>
+              <p className="text-sm text-gray-500">Create your first form to start collecting data</p>
+            </CardContent>
+          </Card>
+        )}
+
+        <FormBuilderDialog
+          isOpen={isFormBuilderOpen}
+          onClose={() => {
+            setIsFormBuilderOpen(false);
+            setEditingForm(null);
+          }}
+          onSave={handleFormSaved}
+          editingForm={editingForm}
+          departments={departments}
+        />
+      </div>
+    </DashboardLayout>
+  );
+};

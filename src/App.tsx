@@ -11,6 +11,7 @@ import { Profile } from "./pages/Profile";
 import { UserManagement } from "./pages/admin/UserManagement";
 import { DepartmentManagement } from "./pages/admin/DepartmentManagement";
 import { DataBankManagement } from "./pages/admin/DataBankManagement";
+import { FormManagement } from "./pages/admin/FormManagement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -40,6 +41,7 @@ const App = () => {
               <Route path="/admin/users" element={<UserManagement />} />
               <Route path="/admin/departments" element={<DepartmentManagement />} />
               <Route path="/admin/databanks" element={<DataBankManagement />} />
+              <Route path="/admin/forms" element={<FormManagement />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

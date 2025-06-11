@@ -1,6 +1,7 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,7 +11,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
 
 export const AuthPage = () => {
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, user, profile } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -27,15 +29,28 @@ export const AuthPage = () => {
     confirmPassword: ''
   });
 
+  // Redirect if user is already authenticated
+  useEffect(() => {
+    if (user && profile) {
+      console.log('User authenticated, redirecting to dashboard');
+      navigate('/dashboard');
+    }
+  }, [user, profile, navigate]);
+
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
+    console.log('Attempting to sign in with:', signInData.email);
+
     const { error } = await signIn(signInData.email, signInData.password);
     
     if (error) {
+      console.error('Sign in error:', error);
       setError(error.message);
+    } else {
+      console.log('Sign in successful');
     }
     
     setLoading(false);

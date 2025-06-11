@@ -29,16 +29,15 @@ export const AuthPage = () => {
     confirmPassword: ''
   });
 
-  // Redirect if user is already authenticated
+  // Redirect authenticated users to dashboard
   useEffect(() => {
-    console.log('AuthPage useEffect - user:', !!user, 'authLoading:', authLoading);
     if (!authLoading && user) {
-      console.log('User authenticated, redirecting to dashboard');
+      console.log('User authenticated on auth page, redirecting to dashboard');
       navigate('/dashboard', { replace: true });
     }
   }, [user, authLoading, navigate]);
 
-  // If we're still loading auth state, show loading
+  // Show loading while checking auth state
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -50,16 +49,9 @@ export const AuthPage = () => {
     );
   }
 
-  // If user is authenticated, don't show auth form
+  // Don't render auth form if user is authenticated
   if (user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-        <div className="flex items-center space-x-2">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-          <span className="text-lg text-gray-600">Redirecting to dashboard...</span>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -67,18 +59,13 @@ export const AuthPage = () => {
     setLoading(true);
     setError(null);
 
-    console.log('Attempting to sign in with:', signInData.email);
-
     const { error } = await signIn(signInData.email, signInData.password);
     
     if (error) {
-      console.error('Sign in error:', error);
       setError(error.message);
-    } else {
-      console.log('Sign in successful');
+      setLoading(false);
     }
-    
-    setLoading(false);
+    // Don't set loading to false on success - let the auth state change handle redirect
   };
 
   const handleSignUp = async (e: React.FormEvent) => {

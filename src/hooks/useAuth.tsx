@@ -88,37 +88,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const initializeAuth = async () => {
       try {
-        console.log('Checking for initial session...');
+        console.log('Initializing auth...');
         const { data: { session: initialSession }, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error('Error getting initial session:', error);
-          if (mounted) {
-            setLoading(false);
-          }
           return;
         }
 
-        console.log('Initial session found:', !!initialSession);
-
         if (mounted) {
+          console.log('Setting initial session:', !!initialSession);
           setSession(initialSession);
           setUser(initialSession?.user ?? null);
 
           if (initialSession?.user) {
-            console.log('User found in initial session, fetching profile...');
+            console.log('Fetching profile for authenticated user...');
             const profileData = await fetchProfile(initialSession.user.id);
             if (mounted) {
               setProfile(profileData);
             }
           }
-          
-          console.log('Initialization complete, setting loading to false');
-          setLoading(false);
         }
       } catch (error) {
         console.error('Error in initializeAuth:', error);
+      } finally {
         if (mounted) {
+          console.log('Auth initialization complete, setting loading to false');
           setLoading(false);
         }
       }
@@ -133,23 +128,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setSession(session);
         setUser(session?.user ?? null);
 
-        if (session?.user && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
-          console.log('User authenticated, fetching profile...');
+        if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
           const profileData = await fetchProfile(session.user.id);
           if (mounted) {
             setProfile(profileData);
           }
         } else if (!session?.user) {
-          console.log('No user session, clearing profile');
           if (mounted) {
             setProfile(null);
           }
         }
 
-        // Always set loading to false after handling auth state change
-        // except for token refresh which shouldn't affect loading state
+        // Set loading to false after handling auth state changes
         if (mounted && event !== 'TOKEN_REFRESHED') {
-          console.log('Setting loading to false after auth state change');
           setLoading(false);
         }
       }

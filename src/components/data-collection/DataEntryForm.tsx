@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { ReferenceDataSelect } from '@/components/reference-data/ReferenceDataSelect';
 
 interface FormField {
   id: string;
@@ -59,7 +60,7 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
   const [loading, setLoading] = useState(true);
 
   // Fetch form fields when component mounts
-  React.useEffect(() => {
+  useEffect(() => {
     fetchFormFields();
   }, [scheduleForm.form_id]);
 
@@ -174,11 +175,20 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
         );
       
       case 'select':
+        if (field.reference_data_name) {
+          return (
+            <ReferenceDataSelect
+              referenceDataName={field.reference_data_name}
+              value={formData[field.field_name] || ''}
+              onValueChange={(value) => handleFieldChange(field.field_name, value)}
+              placeholder="Select an option"
+            />
+          );
+        }
         return (
           <Select
             value={formData[field.field_name] || ''}
             onValueChange={(value) => handleFieldChange(field.field_name, value)}
-            required={field.is_required}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select an option" />

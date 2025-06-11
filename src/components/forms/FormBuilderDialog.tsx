@@ -66,14 +66,14 @@ export const FormBuilderDialog = ({
       setFormData({
         name: editingForm.name,
         description: editingForm.description || '',
-        department_id: editingForm.department_id || ''
+        department_id: editingForm.department_id || 'all'
       });
       fetchFormFields(editingForm.id);
     } else {
       setFormData({
         name: '',
         description: '',
-        department_id: ''
+        department_id: 'all'
       });
       setFields([]);
     }
@@ -102,6 +102,9 @@ export const FormBuilderDialog = ({
     try {
       let formId = editingForm?.id;
 
+      // Convert 'all' back to null for database storage
+      const departmentId = formData.department_id === 'all' ? null : formData.department_id;
+
       if (editingForm) {
         // Update existing form
         const { error } = await supabase
@@ -109,7 +112,7 @@ export const FormBuilderDialog = ({
           .update({
             name: formData.name,
             description: formData.description || null,
-            department_id: formData.department_id || null,
+            department_id: departmentId,
             updated_at: new Date().toISOString()
           })
           .eq('id', editingForm.id);
@@ -122,7 +125,7 @@ export const FormBuilderDialog = ({
           .insert({
             name: formData.name,
             description: formData.description || null,
-            department_id: formData.department_id || null,
+            department_id: departmentId,
             created_by: profile.id
           })
           .select()
@@ -215,7 +218,7 @@ export const FormBuilderDialog = ({
                   <SelectValue placeholder="Select department (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Departments</SelectItem>
+                  <SelectItem value="all">All Departments</SelectItem>
                   {departments.map((dept) => (
                     <SelectItem key={dept.id} value={dept.id}>
                       {dept.name}

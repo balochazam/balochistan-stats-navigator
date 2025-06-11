@@ -1,3 +1,4 @@
+
 import { useState, useEffect, createContext, useContext } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -97,12 +98,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         if (session?.user) {
           console.log('User authenticated, fetching profile...');
-          const profileData = await fetchProfile(session.user.id);
-          if (mounted) {
-            setProfile(profileData);
-            console.log('Profile set:', profileData);
-            console.log('Setting loading to false after profile fetch');
-            setLoading(false);
+          try {
+            const profileData = await fetchProfile(session.user.id);
+            if (mounted) {
+              setProfile(profileData);
+              console.log('Profile set:', profileData);
+            }
+          } catch (error) {
+            console.error('Error fetching profile in auth state change:', error);
+          } finally {
+            if (mounted) {
+              console.log('Setting loading to false after profile fetch attempt');
+              setLoading(false);
+            }
           }
         } else {
           console.log('No user session, clearing profile');
@@ -137,10 +145,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           
           if (session?.user) {
             console.log('Initial session found, fetching profile...');
-            const profileData = await fetchProfile(session.user.id);
-            if (mounted) {
-              setProfile(profileData);
-              console.log('Initial profile set:', profileData);
+            try {
+              const profileData = await fetchProfile(session.user.id);
+              if (mounted) {
+                setProfile(profileData);
+                console.log('Initial profile set:', profileData);
+              }
+            } catch (error) {
+              console.error('Error fetching initial profile:', error);
             }
           }
           

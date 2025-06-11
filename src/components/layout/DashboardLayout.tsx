@@ -17,6 +17,7 @@ import {
   Building2,
   Database,
   FileText,
+  Calendar,
   Settings,
   LogOut,
   Menu,
@@ -44,6 +45,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     { name: 'Departments', href: '/admin/departments', icon: Building2, adminOnly: true },
     { name: 'Data Banks', href: '/admin/databanks', icon: Database, adminOnly: true },
     { name: 'Forms', href: '/admin/forms', icon: FileText, adminOnly: true },
+    { name: 'Schedules', href: '/admin/schedules', icon: Calendar, adminOnly: true },
   ];
 
   const filteredNavigation = navigationItems.filter(item => 

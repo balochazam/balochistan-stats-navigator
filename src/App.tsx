@@ -12,6 +12,7 @@ import { UserManagement } from "./pages/admin/UserManagement";
 import { DepartmentManagement } from "./pages/admin/DepartmentManagement";
 import { DataBankManagement } from "./pages/admin/DataBankManagement";
 import { FormManagement } from "./pages/admin/FormManagement";
+import { ScheduleManagement } from "./pages/admin/ScheduleManagement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -42,6 +43,7 @@ const App = () => {
               <Route path="/admin/departments" element={<DepartmentManagement />} />
               <Route path="/admin/databanks" element={<DataBankManagement />} />
               <Route path="/admin/forms" element={<FormManagement />} />
+              <Route path="/admin/schedules" element={<ScheduleManagement />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

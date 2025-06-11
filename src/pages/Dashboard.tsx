@@ -20,6 +20,8 @@ export const Dashboard = () => {
     }
   }, [user, loading, navigate]);
 
+  console.log('Dashboard render - loading:', loading, 'user:', !!user, 'profile:', !!profile);
+
   if (loading) {
     console.log('Dashboard loading...');
     return (
@@ -35,17 +37,9 @@ export const Dashboard = () => {
     return <AuthPage />;
   }
 
-  if (!profile) {
-    console.log('User found but no profile, showing loading');
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-        <span className="ml-2">Loading profile...</span>
-      </div>
-    );
-  }
-
-  console.log('Rendering dashboard for user:', user.id, 'with role:', profile.role);
+  // Allow dashboard to render even without profile initially
+  // The profile will be fetched and the component will re-render
+  console.log('Rendering dashboard for user:', user.id, 'with profile:', profile?.role || 'loading...');
   
   return (
     <DashboardLayout>

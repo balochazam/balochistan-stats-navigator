@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
@@ -11,7 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
 
 export const AuthPage = () => {
-  const { signIn, signUp, user, profile } = useAuth();
+  const { signIn, signUp, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,11 +30,32 @@ export const AuthPage = () => {
 
   // Redirect if user is already authenticated
   useEffect(() => {
-    if (user && profile) {
+    console.log('AuthPage useEffect - user:', !!user, 'authLoading:', authLoading);
+    if (!authLoading && user) {
       console.log('User authenticated, redirecting to dashboard');
       navigate('/dashboard');
     }
-  }, [user, profile, navigate]);
+  }, [user, authLoading, navigate]);
+
+  // If we're still loading auth state, show loading
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Loading...</span>
+      </div>
+    );
+  }
+
+  // If user is authenticated, don't show auth form
+  if (user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Redirecting...</span>
+      </div>
+    );
+  }
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();

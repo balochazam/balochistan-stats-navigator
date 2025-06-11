@@ -7,8 +7,10 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 export const Dashboard = () => {
-  const { user, profile, loading } = useAuth();
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
+
+  console.log('Dashboard render - loading:', loading, 'user:', !!user);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -17,10 +19,8 @@ export const Dashboard = () => {
     }
   }, [user, loading, navigate]);
 
-  console.log('Dashboard render - loading:', loading, 'user:', !!user, 'profile role:', profile?.role || 'no profile');
-
-  // Show loading spinner while auth is initializing
   if (loading) {
+    console.log('Dashboard showing loading spinner');
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="flex items-center space-x-2">
@@ -31,11 +31,12 @@ export const Dashboard = () => {
     );
   }
 
-  // If no user after loading is complete, redirect will handle this
   if (!user) {
+    console.log('No user, returning null while redirect happens');
     return null;
   }
 
+  console.log('Dashboard rendering main content');
   return (
     <DashboardLayout>
       <DashboardHome />

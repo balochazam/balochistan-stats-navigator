@@ -40,7 +40,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = async (userId: string): Promise<Profile | null> => {
     try {
       console.log('Fetching profile for user:', userId);
       const { data, error } = await supabase
@@ -50,7 +50,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .single();
 
       if (error) {
-        console.error('Error fetching profile:', error.message, error.details);
+        console.error('Error fetching profile:', error.message);
         // If profile doesn't exist, create one with default role
         if (error.code === 'PGRST116') {
           console.log('Profile not found, creating default profile');
@@ -87,6 +87,41 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     let mounted = true;
 
+    const initializeAuth = async () => {
+      try {
+        // Get initial session
+        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Error getting initial session:', error);
+          if (mounted) {
+            setLoading(false);
+          }
+          return;
+        }
+
+        if (mounted) {
+          setSession(initialSession);
+          setUser(initialSession?.user ?? null);
+
+          if (initialSession?.user) {
+            console.log('Initial session found, fetching profile...');
+            const profileData = await fetchProfile(initialSession.user.id);
+            if (mounted) {
+              setProfile(profileData);
+            }
+          }
+          
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Error in initializeAuth:', error);
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -96,79 +131,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setSession(session);
         setUser(session?.user ?? null);
 
-        if (session?.user) {
+        if (session?.user && event !== 'TOKEN_REFRESHED') {
           console.log('User authenticated, fetching profile...');
-          try {
-            const profileData = await fetchProfile(session.user.id);
-            if (mounted) {
-              setProfile(profileData);
-              console.log('Profile set:', profileData);
-            }
-          } catch (error) {
-            console.error('Error fetching profile in auth state change:', error);
-          } finally {
-            if (mounted) {
-              console.log('Setting loading to false after profile fetch attempt');
-              setLoading(false);
-            }
+          const profileData = await fetchProfile(session.user.id);
+          if (mounted) {
+            setProfile(profileData);
           }
-        } else {
+        } else if (!session?.user) {
           console.log('No user session, clearing profile');
           if (mounted) {
             setProfile(null);
-            console.log('Setting loading to false - no user');
-            setLoading(false);
           }
+        }
+
+        if (mounted && event !== 'TOKEN_REFRESHED') {
+          setLoading(false);
         }
       }
     );
 
-    // Check for existing session
-    const getInitialSession = async () => {
-      try {
-        console.log('Checking for initial session...');
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) {
-          console.error('Error getting session:', error);
-          if (mounted) {
-            console.log('Setting loading to false due to session error');
-            setLoading(false);
-          }
-          return;
-        }
-
-        console.log('Initial session check:', session?.user?.id);
-        
-        if (mounted) {
-          setSession(session);
-          setUser(session?.user ?? null);
-          
-          if (session?.user) {
-            console.log('Initial session found, fetching profile...');
-            try {
-              const profileData = await fetchProfile(session.user.id);
-              if (mounted) {
-                setProfile(profileData);
-                console.log('Initial profile set:', profileData);
-              }
-            } catch (error) {
-              console.error('Error fetching initial profile:', error);
-            }
-          }
-          
-          console.log('Initial loading complete, setting loading to false');
-          setLoading(false);
-        }
-      } catch (error) {
-        console.error('Error in getInitialSession:', error);
-        if (mounted) {
-          console.log('Setting loading to false due to initial session error');
-          setLoading(false);
-        }
-      }
-    };
-
-    getInitialSession();
+    initializeAuth();
 
     return () => {
       mounted = false;

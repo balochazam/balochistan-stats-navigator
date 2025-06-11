@@ -1,9 +1,8 @@
 
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LogOut, User, Settings, Users, FileText, Calendar, BarChart3 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -12,10 +11,11 @@ interface DashboardLayoutProps {
 export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleSignOut = async () => {
     await signOut();
-    navigate('/auth');
+    navigate('/auth', { replace: true });
   };
 
   const getMenuItems = () => {
@@ -53,20 +53,29 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
   const menuItems = getMenuItems();
 
+  const handleNavigation = (path: string) => {
+    console.log('Navigating to:', path);
+    navigate(path);
+  };
+
+  const isCurrentPath = (path: string) => {
+    return location.pathname === path;
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
-            <div>
+            <div className="cursor-pointer" onClick={() => handleNavigation('/dashboard')}>
               <h1 className="text-2xl font-bold text-gray-900">BBoS Dashboard</h1>
               <p className="text-sm text-gray-600">Balochistan Bureau of Statistics</p>
             </div>
             <div className="flex items-center space-x-4">
               <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">{profile?.full_name}</p>
-                <p className="text-xs text-gray-600 capitalize">{profile?.role?.replace('_', ' ')}</p>
+                <p className="text-sm font-medium text-gray-900">{profile?.full_name || 'Loading...'}</p>
+                <p className="text-xs text-gray-600 capitalize">{profile?.role?.replace('_', ' ') || 'Loading...'}</p>
               </div>
               <Button onClick={handleSignOut} variant="outline" size="sm">
                 <LogOut className="h-4 w-4 mr-2" />
@@ -84,12 +93,13 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             <ul className="space-y-2">
               {menuItems.map((item) => {
                 const IconComponent = item.icon;
+                const isCurrent = isCurrentPath(item.path);
                 return (
                   <li key={item.path}>
                     <Button
-                      variant="ghost"
+                      variant={isCurrent ? "default" : "ghost"}
                       className="w-full justify-start"
-                      onClick={() => navigate(item.path)}
+                      onClick={() => handleNavigation(item.path)}
                     >
                       <IconComponent className="h-4 w-4 mr-2" />
                       {item.label}

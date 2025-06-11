@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
@@ -33,16 +34,18 @@ export const AuthPage = () => {
     console.log('AuthPage useEffect - user:', !!user, 'authLoading:', authLoading);
     if (!authLoading && user) {
       console.log('User authenticated, redirecting to dashboard');
-      navigate('/dashboard');
+      navigate('/dashboard', { replace: true });
     }
   }, [user, authLoading, navigate]);
 
   // If we're still loading auth state, show loading
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-        <span className="ml-2">Loading...</span>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="flex items-center space-x-2">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          <span className="text-lg text-gray-600">Loading...</span>
+        </div>
       </div>
     );
   }
@@ -50,9 +53,11 @@ export const AuthPage = () => {
   // If user is authenticated, don't show auth form
   if (user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-        <span className="ml-2">Redirecting...</span>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="flex items-center space-x-2">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          <span className="text-lg text-gray-600">Redirecting to dashboard...</span>
+        </div>
       </div>
     );
   }
@@ -130,6 +135,7 @@ export const AuthPage = () => {
                     value={signInData.email}
                     onChange={(e) => setSignInData({ ...signInData, email: e.target.value })}
                     required
+                    disabled={loading}
                   />
                 </div>
                 <div className="space-y-2">
@@ -140,11 +146,12 @@ export const AuthPage = () => {
                     value={signInData.password}
                     onChange={(e) => setSignInData({ ...signInData, password: e.target.value })}
                     required
+                    disabled={loading}
                   />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Sign In
+                  {loading ? 'Signing In...' : 'Sign In'}
                 </Button>
               </form>
             </TabsContent>
@@ -159,6 +166,7 @@ export const AuthPage = () => {
                     value={signUpData.fullName}
                     onChange={(e) => setSignUpData({ ...signUpData, fullName: e.target.value })}
                     required
+                    disabled={loading}
                   />
                 </div>
                 <div className="space-y-2">
@@ -169,6 +177,7 @@ export const AuthPage = () => {
                     value={signUpData.email}
                     onChange={(e) => setSignUpData({ ...signUpData, email: e.target.value })}
                     required
+                    disabled={loading}
                   />
                 </div>
                 <div className="space-y-2">
@@ -179,6 +188,7 @@ export const AuthPage = () => {
                     value={signUpData.password}
                     onChange={(e) => setSignUpData({ ...signUpData, password: e.target.value })}
                     required
+                    disabled={loading}
                   />
                 </div>
                 <div className="space-y-2">
@@ -189,11 +199,12 @@ export const AuthPage = () => {
                     value={signUpData.confirmPassword}
                     onChange={(e) => setSignUpData({ ...signUpData, confirmPassword: e.target.value })}
                     required
+                    disabled={loading}
                   />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Sign Up
+                  {loading ? 'Creating Account...' : 'Sign Up'}
                 </Button>
               </form>
             </TabsContent>

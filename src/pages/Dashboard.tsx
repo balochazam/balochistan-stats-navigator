@@ -12,11 +12,11 @@ export const Dashboard = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    console.log('Dashboard useEffect - user:', user?.id, 'profile:', profile?.role, 'loading:', loading);
+    console.log('Dashboard useEffect - user:', !!user, 'profile:', !!profile, 'loading:', loading);
     
     if (!loading && !user) {
       console.log('No user found, redirecting to auth');
-      navigate('/auth');
+      navigate('/auth', { replace: true });
     }
   }, [user, loading, navigate]);
 
@@ -25,9 +25,11 @@ export const Dashboard = () => {
   if (loading) {
     console.log('Dashboard loading...');
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-        <span className="ml-2">Loading...</span>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="flex items-center space-x-2">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          <span className="text-lg text-gray-600">Loading dashboard...</span>
+        </div>
       </div>
     );
   }
@@ -37,8 +39,6 @@ export const Dashboard = () => {
     return <AuthPage />;
   }
 
-  // Allow dashboard to render even without profile initially
-  // The profile will be fetched and the component will re-render
   console.log('Rendering dashboard for user:', user.id, 'with profile:', profile?.role || 'loading...');
   
   return (

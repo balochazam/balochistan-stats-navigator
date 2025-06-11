@@ -1,12 +1,14 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Edit2, Trash2, Tag, Save, X } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
 
 interface ReferenceData {
   id: string;
@@ -36,9 +38,9 @@ export const ReferenceDataEntries = ({ referenceData }: ReferenceDataEntriesProp
   const [entries, setEntries] = useState<ReferenceDataEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingEntry, setEditingEntry] = useState<string | null>(null);
-  const [newEntry, setNewEntry] = useState({ key: '', value: '' });
-  const [editValues, setEditValues] = useState<{ [key: string]: { key: string; value: string } }>({});
-  const [isAddingNew, setIsAddingNew] = useState(false);
+  const [bulkEntries, setBulkEntries] = useState('');
+  const [editValues, setEditValues] = useState<{ [key: string]: string }>({});
+  const [isAddingBulk, setIsAddingBulk] = useState(false);
 
   useEffect(() => {
     fetchEntries();
@@ -54,7 +56,7 @@ export const ReferenceDataEntries = ({ referenceData }: ReferenceDataEntriesProp
         `)
         .eq('data_bank_id', referenceData.id)
         .eq('is_active', true)
-        .order('value'); // Order by value for better readability
+        .order('value');
 
       if (error) {
         console.error('Error fetching entries:', error);
@@ -73,52 +75,75 @@ export const ReferenceDataEntries = ({ referenceData }: ReferenceDataEntriesProp
     }
   };
 
-  const handleAddEntry = async () => {
-    if (!user || !newEntry.key.trim() || !newEntry.value.trim()) {
+  const generateKey = (value: string): string => {
+    return value.toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '')
+      .replace(/\s+/g, '_')
+      .substring(0, 50);
+  };
+
+  const handleAddBulkEntries = async () => {
+    if (!user || !bulkEntries.trim()) {
       toast({
         title: "Error",
-        description: "Both code and display value are required",
+        description: "Please enter some options to add",
         variant: "destructive",
       });
       return;
     }
 
     try {
+      const entriesText = bulkEntries.trim();
+      const entryValues = entriesText
+        .split(/[,\n]/)
+        .map(entry => entry.trim())
+        .filter(entry => entry.length > 0);
+
+      if (entryValues.length === 0) {
+        toast({
+          title: "Error",
+          description: "No valid entries found",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const entriesToInsert = entryValues.map(value => ({
+        data_bank_id: referenceData.id,
+        key: generateKey(value),
+        value: value,
+        created_by: user.id
+      }));
+
       const { error } = await supabase
         .from('data_bank_entries')
-        .insert({
-          data_bank_id: referenceData.id,
-          key: newEntry.key.trim(),
-          value: newEntry.value.trim(),
-          created_by: user.id
-        });
+        .insert(entriesToInsert);
 
       if (error) {
-        if (error.code === '23505') { // Unique constraint violation
+        if (error.code === '23505') {
           toast({
-            title: "Error",
-            description: "A code with this name already exists",
+            title: "Warning",
+            description: "Some entries already exist and were skipped",
             variant: "destructive",
           });
         } else {
           throw error;
         }
-        return;
+      } else {
+        toast({
+          title: "Success",
+          description: `${entryValues.length} option(s) added successfully`,
+        });
       }
 
-      toast({
-        title: "Success",
-        description: "Option added successfully",
-      });
-      
-      setNewEntry({ key: '', value: '' });
-      setIsAddingNew(false);
+      setBulkEntries('');
+      setIsAddingBulk(false);
       fetchEntries();
     } catch (error) {
-      console.error('Error adding entry:', error);
+      console.error('Error adding entries:', error);
       toast({
         title: "Error",
-        description: "Failed to add option",
+        description: "Failed to add options",
         variant: "destructive",
       });
     }
@@ -128,27 +153,28 @@ export const ReferenceDataEntries = ({ referenceData }: ReferenceDataEntriesProp
     setEditingEntry(entry.id);
     setEditValues(prev => ({
       ...prev,
-      [entry.id]: { key: entry.key, value: entry.value }
+      [entry.id]: entry.value
     }));
   }
 
   async function handleSaveEdit(entryId: string) {
-    const editData = editValues[entryId];
-    if (!editData || !editData.key.trim() || !editData.value.trim()) {
+    const editValue = editValues[entryId];
+    if (!editValue || !editValue.trim()) {
       toast({
         title: "Error",
-        description: "Both code and display value are required",
+        description: "Value is required",
         variant: "destructive",
       });
       return;
     }
 
     try {
+      const newKey = generateKey(editValue.trim());
       const { error } = await supabase
         .from('data_bank_entries')
         .update({
-          key: editData.key.trim(),
-          value: editData.value.trim(),
+          key: newKey,
+          value: editValue.trim(),
           updated_at: new Date().toISOString()
         })
         .eq('id', entryId);
@@ -157,7 +183,7 @@ export const ReferenceDataEntries = ({ referenceData }: ReferenceDataEntriesProp
         if (error.code === '23505') {
           toast({
             title: "Error",
-            description: "A code with this name already exists",
+            description: "An option with this value already exists",
             variant: "destructive",
           });
         } else {
@@ -241,45 +267,50 @@ export const ReferenceDataEntries = ({ referenceData }: ReferenceDataEntriesProp
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center text-lg">
             <Tag className="h-4 w-4 mr-2" />
-            Dropdown Options
+            Options for {referenceData.name}
           </CardTitle>
           <Button 
             size="sm" 
-            onClick={() => setIsAddingNew(true)}
-            disabled={isAddingNew}
+            onClick={() => setIsAddingBulk(true)}
+            disabled={isAddingBulk}
           >
             <Plus className="h-4 w-4 mr-1" />
-            Add Option
+            Add Options
           </Button>
         </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {isAddingNew && (
+          {isAddingBulk && (
             <div className="border rounded-lg p-4 bg-gray-50">
-              <div className="grid grid-cols-2 gap-4 mb-3">
-                <Input
-                  placeholder="Option code (e.g., NY, LON)"
-                  value={newEntry.key}
-                  onChange={(e) => setNewEntry(prev => ({ ...prev, key: e.target.value }))}
-                />
-                <Input
-                  placeholder="Display value (e.g., New York, London)"
-                  value={newEntry.value}
-                  onChange={(e) => setNewEntry(prev => ({ ...prev, value: e.target.value }))}
-                />
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">
+                    Add Multiple Options
+                  </label>
+                  <Textarea
+                    placeholder="Enter options separated by commas or new lines&#10;Example: New York, London, Tokyo&#10;or&#10;New York&#10;London&#10;Tokyo"
+                    value={bulkEntries}
+                    onChange={(e) => setBulkEntries(e.target.value)}
+                    rows={4}
+                    className="w-full"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Separate multiple options with commas or put each on a new line
+                  </p>
+                </div>
               </div>
-              <div className="flex space-x-2">
-                <Button size="sm" onClick={handleAddEntry}>
+              <div className="flex space-x-2 mt-3">
+                <Button size="sm" onClick={handleAddBulkEntries}>
                   <Save className="h-3 w-3 mr-1" />
-                  Save
+                  Add Options
                 </Button>
                 <Button 
                   size="sm" 
                   variant="outline" 
                   onClick={() => {
-                    setIsAddingNew(false);
-                    setNewEntry({ key: '', value: '' });
+                    setIsAddingBulk(false);
+                    setBulkEntries('');
                   }}
                 >
                   <X className="h-3 w-3 mr-1" />
@@ -293,13 +324,12 @@ export const ReferenceDataEntries = ({ referenceData }: ReferenceDataEntriesProp
             <div className="text-center py-8">
               <Tag className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-600">No options found</p>
-              <p className="text-sm text-gray-500">Add your first dropdown option to get started</p>
+              <p className="text-sm text-gray-500">Add your first dropdown options to get started</p>
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Code</TableHead>
                   <TableHead>Display Value</TableHead>
                   <TableHead>Created By</TableHead>
                   <TableHead>Updated</TableHead>
@@ -312,25 +342,10 @@ export const ReferenceDataEntries = ({ referenceData }: ReferenceDataEntriesProp
                     <TableCell>
                       {editingEntry === entry.id ? (
                         <Input
-                          value={editValues[entry.id]?.key || ''}
+                          value={editValues[entry.id] || ''}
                           onChange={(e) => setEditValues(prev => ({
                             ...prev,
-                            [entry.id]: { ...prev[entry.id], key: e.target.value }
-                          }))}
-                          className="h-8"
-                          placeholder="Code"
-                        />
-                      ) : (
-                        <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">{entry.key}</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {editingEntry === entry.id ? (
-                        <Input
-                          value={editValues[entry.id]?.value || ''}
-                          onChange={(e) => setEditValues(prev => ({
-                            ...prev,
-                            [entry.id]: { ...prev[entry.id], value: e.target.value }
+                            [entry.id]: e.target.value
                           }))}
                           className="h-8"
                           placeholder="Display value"
@@ -399,4 +414,4 @@ export const ReferenceDataEntries = ({ referenceData }: ReferenceDataEntriesProp
       </CardContent>
     </Card>
   );
-}
+};

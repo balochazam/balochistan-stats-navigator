@@ -39,7 +39,7 @@ export const Dashboard = () => {
     return <AuthPage />;
   }
 
-  console.log('Rendering dashboard for user:', user.id, 'with profile:', profile?.role || 'loading...');
+  console.log('Rendering dashboard for user:', user.id, 'with profile:', profile?.role || 'no profile yet');
   
   return (
     <DashboardLayout>

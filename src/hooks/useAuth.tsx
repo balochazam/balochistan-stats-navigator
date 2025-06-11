@@ -51,7 +51,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (error) {
         console.error('Error fetching profile:', error.message);
-        // If profile doesn't exist, create one with default role
         if (error.code === 'PGRST116') {
           console.log('Profile not found, creating default profile');
           const { data: newProfile, error: createError } = await supabase
@@ -89,7 +88,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const initializeAuth = async () => {
       try {
-        // Get initial session
+        console.log('Checking for initial session...');
         const { data: { session: initialSession }, error } = await supabase.auth.getSession();
         
         if (error) {
@@ -99,6 +98,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           }
           return;
         }
+
+        console.log('Initial session:', !!initialSession);
 
         if (mounted) {
           setSession(initialSession);
@@ -112,6 +113,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             }
           }
           
+          console.log('Setting loading to false after initialization');
           setLoading(false);
         }
       } catch (error) {
@@ -122,7 +124,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     };
 
-    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return;
@@ -131,21 +132,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setSession(session);
         setUser(session?.user ?? null);
 
-        if (session?.user && event !== 'TOKEN_REFRESHED') {
-          console.log('User authenticated, fetching profile...');
+        if (session?.user && event === 'SIGNED_IN') {
+          console.log('User signed in, fetching profile...');
           const profileData = await fetchProfile(session.user.id);
           if (mounted) {
             setProfile(profileData);
+            setLoading(false);
           }
         } else if (!session?.user) {
           console.log('No user session, clearing profile');
           if (mounted) {
             setProfile(null);
+            setLoading(false);
           }
-        }
-
-        if (mounted && event !== 'TOKEN_REFRESHED') {
-          setLoading(false);
+        } else if (event === 'TOKEN_REFRESHED') {
+          // Don't change loading state on token refresh
+          console.log('Token refreshed');
+        } else {
+          if (mounted) {
+            setLoading(false);
+          }
         }
       }
     );

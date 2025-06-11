@@ -94,20 +94,21 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
   };
 
   const handleNumberChange = (fieldName: string, value: string) => {
-    // Only allow numbers, decimal points, and negative signs
-    const numericValue = value.replace(/[^0-9.-]/g, '');
-    
-    // Ensure only one decimal point and one negative sign at the beginning
-    const parts = numericValue.split('.');
-    if (parts.length > 2) {
-      return; // Don't update if more than one decimal point
+    // Allow empty string for clearing the field
+    if (value === '') {
+      handleFieldChange(fieldName, '');
+      return;
     }
+
+    // Only allow valid number characters: digits, decimal point, and minus sign
+    const numericRegex = /^-?(\d+\.?\d*|\.\d+)$/;
     
-    const finalValue = parts.length === 2 ? 
-      parts[0].replace(/-/g, (match, offset) => offset === 0 ? match : '') + '.' + parts[1].replace(/[.-]/g, '') :
-      numericValue.replace(/-/g, (match, offset) => offset === 0 ? match : '');
+    // Allow partial input during typing (like "-", ".", "12.")
+    const partialRegex = /^-?(\d*\.?\d*)?$/;
     
-    handleFieldChange(fieldName, finalValue);
+    if (partialRegex.test(value)) {
+      handleFieldChange(fieldName, value);
+    }
   };
 
   const validateForm = () => {
@@ -225,18 +226,10 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
           <Input
             type="text"
             inputMode="numeric"
-            pattern="[0-9]*"
             value={formData[field.field_name] || ''}
             onChange={(e) => handleNumberChange(field.field_name, e.target.value)}
             placeholder={field.placeholder_text}
             required={field.is_required}
-            onKeyPress={(e) => {
-              // Allow numbers, decimal point, minus sign, backspace, delete, tab, escape, enter
-              const allowedKeys = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '-', 'Backspace', 'Delete', 'Tab', 'Escape', 'Enter'];
-              if (!allowedKeys.includes(e.key) && !e.ctrlKey && !e.metaKey) {
-                e.preventDefault();
-              }
-            }}
           />
         );
 

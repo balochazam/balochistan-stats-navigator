@@ -51,13 +51,12 @@ export const FormManagement = () => {
 
   const fetchForms = async () => {
     try {
-      // Updated query to properly join with profiles table
+      // Simplified query to avoid join issues - we'll fetch creator info separately if needed
       const { data, error } = await supabase
         .from('forms')
         .select(`
           *,
-          department:departments(name),
-          creator:profiles!forms_created_by_fkey(full_name, email)
+          department:departments(name)
         `)
         .eq('is_active', true)
         .order('created_at', { ascending: false });
@@ -71,7 +70,12 @@ export const FormManagement = () => {
         });
       } else {
         console.log('Forms fetched successfully:', data);
-        setForms(data || []);
+        // Transform the data to match our Form interface
+        const formsWithCreator = (data || []).map(form => ({
+          ...form,
+          creator: undefined // We'll populate this later if needed
+        }));
+        setForms(formsWithCreator);
       }
     } catch (error) {
       console.error('Error in fetchForms:', error);
@@ -216,9 +220,6 @@ export const FormManagement = () => {
                     )}
                     <div className="text-xs text-gray-500 mt-2 ml-8 space-x-4">
                       <span>Created: {new Date(form.created_at).toLocaleDateString()}</span>
-                      {form.creator && (
-                        <span>By: {form.creator.full_name || form.creator.email}</span>
-                      )}
                     </div>
                   </div>
 

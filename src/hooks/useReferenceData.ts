@@ -19,15 +19,15 @@ export const useReferenceData = (referenceDataName: string) => {
         setError(null);
 
         // First, find the reference data set by name
-        const { data: referenceDataSet, error: setError } = await supabase
+        const { data: referenceDataSet, error: dataSetError } = await supabase
           .from('data_banks')
           .select('id')
           .eq('name', referenceDataName)
           .eq('is_active', true)
           .maybeSingle();
 
-        if (setError) {
-          throw setError;
+        if (dataSetError) {
+          throw dataSetError;
         }
 
         if (!referenceDataSet) {

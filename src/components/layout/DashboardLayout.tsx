@@ -1,156 +1,205 @@
 
-import { useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { ReactNode, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  Home,
+  LayoutDashboard,
   Users,
   Building2,
   Database,
   FileText,
   Calendar,
+  ClipboardList,
   Settings,
   LogOut,
+  User,
   Menu,
   X
 } from 'lucide-react';
 
 interface DashboardLayoutProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
-  const { profile, signOut } = useAuth();
-  const location = useLocation();
+  const { profile } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { toast } = useToast();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const handleLogout = async () => {
-    await signOut();
-    navigate('/auth');
+  const handleSignOut = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      navigate('/');
+    } catch (error) {
+      console.error('Error signing out:', error);
+      toast({
+        title: "Error",
+        description: "Failed to sign out",
+        variant: "destructive",
+      });
+    }
   };
 
-  const navigationItems = [
-    { name: 'Dashboard', href: '/dashboard', icon: Home, adminOnly: false },
-    { name: 'Users', href: '/admin/users', icon: Users, adminOnly: true },
-    { name: 'Departments', href: '/admin/departments', icon: Building2, adminOnly: true },
-    { name: 'Data Banks', href: '/admin/databanks', icon: Database, adminOnly: true },
-    { name: 'Forms', href: '/admin/forms', icon: FileText, adminOnly: true },
-    { name: 'Schedules', href: '/admin/schedules', icon: Calendar, adminOnly: true },
+  const menuItems = [
+    {
+      title: 'Dashboard',
+      icon: LayoutDashboard,
+      path: '/dashboard',
+      roles: ['admin', 'department_head', 'data_entry_user']
+    },
+    {
+      title: 'Data Collection',
+      icon: ClipboardList,
+      path: '/data-collection',
+      roles: ['data_entry_user', 'department_head']
+    },
+    {
+      title: 'User Management',
+      icon: Users,
+      path: '/admin/users',
+      roles: ['admin']
+    },
+    {
+      title: 'Department Management',
+      icon: Building2,
+      path: '/admin/departments',
+      roles: ['admin']
+    },
+    {
+      title: 'Data Bank Management',
+      icon: Database,
+      path: '/admin/data-banks',
+      roles: ['admin']
+    },
+    {
+      title: 'Form Management',
+      icon: FileText,
+      path: '/admin/forms',
+      roles: ['admin']
+    },
+    {
+      title: 'Schedule Management',
+      icon: Calendar,
+      path: '/admin/schedules',
+      roles: ['admin']
+    }
   ];
 
-  const filteredNavigation = navigationItems.filter(item => 
-    !item.adminOnly || profile?.role === 'admin'
+  const filteredMenuItems = menuItems.filter(item => 
+    profile?.role && item.roles.includes(profile.role)
   );
 
-  const isActive = (href: string) => location.pathname === href;
+  const SidebarContent = () => (
+    <div className="flex flex-col h-full">
+      <div className="p-6 border-b">
+        <h2 className="text-xl font-bold text-gray-800">Data Portal</h2>
+        {profile && (
+          <div className="mt-3">
+            <p className="text-sm text-gray-600">{profile.full_name || profile.email}</p>
+            <Badge variant="secondary" className="mt-1 text-xs">
+              {profile.role?.replace('_', ' ').toUpperCase()}
+            </Badge>
+          </div>
+        )}
+      </div>
+
+      <nav className="flex-1 p-4">
+        <ul className="space-y-2">
+          {filteredMenuItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = location.pathname === item.path;
+            
+            return (
+              <li key={item.path}>
+                <Button
+                  variant={isActive ? "default" : "ghost"}
+                  className={`w-full justify-start ${isActive ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
+                  onClick={() => {
+                    navigate(item.path);
+                    setSidebarOpen(false);
+                  }}
+                >
+                  <Icon className="h-4 w-4 mr-3" />
+                  {item.title}
+                </Button>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+
+      <div className="p-4 border-t space-y-2">
+        <Button
+          variant="ghost"
+          className="w-full justify-start"
+          onClick={() => {
+            navigate('/profile');
+            setSidebarOpen(false);
+          }}
+        >
+          <User className="h-4 w-4 mr-3" />
+          Profile
+        </Button>
+        <Button
+          variant="ghost"
+          className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+          onClick={handleSignOut}
+        >
+          <LogOut className="h-4 w-4 mr-3" />
+          Sign Out
+        </Button>
+      </div>
+    </div>
+  );
+
+  if (!profile) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">Loading...</div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Mobile sidebar backdrop */}
+    <div className="flex h-screen bg-gray-50">
+      {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          className="fixed inset-0 z-40 bg-black bg-opacity-50 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar */}
       <div className={`
-        fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out
+        fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        lg:translate-x-0 lg:static lg:inset-0
       `}>
-        <div className="flex flex-col h-full">
-          {/* Logo/Header */}
-          <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
-            <h1 className="text-xl font-bold text-gray-900">Admin Panel</h1>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="lg:hidden"
-              onClick={() => setSidebarOpen(false)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {/* Navigation */}
-          <nav className="flex-1 px-4 py-6 space-y-2">
-            {filteredNavigation.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  className={`
-                    flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors
-                    ${isActive(item.href)
-                      ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                    }
-                  `}
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  <Icon className="h-5 w-5 mr-3" />
-                  {item.name}
-                </Link>
-              );
-            })}
-          </nav>
-
-          {/* User menu */}
-          <div className="px-4 py-4 border-t border-gray-200">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="w-full justify-start px-3">
-                  <Avatar className="h-8 w-8 mr-3">
-                    <AvatarFallback>
-                      {profile?.full_name?.split(' ').map(n => n[0]).join('') || 
-                       profile?.email?.charAt(0).toUpperCase() || 'U'}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex flex-col items-start">
-                    <span className="text-sm font-medium">
-                      {profile?.full_name || 'User'}
-                    </span>
-                    <span className="text-xs text-gray-500 capitalize">
-                      {profile?.role?.replace('_', ' ')}
-                    </span>
-                  </div>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem asChild>
-                  <Link to="/profile" className="flex items-center">
-                    <Settings className="mr-2 h-4 w-4" />
-                    Profile Settings
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Logout
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+        <div className="flex items-center justify-between p-4 lg:hidden">
+          <h2 className="text-lg font-semibold">Menu</h2>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSidebarOpen(false)}
+          >
+            <X className="h-4 w-4" />
+          </Button>
         </div>
+        <SidebarContent />
       </div>
 
       {/* Main content */}
-      <div className="lg:pl-64">
-        {/* Top bar */}
-        <div className="flex items-center justify-between h-16 px-6 bg-white border-b border-gray-200 lg:hidden">
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Mobile header */}
+        <div className="lg:hidden bg-white border-b px-4 py-3 flex items-center justify-between">
           <Button
             variant="ghost"
             size="sm"
@@ -158,13 +207,15 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           >
             <Menu className="h-5 w-5" />
           </Button>
-          <h1 className="text-lg font-semibold text-gray-900">Admin Panel</h1>
-          <div className="w-8" /> {/* Spacer for centering */}
+          <h1 className="text-lg font-semibold">Data Portal</h1>
+          <div className="w-8" /> {/* Spacer for alignment */}
         </div>
 
         {/* Page content */}
-        <main className="p-6">
-          {children}
+        <main className="flex-1 overflow-auto">
+          <div className="container mx-auto p-6 max-w-7xl">
+            {children}
+          </div>
         </main>
       </div>
     </div>

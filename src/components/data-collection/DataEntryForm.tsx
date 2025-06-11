@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,6 +17,7 @@ interface FormField {
   field_label: string;
   is_required: boolean;
   reference_data_name?: string;
+  placeholder_text?: string;
 }
 
 interface Form {
@@ -93,6 +93,23 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
     }));
   };
 
+  const handleNumberChange = (fieldName: string, value: string) => {
+    // Only allow numbers, decimal points, and negative signs
+    const numericValue = value.replace(/[^0-9.-]/g, '');
+    
+    // Ensure only one decimal point and one negative sign at the beginning
+    const parts = numericValue.split('.');
+    if (parts.length > 2) {
+      return; // Don't update if more than one decimal point
+    }
+    
+    const finalValue = parts.length === 2 ? 
+      parts[0].replace(/-/g, (match, offset) => offset === 0 ? match : '') + '.' + parts[1].replace(/[.-]/g, '') :
+      numericValue.replace(/-/g, (match, offset) => offset === 0 ? match : '');
+    
+    handleFieldChange(fieldName, finalValue);
+  };
+
   const validateForm = () => {
     const errors: string[] = [];
     
@@ -161,6 +178,7 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
           <Input
             value={formData[field.field_name] || ''}
             onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
+            placeholder={field.placeholder_text}
             required={field.is_required}
           />
         );
@@ -170,6 +188,7 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
           <Textarea
             value={formData[field.field_name] || ''}
             onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
+            placeholder={field.placeholder_text}
             required={field.is_required}
           />
         );
@@ -181,7 +200,7 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
               referenceDataName={field.reference_data_name}
               value={formData[field.field_name] || ''}
               onValueChange={(value) => handleFieldChange(field.field_name, value)}
-              placeholder="Select an option"
+              placeholder={field.placeholder_text || "Select an option"}
             />
           );
         }
@@ -191,7 +210,7 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
             onValueChange={(value) => handleFieldChange(field.field_name, value)}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Select an option" />
+              <SelectValue placeholder={field.placeholder_text || "Select an option"} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="option1">Option 1</SelectItem>
@@ -204,7 +223,38 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
       case 'number':
         return (
           <Input
-            type="number"
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            value={formData[field.field_name] || ''}
+            onChange={(e) => handleNumberChange(field.field_name, e.target.value)}
+            placeholder={field.placeholder_text}
+            required={field.is_required}
+            onKeyPress={(e) => {
+              // Allow numbers, decimal point, minus sign, backspace, delete, tab, escape, enter
+              const allowedKeys = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '-', 'Backspace', 'Delete', 'Tab', 'Escape', 'Enter'];
+              if (!allowedKeys.includes(e.key) && !e.ctrlKey && !e.metaKey) {
+                e.preventDefault();
+              }
+            }}
+          />
+        );
+
+      case 'email':
+        return (
+          <Input
+            type="email"
+            value={formData[field.field_name] || ''}
+            onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
+            placeholder={field.placeholder_text}
+            required={field.is_required}
+          />
+        );
+
+      case 'date':
+        return (
+          <Input
+            type="date"
             value={formData[field.field_name] || ''}
             onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
             required={field.is_required}
@@ -216,6 +266,7 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
           <Input
             value={formData[field.field_name] || ''}
             onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
+            placeholder={field.placeholder_text}
             required={field.is_required}
           />
         );

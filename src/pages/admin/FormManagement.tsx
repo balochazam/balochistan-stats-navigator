@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -50,6 +51,7 @@ export const FormManagement = () => {
 
   const fetchForms = async () => {
     try {
+      console.log('Fetching forms...');
       const { data, error } = await supabase
         .from('forms')
         .select(`
@@ -83,6 +85,7 @@ export const FormManagement = () => {
 
   const fetchDepartments = async () => {
     try {
+      console.log('Fetching departments...');
       const { data, error } = await supabase
         .from('departments')
         .select('id, name')
@@ -91,6 +94,7 @@ export const FormManagement = () => {
       if (error) {
         console.error('Error fetching departments:', error);
       } else {
+        console.log('Departments fetched successfully:', data);
         setDepartments(data || []);
       }
     } catch (error) {
@@ -99,11 +103,13 @@ export const FormManagement = () => {
   };
 
   const handleCreateForm = () => {
+    console.log('Opening create form dialog');
     setEditingForm(null);
     setIsCreateDialogOpen(true);
   };
 
   const handleEditForm = (form: Form) => {
+    console.log('Opening edit form dialog for:', form);
     setEditingForm(form);
     setIsCreateDialogOpen(true);
   };
@@ -114,6 +120,7 @@ export const FormManagement = () => {
     }
 
     try {
+      console.log('Deleting form:', formId);
       const { error } = await supabase
         .from('forms')
         .update({ is_active: false })
@@ -121,6 +128,7 @@ export const FormManagement = () => {
 
       if (error) throw error;
 
+      console.log('Form deleted successfully');
       toast({
         title: "Success",
         description: "Form deleted successfully",
@@ -137,6 +145,7 @@ export const FormManagement = () => {
   };
 
   const handleFormSaved = () => {
+    console.log('Form saved, closing dialog and refreshing forms...');
     setIsCreateDialogOpen(false);
     setEditingForm(null);
     fetchForms();
@@ -258,6 +267,7 @@ export const FormManagement = () => {
         <FormBuilderDialog
           isOpen={isCreateDialogOpen}
           onClose={() => {
+            console.log('Closing form dialog');
             setIsCreateDialogOpen(false);
             setEditingForm(null);
           }}

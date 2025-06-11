@@ -63,6 +63,7 @@ export const FormBuilderDialog = ({
 
   useEffect(() => {
     if (editingForm) {
+      console.log('Editing form:', editingForm);
       setFormData({
         name: editingForm.name,
         description: editingForm.description || '',
@@ -70,6 +71,7 @@ export const FormBuilderDialog = ({
       });
       fetchFormFields(editingForm.id);
     } else {
+      console.log('Creating new form');
       setFormData({
         name: '',
         description: '',
@@ -81,6 +83,7 @@ export const FormBuilderDialog = ({
 
   const fetchFormFields = async (formId: string) => {
     try {
+      console.log('Fetching form fields for form:', formId);
       const { data, error } = await supabase
         .from('form_fields')
         .select('*')
@@ -88,6 +91,7 @@ export const FormBuilderDialog = ({
         .order('field_order');
 
       if (error) throw error;
+      console.log('Form fields fetched:', data);
       setFields(data || []);
     } catch (error) {
       console.error('Error fetching form fields:', error);
@@ -96,7 +100,10 @@ export const FormBuilderDialog = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile?.id) return;
+    if (!profile?.id) {
+      console.error('No profile found');
+      return;
+    }
 
     // Validate that a department is selected
     if (!formData.department_id) {
@@ -108,11 +115,16 @@ export const FormBuilderDialog = ({
       return;
     }
 
+    console.log('Starting form save process...');
+    console.log('Form data:', formData);
+    console.log('Fields:', fields);
+    
     setLoading(true);
     try {
       let formId = editingForm?.id;
 
       if (editingForm) {
+        console.log('Updating existing form:', editingForm.id);
         // Update existing form
         const { error } = await supabase
           .from('forms')
@@ -124,8 +136,13 @@ export const FormBuilderDialog = ({
           })
           .eq('id', editingForm.id);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error updating form:', error);
+          throw error;
+        }
+        console.log('Form updated successfully');
       } else {
+        console.log('Creating new form');
         // Create new form
         const { data, error } = await supabase
           .from('forms')
@@ -138,14 +155,20 @@ export const FormBuilderDialog = ({
           .select()
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error creating form:', error);
+          throw error;
+        }
+        console.log('Form created successfully:', data);
         formId = data.id;
       }
 
       // Save form fields
       if (formId) {
+        console.log('Saving form fields for form:', formId);
         // Delete existing fields if editing
         if (editingForm) {
+          console.log('Deleting existing fields...');
           await supabase
             .from('form_fields')
             .delete()
@@ -154,6 +177,7 @@ export const FormBuilderDialog = ({
 
         // Insert new fields
         if (fields.length > 0) {
+          console.log('Inserting new fields...');
           const fieldsToInsert = fields.map((field, index) => ({
             form_id: formId,
             field_name: field.field_name,
@@ -171,15 +195,22 @@ export const FormBuilderDialog = ({
             .from('form_fields')
             .insert(fieldsToInsert);
 
-          if (fieldsError) throw fieldsError;
+          if (fieldsError) {
+            console.error('Error inserting form fields:', fieldsError);
+            throw fieldsError;
+          }
+          console.log('Form fields inserted successfully');
         }
       }
 
+      console.log('Form save process completed successfully');
       toast({
         title: "Success",
         description: editingForm ? "Form updated successfully" : "Form created successfully",
       });
       
+      // Call onSave to trigger parent component refresh and close dialog
+      console.log('Calling onSave callback...');
       onSave();
     } catch (error) {
       console.error('Error saving form:', error);

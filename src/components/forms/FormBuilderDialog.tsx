@@ -66,14 +66,14 @@ export const FormBuilderDialog = ({
       setFormData({
         name: editingForm.name,
         description: editingForm.description || '',
-        department_id: editingForm.department_id || 'all'
+        department_id: editingForm.department_id || ''
       });
       fetchFormFields(editingForm.id);
     } else {
       setFormData({
         name: '',
         description: '',
-        department_id: 'all'
+        department_id: ''
       });
       setFields([]);
     }
@@ -98,12 +98,19 @@ export const FormBuilderDialog = ({
     e.preventDefault();
     if (!profile?.id) return;
 
+    // Validate that a department is selected
+    if (!formData.department_id) {
+      toast({
+        title: "Validation Error",
+        description: "Please select a department for this form",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       let formId = editingForm?.id;
-
-      // Convert 'all' back to null for database storage
-      const departmentId = formData.department_id === 'all' ? null : formData.department_id;
 
       if (editingForm) {
         // Update existing form
@@ -112,7 +119,7 @@ export const FormBuilderDialog = ({
           .update({
             name: formData.name,
             description: formData.description || null,
-            department_id: departmentId,
+            department_id: formData.department_id,
             updated_at: new Date().toISOString()
           })
           .eq('id', editingForm.id);
@@ -125,7 +132,7 @@ export const FormBuilderDialog = ({
           .insert({
             name: formData.name,
             description: formData.description || null,
-            department_id: departmentId,
+            department_id: formData.department_id,
             created_by: profile.id
           })
           .select()
@@ -209,16 +216,16 @@ export const FormBuilderDialog = ({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="department">Department</Label>
+              <Label htmlFor="department">Department *</Label>
               <Select
                 value={formData.department_id}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, department_id: value }))}
+                required
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select department (optional)" />
+                  <SelectValue placeholder="Select department" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Departments</SelectItem>
                   {departments.map((dept) => (
                     <SelectItem key={dept.id} value={dept.id}>
                       {dept.name}

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -51,7 +50,6 @@ export const FormManagement = () => {
 
   const fetchForms = async () => {
     try {
-      // Simplified query to avoid join issues - we'll fetch creator info separately if needed
       const { data, error } = await supabase
         .from('forms')
         .select(`
@@ -70,10 +68,9 @@ export const FormManagement = () => {
         });
       } else {
         console.log('Forms fetched successfully:', data);
-        // Transform the data to match our Form interface
         const formsWithCreator = (data || []).map(form => ({
           ...form,
-          creator: undefined // We'll populate this later if needed
+          creator: undefined
         }));
         setForms(formsWithCreator);
       }
@@ -185,7 +182,7 @@ export const FormManagement = () => {
                   Form Management
                 </CardTitle>
                 <CardDescription>
-                  Create and manage dynamic forms for data collection
+                  Create and manage dynamic forms for data collection. Each form must be assigned to a specific department.
                 </CardDescription>
               </div>
               <Button onClick={handleCreateForm}>
@@ -210,9 +207,6 @@ export const FormManagement = () => {
                           <Users className="h-3 w-3 mr-1" />
                           {form.department.name}
                         </Badge>
-                      )}
-                      {!form.department && (
-                        <Badge variant="outline">All Departments</Badge>
                       )}
                     </div>
                     {form.description && (

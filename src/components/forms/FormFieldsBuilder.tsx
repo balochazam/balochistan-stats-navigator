@@ -6,8 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Trash2, GripVertical } from 'lucide-react';
+import { Plus, Trash2, GripVertical, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface FormField {
   id?: string;
@@ -43,6 +44,9 @@ const FIELD_TYPES = [
 
 export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) => {
   const [referenceDataSets, setReferenceDataSets] = useState<ReferenceDataOption[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchReferenceDataSets();
@@ -50,16 +54,45 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
 
   const fetchReferenceDataSets = async () => {
     try {
-      const { data, error } = await supabase
+      setLoading(true);
+      setError(null);
+      
+      console.log('Fetching reference data sets...');
+      
+      const { data, error: fetchError } = await supabase
         .from('data_banks')
         .select('name')
         .eq('is_active', true)
         .order('name');
 
-      if (error) throw error;
+      if (fetchError) {
+        console.error('Error fetching reference data sets:', fetchError);
+        setError(`Failed to fetch reference data: ${fetchError.message}`);
+        toast({
+          title: "Error",
+          description: "Failed to fetch reference data sets",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('Reference data sets fetched:', data);
       setReferenceDataSets(data || []);
-    } catch (error) {
-      console.error('Error fetching reference data sets:', error);
+      
+      if (!data || data.length === 0) {
+        console.log('No reference data sets found');
+        setError('No reference data sets available. Please create data banks first.');
+      }
+    } catch (err) {
+      console.error('Error in fetchReferenceDataSets:', err);
+      setError('Failed to fetch reference data sets');
+      toast({
+        title: "Error",
+        description: "Failed to fetch reference data sets",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -89,6 +122,11 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
             .replace(/[^a-z0-9]/g, '_')
             .replace(/_+/g, '_')
             .replace(/^_|_$/g, '');
+        }
+        
+        // Clear reference_data_name if field type changes to non-dropdown
+        if (updates.field_type && !requiresReferenceData(updates.field_type)) {
+          updatedField.reference_data_name = undefined;
         }
         
         return updatedField;
@@ -223,21 +261,48 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
             {requiresReferenceData(field.field_type) && (
               <div className="space-y-2">
                 <Label>Reference Data Set *</Label>
-                <Select
-                  value={field.reference_data_name || ''}
-                  onValueChange={(value) => updateField(index, { reference_data_name: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select reference data set" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {referenceDataSets.map((dataSet) => (
-                      <SelectItem key={dataSet.name} value={dataSet.name}>
-                        {dataSet.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {loading ? (
+                  <div className="flex items-center space-x-2 p-2 border rounded-md bg-gray-50">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-900"></div>
+                    <span className="text-sm text-gray-600">Loading reference data...</span>
+                  </div>
+                ) : error ? (
+                  <div className="flex items-center space-x-2 p-2 border rounded-md bg-red-50 border-red-200">
+                    <AlertCircle className="h-4 w-4 text-red-500" />
+                    <span className="text-sm text-red-600">{error}</span>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={fetchReferenceDataSets}
+                      className="ml-auto"
+                    >
+                      Retry
+                    </Button>
+                  </div>
+                ) : (
+                  <Select
+                    value={field.reference_data_name || ''}
+                    onValueChange={(value) => updateField(index, { reference_data_name: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select reference data set" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {referenceDataSets.length === 0 ? (
+                        <SelectItem value="" disabled>
+                          No reference data sets available
+                        </SelectItem>
+                      ) : (
+                        referenceDataSets.map((dataSet) => (
+                          <SelectItem key={dataSet.name} value={dataSet.name}>
+                            {dataSet.name}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                )}
                 <p className="text-xs text-gray-500">
                   Choose the dropdown options from your reference data sets
                 </p>

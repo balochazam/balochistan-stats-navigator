@@ -6,12 +6,12 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Database, Plus, Shield } from 'lucide-react';
-import { DataBankList } from '@/components/databanks/DataBankList';
-import { DataBankForm } from '@/components/databanks/DataBankForm';
-import { DataBankEntries } from '@/components/databanks/DataBankEntries';
+import { Database, Plus, Shield, List } from 'lucide-react';
+import { ReferenceDataList } from '@/components/reference-data/ReferenceDataList';
+import { ReferenceDataForm } from '@/components/reference-data/ReferenceDataForm';
+import { ReferenceDataEntries } from '@/components/reference-data/ReferenceDataEntries';
 
-interface DataBank {
+interface ReferenceData {
   id: string;
   name: string;
   description: string | null;
@@ -37,21 +37,21 @@ interface Department {
 export const DataBankManagement = () => {
   const { profile } = useAuth();
   const { toast } = useToast();
-  const [dataBanks, setDataBanks] = useState<DataBank[]>([]);
+  const [referenceDataSets, setReferenceDataSets] = useState<ReferenceData[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [editingDataBank, setEditingDataBank] = useState<DataBank | null>(null);
-  const [selectedDataBank, setSelectedDataBank] = useState<DataBank | null>(null);
+  const [editingReferenceData, setEditingReferenceData] = useState<ReferenceData | null>(null);
+  const [selectedReferenceData, setSelectedReferenceData] = useState<ReferenceData | null>(null);
 
   useEffect(() => {
     if (profile?.role === 'admin') {
-      fetchDataBanks();
+      fetchReferenceData();
       fetchDepartments();
     }
   }, [profile]);
 
-  const fetchDataBanks = async () => {
+  const fetchReferenceData = async () => {
     try {
       const { data, error } = await supabase
         .from('data_banks')
@@ -64,17 +64,17 @@ export const DataBankManagement = () => {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching data banks:', error);
+        console.error('Error fetching reference data:', error);
         toast({
           title: "Error",
-          description: "Failed to fetch data banks",
+          description: "Failed to fetch reference data",
           variant: "destructive",
         });
       } else {
-        setDataBanks(data || []);
+        setReferenceDataSets(data || []);
       }
     } catch (error) {
-      console.error('Error in fetchDataBanks:', error);
+      console.error('Error in fetchReferenceData:', error);
     } finally {
       setLoading(false);
     }
@@ -97,18 +97,18 @@ export const DataBankManagement = () => {
     }
   };
 
-  const handleCreateDataBank = () => {
-    setEditingDataBank(null);
+  const handleCreateReferenceData = () => {
+    setEditingReferenceData(null);
     setIsCreateDialogOpen(true);
   };
 
-  const handleEditDataBank = (dataBank: DataBank) => {
-    setEditingDataBank(dataBank);
+  const handleEditReferenceData = (referenceData: ReferenceData) => {
+    setEditingReferenceData(referenceData);
     setIsCreateDialogOpen(true);
   };
 
-  const handleDeleteDataBank = async (dataBankId: string) => {
-    if (!confirm('Are you sure you want to delete this data bank? This action cannot be undone.')) {
+  const handleDeleteReferenceData = async (referenceDataId: string) => {
+    if (!confirm('Are you sure you want to delete this reference data set? This action cannot be undone.')) {
       return;
     }
 
@@ -116,20 +116,20 @@ export const DataBankManagement = () => {
       const { error } = await supabase
         .from('data_banks')
         .update({ is_active: false })
-        .eq('id', dataBankId);
+        .eq('id', referenceDataId);
 
       if (error) throw error;
 
       toast({
         title: "Success",
-        description: "Data bank deleted successfully",
+        description: "Reference data set deleted successfully",
       });
-      fetchDataBanks();
+      fetchReferenceData();
     } catch (error) {
-      console.error('Error deleting data bank:', error);
+      console.error('Error deleting reference data:', error);
       toast({
         title: "Error",
-        description: "Failed to delete data bank",
+        description: "Failed to delete reference data set",
         variant: "destructive",
       });
     }
@@ -137,8 +137,8 @@ export const DataBankManagement = () => {
 
   const handleFormSuccess = () => {
     setIsCreateDialogOpen(false);
-    setEditingDataBank(null);
-    fetchDataBanks();
+    setEditingReferenceData(null);
+    fetchReferenceData();
   };
 
   if (profile?.role !== 'admin') {
@@ -163,7 +163,7 @@ export const DataBankManagement = () => {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-64">
-          <div className="text-center">Loading data banks...</div>
+          <div className="text-center">Loading reference data...</div>
         </div>
       </DashboardLayout>
     );
@@ -177,16 +177,16 @@ export const DataBankManagement = () => {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="flex items-center">
-                  <Database className="h-5 w-5 mr-2" />
-                  Data Bank Management
+                  <List className="h-5 w-5 mr-2" />
+                  Reference Data Management
                 </CardTitle>
                 <CardDescription>
-                  Create and manage master data banks for your organization
+                  Manage dropdown options and lookup data for forms (Districts, Countries, Hospitals, etc.)
                 </CardDescription>
               </div>
-              <Button onClick={handleCreateDataBank}>
+              <Button onClick={handleCreateReferenceData}>
                 <Plus className="h-4 w-4 mr-2" />
-                Add Data Bank
+                Add Reference Data Set
               </Button>
             </div>
           </CardHeader>
@@ -194,41 +194,42 @@ export const DataBankManagement = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Data Banks</h3>
-            <DataBankList
-              dataBanks={dataBanks}
-              onEdit={handleEditDataBank}
-              onDelete={handleDeleteDataBank}
-              onSelect={setSelectedDataBank}
-              selectedDataBank={selectedDataBank}
+            <h3 className="text-lg font-semibold">Reference Data Sets</h3>
+            <ReferenceDataList
+              referenceDataSets={referenceDataSets}
+              onEdit={handleEditReferenceData}
+              onDelete={handleDeleteReferenceData}
+              onSelect={setSelectedReferenceData}
+              selectedReferenceData={selectedReferenceData}
             />
           </div>
 
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">
-              {selectedDataBank ? `Entries: ${selectedDataBank.name}` : 'Select a Data Bank'}
+              {selectedReferenceData ? `Options: ${selectedReferenceData.name}` : 'Select a Reference Data Set'}
             </h3>
-            {selectedDataBank ? (
-              <DataBankEntries dataBank={selectedDataBank} />
+            {selectedReferenceData ? (
+              <ReferenceDataEntries referenceData={selectedReferenceData} />
             ) : (
               <Card>
                 <CardContent className="text-center py-8">
                   <Database className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600">Select a data bank to view and manage its entries</p>
+                  <p className="text-gray-600 mb-2">Select a reference data set to manage its options</p>
+                  <p className="text-sm text-gray-500">Examples: Districts, Countries, Hospitals, Schools</p>
                 </CardContent>
               </Card>
             )}
           </div>
         </div>
 
-        <DataBankForm
+        <ReferenceDataForm
           isOpen={isCreateDialogOpen}
           onClose={() => {
             setIsCreateDialogOpen(false);
-            setEditingDataBank(null);
+            setEditingReferenceData(null);
           }}
           onSuccess={handleFormSuccess}
-          editingDataBank={editingDataBank}
+          editingReferenceData={editingReferenceData}
           departments={departments}
         />
       </div>

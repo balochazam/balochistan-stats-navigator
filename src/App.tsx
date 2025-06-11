@@ -7,6 +7,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { Dashboard } from "./pages/Dashboard";
 import { AuthPage } from "./components/auth/AuthPage";
+import { UserManagement } from "./pages/admin/UserManagement";
+import { DepartmentManagement } from "./pages/admin/DepartmentManagement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +24,8 @@ const App = () => (
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/auth" element={<AuthPage />} />
+            <Route path="/admin/users" element={<UserManagement />} />
+            <Route path="/admin/departments" element={<DepartmentManagement />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

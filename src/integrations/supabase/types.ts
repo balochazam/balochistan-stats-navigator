@@ -193,6 +193,7 @@ export type Database = {
           data: Json
           form_id: string
           id: string
+          schedule_id: string | null
           submitted_at: string
           submitted_by: string
         }
@@ -200,6 +201,7 @@ export type Database = {
           data?: Json
           form_id: string
           id?: string
+          schedule_id?: string | null
           submitted_at?: string
           submitted_by: string
         }
@@ -207,6 +209,7 @@ export type Database = {
           data?: Json
           form_id?: string
           id?: string
+          schedule_id?: string | null
           submitted_at?: string
           submitted_by?: string
         }
@@ -216,6 +219,13 @@ export type Database = {
             columns: ["form_id"]
             isOneToOne: false
             referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_submissions_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "schedules"
             referencedColumns: ["id"]
           },
         ]
@@ -292,6 +302,98 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "fk_profiles_department"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      schedule_forms: {
+        Row: {
+          created_at: string
+          due_date: string | null
+          form_id: string
+          id: string
+          is_required: boolean
+          schedule_id: string
+        }
+        Insert: {
+          created_at?: string
+          due_date?: string | null
+          form_id: string
+          id?: string
+          is_required?: boolean
+          schedule_id: string
+        }
+        Update: {
+          created_at?: string
+          due_date?: string | null
+          form_id?: string
+          id?: string
+          is_required?: boolean
+          schedule_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_forms_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_forms_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "schedules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      schedules: {
+        Row: {
+          created_at: string
+          created_by: string
+          department_id: string
+          description: string | null
+          end_date: string
+          id: string
+          name: string
+          start_date: string
+          status: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          department_id: string
+          description?: string | null
+          end_date: string
+          id?: string
+          name: string
+          start_date: string
+          status?: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          department_id?: string
+          description?: string | null
+          end_date?: string
+          id?: string
+          name?: string
+          start_date?: string
+          status?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedules_department_id_fkey"
             columns: ["department_id"]
             isOneToOne: false
             referencedRelation: "departments"

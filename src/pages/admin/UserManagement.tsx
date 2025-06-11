@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -79,7 +78,7 @@ export const UserManagement = () => {
     }
   };
 
-  const updateUserRole = async (userId: string, newRole: string) => {
+  const updateUserRole = async (userId: string, newRole: 'admin' | 'department_user' | 'data_entry_user') => {
     try {
       const { error } = await supabase
         .from('profiles')
@@ -221,7 +220,7 @@ export const UserManagement = () => {
                       <div className="text-sm font-medium">Role</div>
                       <Select
                         value={user.role}
-                        onValueChange={(value) => updateUserRole(user.id, value)}
+                        onValueChange={(value: 'admin' | 'department_user' | 'data_entry_user') => updateUserRole(user.id, value)}
                       >
                         <SelectTrigger className="w-40">
                           <SelectValue />

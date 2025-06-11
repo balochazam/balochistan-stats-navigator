@@ -1,4 +1,3 @@
-
 import { useState, useEffect, createContext, useContext } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -102,15 +101,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           if (mounted) {
             setProfile(profileData);
             console.log('Profile set:', profileData);
+            console.log('Setting loading to false after profile fetch');
+            setLoading(false);
           }
         } else {
           console.log('No user session, clearing profile');
-          setProfile(null);
-        }
-        
-        if (mounted) {
-          console.log('Setting loading to false');
-          setLoading(false);
+          if (mounted) {
+            setProfile(null);
+            console.log('Setting loading to false - no user');
+            setLoading(false);
+          }
         }
       }
     );
@@ -122,7 +122,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) {
           console.error('Error getting session:', error);
-          if (mounted) setLoading(false);
+          if (mounted) {
+            console.log('Setting loading to false due to session error');
+            setLoading(false);
+          }
           return;
         }
 
@@ -141,12 +144,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             }
           }
           
-          console.log('Initial loading complete');
+          console.log('Initial loading complete, setting loading to false');
           setLoading(false);
         }
       } catch (error) {
         console.error('Error in getInitialSession:', error);
-        if (mounted) setLoading(false);
+        if (mounted) {
+          console.log('Setting loading to false due to initial session error');
+          setLoading(false);
+        }
       }
     };
 
@@ -218,3 +224,5 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     </AuthContext.Provider>
   );
 };
+
+export default AuthProvider;

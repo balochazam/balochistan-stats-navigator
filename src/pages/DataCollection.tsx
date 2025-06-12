@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -142,9 +143,9 @@ export const DataCollection = () => {
     try {
       console.log('Fetching user completions...');
       const { data, error } = await supabase
-        .from('schedule_form_completions')
-        .select('schedule_form_id, user_id')
-        .eq('user_id', profile.id);
+        .rpc('get_user_completions', {
+          p_user_id: profile.id
+        });
 
       if (error) throw error;
 

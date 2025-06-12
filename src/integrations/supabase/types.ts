@@ -309,6 +309,38 @@ export type Database = {
           },
         ]
       }
+      schedule_form_completions: {
+        Row: {
+          completed_at: string
+          created_at: string
+          id: string
+          schedule_form_id: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          created_at?: string
+          id?: string
+          schedule_form_id: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          created_at?: string
+          id?: string
+          schedule_form_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_form_completions_schedule_form_id_fkey"
+            columns: ["schedule_form_id"]
+            isOneToOne: false
+            referencedRelation: "schedule_forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       schedule_forms: {
         Row: {
           created_at: string

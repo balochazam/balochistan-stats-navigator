@@ -122,11 +122,10 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
 
       // Check if user has marked this form as complete
       const { data: completion, error: completionError } = await supabase
-        .from('schedule_form_completions')
-        .select('id')
-        .eq('schedule_form_id', scheduleForm.id)
-        .eq('user_id', profile.id)
-        .maybeSingle();
+        .rpc('get_schedule_form_completion', {
+          p_schedule_form_id: scheduleForm.id,
+          p_user_id: profile.id
+        });
 
       if (completionError && completionError.code !== 'PGRST116') {
         console.error('Error checking completion status:', completionError);
@@ -262,11 +261,9 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
     setIsMarkingComplete(true);
     try {
       const { error } = await supabase
-        .from('schedule_form_completions')
-        .insert({
-          schedule_form_id: scheduleForm.id,
-          user_id: profile?.id,
-          completed_at: new Date().toISOString()
+        .rpc('mark_schedule_form_complete', {
+          p_schedule_form_id: scheduleForm.id,
+          p_user_id: profile?.id
         });
 
       if (error) {

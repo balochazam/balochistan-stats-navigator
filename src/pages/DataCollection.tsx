@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Calendar, FileText, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { Calendar, FileText, Clock, CheckCircle, AlertCircle, Plus } from 'lucide-react';
 import { DataEntryForm } from '@/components/data-collection/DataEntryForm';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
@@ -40,12 +40,18 @@ interface FormSubmission {
   submitted_at: string;
 }
 
+interface FormCompletion {
+  schedule_form_id: string;
+  user_id: string;
+}
+
 export const DataCollection = () => {
   const { profile, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [scheduleForms, setScheduleForms] = useState<ScheduleForm[]>([]);
   const [submissions, setSubmissions] = useState<FormSubmission[]>([]);
+  const [completions, setCompletions] = useState<FormCompletion[]>([]);
   const [selectedScheduleForm, setSelectedScheduleForm] = useState<ScheduleForm | null>(null);
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
   const [loading, setLoading] = useState(true);
@@ -130,14 +136,34 @@ export const DataCollection = () => {
     }
   }, [profile?.id]);
 
+  const fetchUserCompletions = useCallback(async () => {
+    if (!profile?.id) return;
+
+    try {
+      console.log('Fetching user completions...');
+      const { data, error } = await supabase
+        .from('schedule_form_completions')
+        .select('schedule_form_id, user_id')
+        .eq('user_id', profile.id);
+
+      if (error) throw error;
+
+      console.log('Completions fetched:', data);
+      setCompletions(data || []);
+    } catch (error) {
+      console.error('Error fetching completions:', error);
+    }
+  }, [profile?.id]);
+
   const loadData = useCallback(async () => {
     setLoading(true);
     await Promise.all([
       fetchActiveSchedules(),
-      fetchUserSubmissions()
+      fetchUserSubmissions(),
+      fetchUserCompletions()
     ]);
     setLoading(false);
-  }, [fetchActiveSchedules, fetchUserSubmissions]);
+  }, [fetchActiveSchedules, fetchUserSubmissions, fetchUserCompletions]);
 
   useEffect(() => {
     if (profile?.id && !authLoading) {
@@ -146,14 +172,22 @@ export const DataCollection = () => {
   }, [profile?.id, authLoading, loadData]);
 
   const handleFormSubmitted = useCallback(() => {
-    setSelectedScheduleForm(null);
-    setSelectedSchedule(null);
     fetchUserSubmissions();
     toast({
       title: "Success",
-      description: "Form submitted successfully",
+      description: "Entry added successfully",
     });
   }, [fetchUserSubmissions, toast]);
+
+  const handleFormCompleted = useCallback(() => {
+    setSelectedScheduleForm(null);
+    setSelectedSchedule(null);
+    fetchUserCompletions();
+    toast({
+      title: "Success",
+      description: "Form marked as complete",
+    });
+  }, [fetchUserCompletions, toast]);
 
   const handleSelectForm = useCallback((scheduleForm: ScheduleForm) => {
     const schedule = schedules.find(s => s.id === scheduleForm.schedule_id);
@@ -163,9 +197,13 @@ export const DataCollection = () => {
     }
   }, [schedules]);
 
-  const isFormSubmitted = useCallback((formId: string, scheduleId: string) => {
-    return submissions.some(sub => sub.form_id === formId && sub.schedule_id === scheduleId);
+  const getSubmissionCount = useCallback((formId: string, scheduleId: string) => {
+    return submissions.filter(sub => sub.form_id === formId && sub.schedule_id === scheduleId).length;
   }, [submissions]);
+
+  const isFormCompleted = useCallback((scheduleFormId: string) => {
+    return completions.some(comp => comp.schedule_form_id === scheduleFormId);
+  }, [completions]);
 
   const getScheduleStatus = useCallback((schedule: Schedule) => {
     const today = new Date();
@@ -246,6 +284,7 @@ export const DataCollection = () => {
           schedule={selectedSchedule}
           scheduleForm={selectedScheduleForm}
           onSubmitted={handleFormSubmitted}
+          onCompleted={handleFormCompleted}
           onCancel={() => {
             setSelectedScheduleForm(null);
             setSelectedSchedule(null);
@@ -313,7 +352,8 @@ export const DataCollection = () => {
                   <div className="space-y-3">
                     <h4 className="font-semibold text-sm text-gray-700 mb-3">Available Forms:</h4>
                     {forms.map((scheduleForm) => {
-                      const isSubmitted = isFormSubmitted(scheduleForm.form_id, schedule.id);
+                      const submissionCount = getSubmissionCount(scheduleForm.form_id, schedule.id);
+                      const isCompleted = isFormCompleted(scheduleForm.id);
                       const isPastDue = scheduleForm.due_date && new Date(scheduleForm.due_date) < new Date();
                       
                       return (
@@ -325,13 +365,13 @@ export const DataCollection = () => {
                               {scheduleForm.is_required && (
                                 <Badge variant="destructive" className="text-xs">Required</Badge>
                               )}
-                              {isSubmitted && (
+                              {isCompleted && (
                                 <Badge className="bg-green-500 text-white text-xs flex items-center space-x-1">
                                   <CheckCircle className="h-3 w-3" />
-                                  <span>Submitted</span>
+                                  <span>Completed</span>
                                 </Badge>
                               )}
-                              {isPastDue && !isSubmitted && (
+                              {isPastDue && !isCompleted && (
                                 <Badge variant="destructive" className="text-xs">Past Due</Badge>
                               )}
                             </div>
@@ -340,21 +380,33 @@ export const DataCollection = () => {
                                 {scheduleForm.form.description}
                               </p>
                             )}
-                            {scheduleForm.due_date && (
-                              <p className="text-xs text-gray-500 ml-7 mt-1">
-                                Due: {new Date(scheduleForm.due_date).toLocaleDateString()}
-                              </p>
-                            )}
+                            <div className="text-xs text-gray-500 ml-7 mt-1 space-x-4">
+                              <span>Entries: {submissionCount}</span>
+                              {scheduleForm.due_date && (
+                                <span>Due: {new Date(scheduleForm.due_date).toLocaleDateString()}</span>
+                              )}
+                            </div>
                           </div>
                           <div>
                             {schedule.status === 'collection' && scheduleStatus === 'active' && (
                               <Button
                                 onClick={() => handleSelectForm(scheduleForm)}
-                                disabled={isSubmitted}
-                                variant={isSubmitted ? "secondary" : "default"}
+                                disabled={isCompleted}
+                                variant={isCompleted ? "secondary" : "default"}
                                 size="sm"
+                                className="flex items-center space-x-1"
                               >
-                                {isSubmitted ? 'Completed' : 'Fill Form'}
+                                {isCompleted ? (
+                                  <>
+                                    <CheckCircle className="h-4 w-4" />
+                                    <span>Completed</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Plus className="h-4 w-4" />
+                                    <span>{submissionCount > 0 ? 'Continue' : 'Start'}</span>
+                                  </>
+                                )}
                               </Button>
                             )}
                             {schedule.status === 'open' && (

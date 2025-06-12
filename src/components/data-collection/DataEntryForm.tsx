@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { ReferenceDataSelect } from '@/components/reference-data/ReferenceDataSelect';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { CheckCircle, Plus } from 'lucide-react';
 
 interface FormField {
   id: string;
@@ -51,16 +51,20 @@ interface DataEntryFormProps {
   scheduleForm: ScheduleForm;
   onSubmitted: () => void;
   onCancel: () => void;
+  onCompleted?: () => void;
 }
 
-export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }: DataEntryFormProps) => {
+export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, onCompleted }: DataEntryFormProps) => {
   const { profile } = useAuth();
   const { toast } = useToast();
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [formFields, setFormFields] = useState<FormField[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isMarkingComplete, setIsMarkingComplete] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [submissionCount, setSubmissionCount] = useState(0);
+  const [isCompleted, setIsCompleted] = useState(false);
 
   // Memoize the fetch function to prevent unnecessary re-renders
   const fetchFormFields = useCallback(async () => {
@@ -97,15 +101,57 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
         description: "Failed to load form fields",
         variant: "destructive"
       });
-    } finally {
-      setLoading(false);
     }
   }, [scheduleForm.form_id, toast]);
 
-  // Fetch form fields when component mounts or form_id changes
+  const fetchSubmissionStatus = useCallback(async () => {
+    if (!profile?.id || !scheduleForm.form_id || !schedule.id) return;
+
+    try {
+      // Get submission count for this user
+      const { data: submissions, error: submissionsError } = await supabase
+        .from('form_submissions')
+        .select('id')
+        .eq('form_id', scheduleForm.form_id)
+        .eq('schedule_id', schedule.id)
+        .eq('submitted_by', profile.id);
+
+      if (submissionsError) throw submissionsError;
+      
+      setSubmissionCount(submissions?.length || 0);
+
+      // Check if user has marked this form as complete
+      const { data: completion, error: completionError } = await supabase
+        .from('schedule_form_completions')
+        .select('id')
+        .eq('schedule_form_id', scheduleForm.id)
+        .eq('user_id', profile.id)
+        .maybeSingle();
+
+      if (completionError && completionError.code !== 'PGRST116') {
+        console.error('Error checking completion status:', completionError);
+      } else {
+        setIsCompleted(!!completion);
+      }
+
+    } catch (error) {
+      console.error('Error fetching submission status:', error);
+    }
+  }, [profile?.id, scheduleForm.form_id, scheduleForm.id, schedule.id]);
+
+  // Fetch form fields and submission status when component mounts
   useEffect(() => {
-    fetchFormFields();
-  }, [fetchFormFields]);
+    const loadData = async () => {
+      setLoading(true);
+      await Promise.all([
+        fetchFormFields(),
+        fetchSubmissionStatus()
+      ]);
+      setLoading(false);
+    };
+    
+    loadData();
+  }, [fetchFormFields, fetchSubmissionStatus]);
 
   const handleFieldChange = useCallback((fieldName: string, value: any) => {
     console.log(`Updating field "${fieldName}" with value:`, value);
@@ -183,10 +229,19 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
       console.log('Form submitted successfully');
       toast({
         title: "Success",
-        description: "Form submitted successfully"
+        description: "Data submitted successfully. You can continue adding more entries."
       });
 
-      setFormData({});
+      // Clear form for next entry
+      const clearedData: Record<string, any> = {};
+      formFields.forEach(field => {
+        clearedData[field.field_name] = '';
+      });
+      setFormData(clearedData);
+      
+      // Update submission count
+      setSubmissionCount(prev => prev + 1);
+      
       onSubmitted();
     } catch (error) {
       console.error('Error submitting form:', error);
@@ -198,6 +253,44 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
       });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleMarkComplete = async () => {
+    if (isMarkingComplete) return;
+
+    setIsMarkingComplete(true);
+    try {
+      const { error } = await supabase
+        .from('schedule_form_completions')
+        .insert({
+          schedule_form_id: scheduleForm.id,
+          user_id: profile?.id,
+          completed_at: new Date().toISOString()
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      setIsCompleted(true);
+      toast({
+        title: "Success",
+        description: "Form marked as complete"
+      });
+
+      if (onCompleted) {
+        onCompleted();
+      }
+    } catch (error) {
+      console.error('Error marking form as complete:', error);
+      toast({
+        title: "Error",
+        description: "Failed to mark form as complete",
+        variant: "destructive"
+      });
+    } finally {
+      setIsMarkingComplete(false);
     }
   };
 
@@ -346,7 +439,7 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
       <Card className="w-full">
         <CardContent className="flex flex-col items-center justify-center py-8">
           <p className="text-red-600 mb-4">{error}</p>
-          <Button onClick={fetchFormFields} variant="outline">
+          <Button onClick={() => window.location.reload()} variant="outline">
             Try Again
           </Button>
         </CardContent>
@@ -357,7 +450,15 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle>{scheduleForm.form.name}</CardTitle>
+        <CardTitle className="flex items-center justify-between">
+          <span>{scheduleForm.form.name}</span>
+          {isCompleted && (
+            <div className="flex items-center space-x-1 text-green-600">
+              <CheckCircle className="h-5 w-5" />
+              <span className="text-sm font-normal">Completed</span>
+            </div>
+          )}
+        </CardTitle>
         <CardDescription>
           {scheduleForm.form.description}
           <div className="text-sm text-muted-foreground mt-2">
@@ -365,35 +466,72 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
             {scheduleForm.due_date && (
               <span className="ml-4">Due: {new Date(scheduleForm.due_date).toLocaleDateString()}</span>
             )}
+            <span className="ml-4">Entries submitted: {submissionCount}</span>
           </div>
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {formFields.map((field) => (
-            <div key={field.id} className="space-y-2">
-              <Label htmlFor={field.field_name}>
-                {field.field_label}
-                {field.is_required && <span className="text-red-500 ml-1">*</span>}
-              </Label>
-              {renderField(field)}
-            </div>
-          ))}
-          
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
-              Cancel
-            </Button>
-            <Button 
-              type="submit" 
-              disabled={isSubmitting}
-              className="flex items-center space-x-2"
-            >
-              {isSubmitting && <LoadingSpinner size="sm" />}
-              <span>{isSubmitting ? 'Submitting...' : 'Submit Form'}</span>
+        {isCompleted ? (
+          <div className="text-center py-8">
+            <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Form Completed</h3>
+            <p className="text-gray-600 mb-4">
+              You have marked this form as complete with {submissionCount} entries submitted.
+            </p>
+            <Button onClick={onCancel}>
+              Back to Data Collection
             </Button>
           </div>
-        </form>
+        ) : (
+          <>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {formFields.map((field) => (
+                <div key={field.id} className="space-y-2">
+                  <Label htmlFor={field.field_name}>
+                    {field.field_label}
+                    {field.is_required && <span className="text-red-500 ml-1">*</span>}
+                  </Label>
+                  {renderField(field)}
+                </div>
+              ))}
+              
+              <div className="flex justify-between items-center pt-4 border-t">
+                <div className="text-sm text-gray-600">
+                  {submissionCount > 0 && (
+                    <span>{submissionCount} entries submitted</span>
+                  )}
+                </div>
+                <div className="flex space-x-2">
+                  <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting || isMarkingComplete}>
+                    Cancel
+                  </Button>
+                  {submissionCount > 0 && (
+                    <Button 
+                      type="button" 
+                      variant="secondary"
+                      onClick={handleMarkComplete}
+                      disabled={isSubmitting || isMarkingComplete}
+                      className="flex items-center space-x-2"
+                    >
+                      {isMarkingComplete && <LoadingSpinner size="sm" />}
+                      <CheckCircle className="h-4 w-4" />
+                      <span>{isMarkingComplete ? 'Marking Complete...' : 'Mark as Complete'}</span>
+                    </Button>
+                  )}
+                  <Button 
+                    type="submit" 
+                    disabled={isSubmitting || isMarkingComplete}
+                    className="flex items-center space-x-2"
+                  >
+                    {isSubmitting && <LoadingSpinner size="sm" />}
+                    <Plus className="h-4 w-4" />
+                    <span>{isSubmitting ? 'Adding Entry...' : 'Add Entry'}</span>
+                  </Button>
+                </div>
+              </div>
+            </form>
+          </>
+        )}
       </CardContent>
     </Card>
   );

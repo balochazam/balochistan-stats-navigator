@@ -1,4 +1,3 @@
-
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -120,8 +119,6 @@ export const DashboardHome = () => {
     switch (profile?.role) {
       case 'admin':
         return 'Welcome to the BBoS Admin Dashboard. You have full access to manage the system.';
-      case 'department_head':
-        return 'Welcome to your Department Dashboard. Manage your department\'s data and users.';
       case 'data_entry_user':
         return 'Welcome to the Data Entry Portal. Enter data for your assigned forms.';
       default:
@@ -155,23 +152,6 @@ export const DashboardHome = () => {
           description: 'Manage data collection schedules',
           icon: Calendar,
           path: '/admin/schedules'
-        }
-      ];
-    }
-
-    if (profile?.role === 'department_head') {
-      return [
-        { 
-          title: 'Data Collection', 
-          description: 'Enter data for assigned forms',
-          icon: FileText,
-          path: '/data-collection'
-        },
-        { 
-          title: 'Reports', 
-          description: 'View department reports',
-          icon: BarChart3,
-          path: '/reports'
         }
       ];
     }

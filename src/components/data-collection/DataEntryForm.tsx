@@ -87,6 +87,7 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
   };
 
   const handleFieldChange = (fieldName: string, value: any) => {
+    console.log(`Updating field ${fieldName} with value:`, value);
     setFormData(prev => ({
       ...prev,
       [fieldName]: value
@@ -94,18 +95,17 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
   };
 
   const handleNumberChange = (fieldName: string, value: string) => {
+    console.log(`Number field ${fieldName} input:`, value);
+    
     // Allow empty string for clearing the field
     if (value === '') {
       handleFieldChange(fieldName, '');
       return;
     }
 
-    // Simple validation: only allow digits, one decimal point, and minus sign at the start
-    const isValidNumber = /^-?\d*\.?\d*$/.test(value);
-    
-    if (isValidNumber) {
-      handleFieldChange(fieldName, value);
-    }
+    // Allow any input during typing, validate on submit
+    // This removes the restrictive validation that was preventing typing
+    handleFieldChange(fieldName, value);
   };
 
   const validateForm = () => {
@@ -170,6 +170,8 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
   };
 
   const renderField = (field: FormField) => {
+    console.log(`Rendering field: ${field.field_name}, type: ${field.field_type}, value:`, formData[field.field_name]);
+    
     switch (field.field_type) {
       case 'text':
         return (
@@ -223,10 +225,22 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
           <Input
             type="text"
             inputMode="numeric"
+            pattern="[0-9]*"
             value={formData[field.field_name] || ''}
             onChange={(e) => handleNumberChange(field.field_name, e.target.value)}
             placeholder={field.placeholder_text}
             required={field.is_required}
+            onBlur={(e) => {
+              // Validate on blur to ensure it's a valid number
+              const value = e.target.value.trim();
+              if (value && isNaN(Number(value))) {
+                toast({
+                  title: "Invalid Number",
+                  description: `${field.field_label} must be a valid number`,
+                  variant: "destructive"
+                });
+              }
+            }}
           />
         );
 

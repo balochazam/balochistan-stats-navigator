@@ -1,13 +1,14 @@
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Calendar, FileText, Clock, CheckCircle } from 'lucide-react';
+import { Calendar, FileText, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { DataEntryForm } from '@/components/data-collection/DataEntryForm';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 interface Schedule {
   id: string;
@@ -40,7 +41,7 @@ interface FormSubmission {
 }
 
 export const DataCollection = () => {
-  const { profile } = useAuth();
+  const { profile, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [scheduleForms, setScheduleForms] = useState<ScheduleForm[]>([]);
@@ -48,17 +49,14 @@ export const DataCollection = () => {
   const [selectedScheduleForm, setSelectedScheduleForm] = useState<ScheduleForm | null>(null);
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (profile?.id) {
-      fetchActiveSchedules();
-      fetchUserSubmissions();
-    }
-  }, [profile]);
-
-  const fetchActiveSchedules = async () => {
+  const fetchActiveSchedules = useCallback(async () => {
+    if (!profile?.id) return;
+    
     try {
       console.log('Fetching active schedules...');
+      setError(null);
       
       // Get active schedules (collection or open status)
       const { data: schedulesData, error: schedulesError } = await supabase
@@ -70,6 +68,7 @@ export const DataCollection = () => {
 
       if (schedulesError) throw schedulesError;
 
+      console.log('Schedules fetched:', schedulesData);
       setSchedules(schedulesData || []);
 
       // For admins, get all forms. For others, get forms from their department
@@ -103,20 +102,20 @@ export const DataCollection = () => {
       }
     } catch (error) {
       console.error('Error fetching schedules:', error);
+      setError('Failed to fetch active schedules');
       toast({
         title: "Error",
         description: "Failed to fetch active schedules",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [profile?.id, profile?.role, profile?.department_id, toast]);
 
-  const fetchUserSubmissions = async () => {
+  const fetchUserSubmissions = useCallback(async () => {
     if (!profile?.id) return;
 
     try {
+      console.log('Fetching user submissions...');
       const { data, error } = await supabase
         .from('form_submissions')
         .select('id, form_id, schedule_id, submitted_at')
@@ -124,13 +123,29 @@ export const DataCollection = () => {
 
       if (error) throw error;
 
+      console.log('Submissions fetched:', data);
       setSubmissions(data || []);
     } catch (error) {
       console.error('Error fetching submissions:', error);
     }
-  };
+  }, [profile?.id]);
 
-  const handleFormSubmitted = () => {
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    await Promise.all([
+      fetchActiveSchedules(),
+      fetchUserSubmissions()
+    ]);
+    setLoading(false);
+  }, [fetchActiveSchedules, fetchUserSubmissions]);
+
+  useEffect(() => {
+    if (profile?.id && !authLoading) {
+      loadData();
+    }
+  }, [profile?.id, authLoading, loadData]);
+
+  const handleFormSubmitted = useCallback(() => {
     setSelectedScheduleForm(null);
     setSelectedSchedule(null);
     fetchUserSubmissions();
@@ -138,21 +153,21 @@ export const DataCollection = () => {
       title: "Success",
       description: "Form submitted successfully",
     });
-  };
+  }, [fetchUserSubmissions, toast]);
 
-  const handleSelectForm = (scheduleForm: ScheduleForm) => {
+  const handleSelectForm = useCallback((scheduleForm: ScheduleForm) => {
     const schedule = schedules.find(s => s.id === scheduleForm.schedule_id);
     if (schedule) {
       setSelectedScheduleForm(scheduleForm);
       setSelectedSchedule(schedule);
     }
-  };
+  }, [schedules]);
 
-  const isFormSubmitted = (formId: string, scheduleId: string) => {
+  const isFormSubmitted = useCallback((formId: string, scheduleId: string) => {
     return submissions.some(sub => sub.form_id === formId && sub.schedule_id === scheduleId);
-  };
+  }, [submissions]);
 
-  const getScheduleStatus = (schedule: Schedule) => {
+  const getScheduleStatus = useCallback((schedule: Schedule) => {
     const today = new Date();
     const startDate = new Date(schedule.start_date);
     const endDate = new Date(schedule.end_date);
@@ -160,9 +175,9 @@ export const DataCollection = () => {
     if (today < startDate) return 'upcoming';
     if (today > endDate) return 'expired';
     return 'active';
-  };
+  }, []);
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = useCallback((status: string) => {
     switch (status) {
       case 'upcoming':
         return 'bg-blue-500';
@@ -173,18 +188,53 @@ export const DataCollection = () => {
       default:
         return 'bg-gray-500';
     }
-  };
+  }, []);
 
-  const getFormsBySchedule = (scheduleId: string) => {
+  const getFormsBySchedule = useCallback((scheduleId: string) => {
     return scheduleForms.filter(sf => sf.schedule_id === scheduleId);
-  };
+  }, [scheduleForms]);
 
+  // Show loading while auth is loading
+  if (authLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="flex items-center space-x-2">
+            <LoadingSpinner />
+            <span>Loading authentication...</span>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Show loading while data is loading
   if (loading) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-64">
-          <div className="text-center">Loading data collection forms...</div>
+          <div className="flex items-center space-x-2">
+            <LoadingSpinner />
+            <span>Loading data collection forms...</span>
+          </div>
         </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <DashboardLayout>
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-8">
+            <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
+            <p className="text-red-600 mb-4">{error}</p>
+            <Button onClick={loadData} variant="outline">
+              Try Again
+            </Button>
+          </CardContent>
+        </Card>
       </DashboardLayout>
     );
   }
@@ -298,17 +348,14 @@ export const DataCollection = () => {
                           </div>
                           <div>
                             {schedule.status === 'collection' && scheduleStatus === 'active' && (
-                              <button
+                              <Button
                                 onClick={() => handleSelectForm(scheduleForm)}
                                 disabled={isSubmitted}
-                                className={`px-4 py-2 rounded-md text-sm font-medium ${
-                                  isSubmitted
-                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                    : 'bg-blue-600 text-white hover:bg-blue-700'
-                                }`}
+                                variant={isSubmitted ? "secondary" : "default"}
+                                size="sm"
                               >
                                 {isSubmitted ? 'Completed' : 'Fill Form'}
-                              </button>
+                              </Button>
                             )}
                             {schedule.status === 'open' && (
                               <span className="text-sm text-gray-500">

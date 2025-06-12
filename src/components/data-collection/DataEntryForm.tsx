@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { ReferenceDataSelect } from '@/components/reference-data/ReferenceDataSelect';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 interface FormField {
   id: string;
@@ -58,14 +59,16 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
   const [formFields, setFormFields] = useState<FormField[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Fetch form fields when component mounts
-  useEffect(() => {
-    fetchFormFields();
-  }, [scheduleForm.form_id]);
-
-  const fetchFormFields = async () => {
+  // Memoize the fetch function to prevent unnecessary re-renders
+  const fetchFormFields = useCallback(async () => {
+    if (!scheduleForm.form_id) return;
+    
     try {
+      setError(null);
+      console.log('Fetching form fields for form:', scheduleForm.form_id);
+      
       const { data, error } = await supabase
         .from('form_fields')
         .select('*')
@@ -73,9 +76,12 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
         .order('field_order');
 
       if (error) throw error;
+      
+      console.log('Form fields fetched successfully:', data);
       setFormFields(data || []);
     } catch (error) {
       console.error('Error fetching form fields:', error);
+      setError('Failed to load form fields');
       toast({
         title: "Error",
         description: "Failed to load form fields",
@@ -84,17 +90,22 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
     } finally {
       setLoading(false);
     }
-  };
+  }, [scheduleForm.form_id, toast]);
 
-  const handleFieldChange = (fieldName: string, value: any) => {
+  // Fetch form fields when component mounts or form_id changes
+  useEffect(() => {
+    fetchFormFields();
+  }, [fetchFormFields]);
+
+  const handleFieldChange = useCallback((fieldName: string, value: any) => {
     console.log(`Updating field ${fieldName} with value:`, value);
     setFormData(prev => ({
       ...prev,
       [fieldName]: value
     }));
-  };
+  }, []);
 
-  const handleNumberChange = (fieldName: string, value: string) => {
+  const handleNumberChange = useCallback((fieldName: string, value: string) => {
     console.log(`Number field ${fieldName} input:`, value);
     
     // Allow empty string for clearing the field
@@ -104,11 +115,10 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
     }
 
     // Allow any input during typing, validate on submit
-    // This removes the restrictive validation that was preventing typing
     handleFieldChange(fieldName, value);
-  };
+  }, [handleFieldChange]);
 
-  const validateForm = () => {
+  const validateForm = useCallback(() => {
     const errors: string[] = [];
     
     formFields.forEach(field => {
@@ -118,10 +128,12 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
     });
 
     return errors;
-  };
+  }, [formFields, formData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (isSubmitting) return; // Prevent double submission
     
     const validationErrors = validateForm();
     if (validationErrors.length > 0) {
@@ -134,8 +146,11 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
     }
 
     setIsSubmitting(true);
+    setError(null);
 
     try {
+      console.log('Submitting form with data:', formData);
+      
       const { error } = await supabase
         .from('form_submissions')
         .insert({
@@ -150,6 +165,7 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
         throw error;
       }
 
+      console.log('Form submitted successfully');
       toast({
         title: "Success",
         description: "Form submitted successfully"
@@ -159,6 +175,7 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
       onSubmitted();
     } catch (error) {
       console.error('Error submitting form:', error);
+      setError('Failed to submit form');
       toast({
         title: "Error",
         description: "Failed to submit form",
@@ -169,7 +186,7 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
     }
   };
 
-  const renderField = (field: FormField) => {
+  const renderField = useCallback((field: FormField) => {
     console.log(`Rendering field: ${field.field_name}, type: ${field.field_type}, value:`, formData[field.field_name]);
     
     switch (field.field_type) {
@@ -275,13 +292,29 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
           />
         );
     }
-  };
+  }, [formData, handleFieldChange, handleNumberChange, toast]);
 
   if (loading) {
     return (
       <Card className="w-full">
         <CardContent className="flex items-center justify-center py-8">
-          <div>Loading form...</div>
+          <div className="flex items-center space-x-2">
+            <LoadingSpinner />
+            <span>Loading form...</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="w-full">
+        <CardContent className="flex flex-col items-center justify-center py-8">
+          <p className="text-red-600 mb-4">{error}</p>
+          <Button onClick={fetchFormFields} variant="outline">
+            Try Again
+          </Button>
         </CardContent>
       </Card>
     );
@@ -314,14 +347,16 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
           ))}
           
           <div className="flex justify-end space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={onCancel}>
+            <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
               Cancel
             </Button>
             <Button 
               type="submit" 
               disabled={isSubmitting}
+              className="flex items-center space-x-2"
             >
-              {isSubmitting ? 'Submitting...' : 'Submit Form'}
+              {isSubmitting && <LoadingSpinner size="sm" />}
+              <span>{isSubmitting ? 'Submitting...' : 'Submit Form'}</span>
             </Button>
           </div>
         </form>

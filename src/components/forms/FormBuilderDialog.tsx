@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { FormFieldsBuilder } from './FormFieldsBuilder';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 interface Department {
   id: string;
@@ -54,6 +54,7 @@ export const FormBuilderDialog = ({
   const { profile } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [fieldsLoading, setFieldsLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -61,28 +62,9 @@ export const FormBuilderDialog = ({
   });
   const [fields, setFields] = useState<FormField[]>([]);
 
-  useEffect(() => {
-    if (editingForm) {
-      console.log('Editing form:', editingForm);
-      setFormData({
-        name: editingForm.name,
-        description: editingForm.description || '',
-        department_id: editingForm.department_id || ''
-      });
-      fetchFormFields(editingForm.id);
-    } else {
-      console.log('Creating new form');
-      setFormData({
-        name: '',
-        description: '',
-        department_id: ''
-      });
-      setFields([]);
-    }
-  }, [editingForm, isOpen]);
-
-  const fetchFormFields = async (formId: string) => {
+  const fetchFormFields = useCallback(async (formId: string) => {
     try {
+      setFieldsLoading(true);
       console.log('Fetching form fields for form:', formId);
       const { data, error } = await supabase
         .from('form_fields')
@@ -95,8 +77,35 @@ export const FormBuilderDialog = ({
       setFields(data || []);
     } catch (error) {
       console.error('Error fetching form fields:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load form fields",
+        variant: "destructive",
+      });
+    } finally {
+      setFieldsLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    if (editingForm && isOpen) {
+      console.log('Editing form:', editingForm);
+      setFormData({
+        name: editingForm.name,
+        description: editingForm.description || '',
+        department_id: editingForm.department_id || ''
+      });
+      fetchFormFields(editingForm.id);
+    } else if (isOpen) {
+      console.log('Creating new form');
+      setFormData({
+        name: '',
+        description: '',
+        department_id: ''
+      });
+      setFields([]);
+    }
+  }, [editingForm, isOpen, fetchFormFields]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -233,65 +242,75 @@ export const FormBuilderDialog = ({
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {fieldsLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="flex items-center space-x-2">
+              <LoadingSpinner />
+              <span>Loading form fields...</span>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Form Name *</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Enter form name"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="department">Department *</Label>
+                <Select
+                  value={formData.department_id}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, department_id: value }))}
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {departments.map((dept) => (
+                      <SelectItem key={dept.id} value={dept.id}>
+                        {dept.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             <div className="space-y-2">
-              <Label htmlFor="name">Form Name *</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Enter form name"
-                required
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Enter form description"
+                rows={3}
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="department">Department *</Label>
-              <Select
-                value={formData.department_id}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, department_id: value }))}
-                required
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select department" />
-                </SelectTrigger>
-                <SelectContent>
-                  {departments.map((dept) => (
-                    <SelectItem key={dept.id} value={dept.id}>
-                      {dept.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="Enter form description"
-              rows={3}
+            <FormFieldsBuilder
+              fields={fields}
+              onChange={setFields}
             />
-          </div>
 
-          <FormFieldsBuilder
-            fields={fields}
-            onChange={setFields}
-          />
-
-          <div className="flex justify-end space-x-2 pt-4 border-t">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? 'Saving...' : editingForm ? 'Update Form' : 'Create Form'}
-            </Button>
-          </div>
-        </form>
+            <div className="flex justify-end space-x-2 pt-4 border-t">
+              <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={loading} className="flex items-center space-x-2">
+                {loading && <LoadingSpinner size="sm" />}
+                <span>{loading ? 'Saving...' : editingForm ? 'Update Form' : 'Create Form'}</span>
+              </Button>
+            </div>
+          </form>
+        )}
       </DialogContent>
     </Dialog>
   );

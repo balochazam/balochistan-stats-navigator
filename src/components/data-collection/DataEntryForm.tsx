@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -79,6 +80,15 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
       
       console.log('Form fields fetched successfully:', data);
       setFormFields(data || []);
+      
+      // Initialize form data with empty values for each field
+      const initialData: Record<string, any> = {};
+      (data || []).forEach(field => {
+        initialData[field.field_name] = '';
+      });
+      setFormData(initialData);
+      console.log('Initial form data set:', initialData);
+      
     } catch (error) {
       console.error('Error fetching form fields:', error);
       setError('Failed to load form fields');
@@ -98,15 +108,19 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
   }, [fetchFormFields]);
 
   const handleFieldChange = useCallback((fieldName: string, value: any) => {
-    console.log(`Updating field ${fieldName} with value:`, value);
-    setFormData(prev => ({
-      ...prev,
-      [fieldName]: value
-    }));
+    console.log(`Updating field "${fieldName}" with value:`, value);
+    setFormData(prev => {
+      const updated = {
+        ...prev,
+        [fieldName]: value
+      };
+      console.log('Updated form data:', updated);
+      return updated;
+    });
   }, []);
 
   const handleNumberChange = useCallback((fieldName: string, value: string) => {
-    console.log(`Number field ${fieldName} input:`, value);
+    console.log(`Number field "${fieldName}" input:`, value);
     
     // Allow empty string for clearing the field
     if (value === '') {
@@ -122,7 +136,8 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
     const errors: string[] = [];
     
     formFields.forEach(field => {
-      if (field.is_required && (!formData[field.field_name] || formData[field.field_name] === '')) {
+      const fieldValue = formData[field.field_name];
+      if (field.is_required && (!fieldValue || fieldValue === '')) {
         errors.push(`${field.field_label} is required`);
       }
     });
@@ -187,13 +202,16 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
   };
 
   const renderField = useCallback((field: FormField) => {
-    console.log(`Rendering field: ${field.field_name}, type: ${field.field_type}, value:`, formData[field.field_name]);
+    const fieldValue = formData[field.field_name] || '';
+    console.log(`Rendering field: "${field.field_name}", type: ${field.field_type}, value:`, fieldValue);
     
     switch (field.field_type) {
       case 'text':
         return (
           <Input
-            value={formData[field.field_name] || ''}
+            id={field.field_name}
+            name={field.field_name}
+            value={fieldValue}
             onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
             placeholder={field.placeholder_text}
             required={field.is_required}
@@ -203,7 +221,9 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
       case 'textarea':
         return (
           <Textarea
-            value={formData[field.field_name] || ''}
+            id={field.field_name}
+            name={field.field_name}
+            value={fieldValue}
             onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
             placeholder={field.placeholder_text}
             required={field.is_required}
@@ -215,18 +235,24 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
           return (
             <ReferenceDataSelect
               referenceDataName={field.reference_data_name}
-              value={formData[field.field_name] || ''}
-              onValueChange={(value) => handleFieldChange(field.field_name, value)}
+              value={fieldValue}
+              onValueChange={(value) => {
+                console.log(`Reference data select changed for "${field.field_name}":`, value);
+                handleFieldChange(field.field_name, value);
+              }}
               placeholder={field.placeholder_text || "Select an option"}
             />
           );
         }
         return (
           <Select
-            value={formData[field.field_name] || ''}
-            onValueChange={(value) => handleFieldChange(field.field_name, value)}
+            value={fieldValue}
+            onValueChange={(value) => {
+              console.log(`Select changed for "${field.field_name}":`, value);
+              handleFieldChange(field.field_name, value);
+            }}
           >
-            <SelectTrigger>
+            <SelectTrigger id={field.field_name}>
               <SelectValue placeholder={field.placeholder_text || "Select an option"} />
             </SelectTrigger>
             <SelectContent>
@@ -240,10 +266,12 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
       case 'number':
         return (
           <Input
+            id={field.field_name}
+            name={field.field_name}
             type="text"
             inputMode="numeric"
             pattern="[0-9]*"
-            value={formData[field.field_name] || ''}
+            value={fieldValue}
             onChange={(e) => handleNumberChange(field.field_name, e.target.value)}
             placeholder={field.placeholder_text}
             required={field.is_required}
@@ -264,8 +292,10 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
       case 'email':
         return (
           <Input
+            id={field.field_name}
+            name={field.field_name}
             type="email"
-            value={formData[field.field_name] || ''}
+            value={fieldValue}
             onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
             placeholder={field.placeholder_text}
             required={field.is_required}
@@ -275,8 +305,10 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
       case 'date':
         return (
           <Input
+            id={field.field_name}
+            name={field.field_name}
             type="date"
-            value={formData[field.field_name] || ''}
+            value={fieldValue}
             onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
             required={field.is_required}
           />
@@ -285,7 +317,9 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel }:
       default:
         return (
           <Input
-            value={formData[field.field_name] || ''}
+            id={field.field_name}
+            name={field.field_name}
+            value={fieldValue}
             onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
             placeholder={field.placeholder_text}
             required={field.is_required}

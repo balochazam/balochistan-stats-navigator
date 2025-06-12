@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -43,6 +44,14 @@ interface FormBuilderDialogProps {
   editingForm: Form | null;
   departments: Department[];
 }
+
+const generateFieldName = (label: string): string => {
+  return label
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .replace(/\s+/g, '_')
+    .replace(/^_|_$/g, '');
+};
 
 export const FormBuilderDialog = ({
   isOpen,
@@ -107,6 +116,35 @@ export const FormBuilderDialog = ({
     }
   }, [editingForm, isOpen, fetchFormFields]);
 
+  const validateFields = (): string[] => {
+    const errors: string[] = [];
+    const fieldNames = new Set<string>();
+
+    fields.forEach((field, index) => {
+      // Ensure field has a label
+      if (!field.field_label?.trim()) {
+        errors.push(`Field ${index + 1}: Field label is required`);
+      }
+
+      // Generate field name if empty and validate uniqueness
+      const fieldName = field.field_name || generateFieldName(field.field_label);
+      if (!fieldName) {
+        errors.push(`Field ${index + 1}: Could not generate valid field name from label "${field.field_label}"`);
+      } else if (fieldNames.has(fieldName)) {
+        errors.push(`Field ${index + 1}: Duplicate field name "${fieldName}"`);
+      } else {
+        fieldNames.add(fieldName);
+      }
+
+      // Validate reference data for dropdown fields
+      if ((field.field_type === 'select' || field.field_type === 'radio') && !field.reference_data_name) {
+        errors.push(`Field ${index + 1}: Reference data set is required for ${field.field_type} fields`);
+      }
+    });
+
+    return errors;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile?.id) {
@@ -119,6 +157,17 @@ export const FormBuilderDialog = ({
       toast({
         title: "Validation Error",
         description: "Please select a department for this form",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate fields
+    const fieldErrors = validateFields();
+    if (fieldErrors.length > 0) {
+      toast({
+        title: "Field Validation Errors",
+        description: fieldErrors.join('; '),
         variant: "destructive",
       });
       return;
@@ -172,7 +221,7 @@ export const FormBuilderDialog = ({
         formId = data.id;
       }
 
-      // Save form fields
+      // Save form fields with proper field names
       if (formId) {
         console.log('Saving form fields for form:', formId);
         // Delete existing fields if editing
@@ -184,21 +233,28 @@ export const FormBuilderDialog = ({
             .eq('form_id', formId);
         }
 
-        // Insert new fields
+        // Insert new fields with proper field names
         if (fields.length > 0) {
           console.log('Inserting new fields...');
-          const fieldsToInsert = fields.map((field, index) => ({
-            form_id: formId,
-            field_name: field.field_name,
-            field_label: field.field_label,
-            field_type: field.field_type,
-            is_required: field.is_required,
-            is_primary_column: field.is_primary_column,
-            is_secondary_column: field.is_secondary_column,
-            reference_data_name: field.reference_data_name || null,
-            placeholder_text: field.placeholder_text || null,
-            field_order: index
-          }));
+          const fieldsToInsert = fields.map((field, index) => {
+            // Ensure field_name is properly set
+            const fieldName = field.field_name || generateFieldName(field.field_label);
+            
+            return {
+              form_id: formId,
+              field_name: fieldName,
+              field_label: field.field_label,
+              field_type: field.field_type,
+              is_required: field.is_required,
+              is_primary_column: field.is_primary_column,
+              is_secondary_column: field.is_secondary_column,
+              reference_data_name: field.reference_data_name || null,
+              placeholder_text: field.placeholder_text || null,
+              field_order: index
+            };
+          });
+
+          console.log('Fields to insert:', fieldsToInsert);
 
           const { error: fieldsError } = await supabase
             .from('form_fields')

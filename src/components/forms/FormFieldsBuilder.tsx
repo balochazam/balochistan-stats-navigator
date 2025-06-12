@@ -42,6 +42,14 @@ const FIELD_TYPES = [
   { value: 'radio', label: 'Radio Buttons' }
 ];
 
+const generateFieldName = (label: string): string => {
+  return label
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .replace(/\s+/g, '_')
+    .replace(/^_|_$/g, '');
+};
+
 export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) => {
   const [referenceDataSets, setReferenceDataSets] = useState<ReferenceDataOption[]>([]);
   const [loading, setLoading] = useState(false);
@@ -116,12 +124,9 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
         const updatedField = { ...field, ...updates };
         
         // Auto-generate field_name from field_label if field_name is empty
-        if (updates.field_label && !field.field_name) {
-          updatedField.field_name = updates.field_label
-            .toLowerCase()
-            .replace(/[^a-z0-9]/g, '_')
-            .replace(/_+/g, '_')
-            .replace(/^_|_$/g, '');
+        if (updates.field_label && (!field.field_name || field.field_name === '')) {
+          const generatedName = generateFieldName(updates.field_label);
+          updatedField.field_name = generatedName;
         }
         
         // Clear reference_data_name if field type changes to non-dropdown
@@ -246,7 +251,9 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
                   onChange={(e) => updateField(index, { field_name: e.target.value })}
                   placeholder="Auto-generated from label"
                 />
-                <p className="text-xs text-gray-500">Used for data storage (auto-generated if empty)</p>
+                <p className="text-xs text-gray-500">
+                  {field.field_name ? `Will be saved as: ${field.field_name}` : 'Auto-generated from field label'}
+                </p>
               </div>
               <div className="space-y-2">
                 <Label>Placeholder Text</Label>

@@ -266,6 +266,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put('/api/data-banks/:dataBankId/entries/:entryId', requireAuth, async (req, res) => {
+    try {
+      const entry = await storage.updateDataBankEntry(req.params.entryId, req.body);
+      if (!entry) {
+        return res.status(404).json({ error: 'Data bank entry not found' });
+      }
+      res.json(entry);
+    } catch (error) {
+      res.status(400).json({ error: 'Failed to update data bank entry' });
+    }
+  });
+
+  app.delete('/api/data-banks/:dataBankId/entries/:entryId', requireAuth, async (req, res) => {
+    try {
+      const success = await storage.deleteDataBankEntry(req.params.entryId);
+      if (!success) {
+        return res.status(404).json({ error: 'Data bank entry not found' });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to delete data bank entry' });
+    }
+  });
+
   app.patch('/api/data-bank-entries/:id', requireAuth, async (req, res) => {
     try {
       const entry = await storage.updateDataBankEntry(req.params.id, req.body);

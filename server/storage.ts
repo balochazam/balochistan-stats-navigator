@@ -168,9 +168,27 @@ export class DatabaseStorage implements IStorage {
 
   // Data Bank Entry methods
   async getDataBankEntries(dataBankId: string): Promise<DataBankEntry[]> {
-    return await db.select().from(data_bank_entries)
-      .where(and(eq(data_bank_entries.data_bank_id, dataBankId), eq(data_bank_entries.is_active, true)))
-      .orderBy(asc(data_bank_entries.key));
+    const results = await db.select({
+      id: data_bank_entries.id,
+      data_bank_id: data_bank_entries.data_bank_id,
+      key: data_bank_entries.key,
+      value: data_bank_entries.value,
+      created_at: data_bank_entries.created_at,
+      updated_at: data_bank_entries.updated_at,
+      created_by: data_bank_entries.created_by,
+      is_active: data_bank_entries.is_active,
+      metadata: data_bank_entries.metadata,
+      creator: {
+        full_name: profiles.full_name,
+        email: profiles.email
+      }
+    })
+    .from(data_bank_entries)
+    .leftJoin(profiles, eq(data_bank_entries.created_by, profiles.id))
+    .where(and(eq(data_bank_entries.data_bank_id, dataBankId), eq(data_bank_entries.is_active, true)))
+    .orderBy(asc(data_bank_entries.key));
+    
+    return results as DataBankEntry[];
   }
 
   async createDataBankEntry(entry: InsertDataBankEntry): Promise<DataBankEntry> {

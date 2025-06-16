@@ -345,7 +345,7 @@ export const DataBankEntries = ({ dataBank }: DataBankEntriesProps) => {
                     </TableCell>
                     <TableCell>
                       <span className="text-xs text-gray-500">
-                        {new Date(entry.putd_at).toLocaleDateString()}
+                        {new Date(entry.updated_at || entry.created_at).toLocaleDateString()}
                       </span>
                     </TableCell>
                     <TableCell>

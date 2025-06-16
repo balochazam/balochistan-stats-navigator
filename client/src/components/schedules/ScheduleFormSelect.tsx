@@ -47,25 +47,16 @@ export const ScheduleFormSelect = ({
       // Get forms that are not already in this schedule
       const forms = await apiClient.get('/api/forms');
 
-      const excludeIds = existingFormIds?.map(sf => sf.form_id) || [];
+      // Get existing schedule forms to exclude
+      const scheduleFormsResponse = await apiClient.get(`/api/schedules/${schedule.id}/forms`);
+      const excludeIds = scheduleFormsResponse?.map((sf: any) => sf.form_id) || [];
 
       // Filter out forms that are already in this schedule
       const availableForms = forms.filter((form: any) => 
         !excludeIds.includes(form.id)
       ).sort((a: any, b: any) => a.name.localeCompare(b.name));
 
-      const formsData = availableForms;
-
-      if (error) {
-        console.error('Error fetching available forms:', error);
-        toast({
-          title: "Error",
-          description: "Failed to fetch available forms",
-          variant: "destructive",
-        });
-      } else {
-        setAvailableForms(data || []);
-      }
+      setAvailableForms(availableForms || []);
     } catch (error) {
       console.error('Error in fetchAvailableForms:', error);
     }
@@ -85,16 +76,12 @@ export const ScheduleFormSelect = ({
 
     setLoading(true);
     try {
-      const { error } = await apiClient
-        .get
-        .post({
-          schedule_id: schedule.id,
-          form_id: selectedFormId,
-          is_required: isRequired,
-          due_date: dueDate || null
-        });
-
-      if (error) throw error;
+      await apiClient.post('/api/schedule-forms', {
+        schedule_id: schedule.id,
+        form_id: selectedFormId,
+        is_required: isRequired,
+        due_date: dueDate || null
+      });
 
       toast({
         title: "Success",

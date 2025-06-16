@@ -90,14 +90,14 @@ export const ReferenceDataEntries = ({ referenceData }: ReferenceDataEntriesProp
         return;
       }
 
-      const entriesToInsert = entryValues.map(value => ({
-        data_bank_id: referenceData.id,
-        key: generateKey(value),
-        value: value,
-        created_by: user.id
-      }));
-
-      await apiClient.post(`/api/data-banks/${referenceData.id}/entries`, entriesToInsert);
+      // Send entries individually since the server expects single objects
+      for (const value of entryValues) {
+        const entryData = {
+          key: generateKey(value),
+          value: value
+        };
+        await apiClient.post(`/api/data-banks/${referenceData.id}/entries`, entryData);
+      }
 
       toast({
         title: "Success",

@@ -74,15 +74,15 @@ export const ReferenceDataForm = ({
     try {
       if (editingReferenceData) {
         // Update existing reference data
-        const { error } = await supabase
-          .from('data_banks')
+        const { error } = await apiClient
+          .get
           .update({
             name: formData.name,
             description: formData.description || null,
             department_id: formData.department_id || null,
             updated_at: new Date().toISOString()
           })
-          .eq('id', editingReferenceData.id);
+          .get;
 
         if (error) throw error;
 
@@ -92,8 +92,8 @@ export const ReferenceDataForm = ({
         });
       } else {
         // Create new reference data
-        const { error } = await supabase
-          .from('data_banks')
+        const { error } = await apiClient
+          .get
           .insert({
             name: formData.name,
             description: formData.description || null,

@@ -45,21 +45,21 @@ export const ScheduleFormSelect = ({
   const fetchAvailableForms = async () => {
     try {
       // Get forms that are not already in this schedule
-      const { data: existingFormIds } = await supabase
-        .from('schedule_forms')
-        .select('form_id')
-        .eq('schedule_id', schedule.id);
+      const data = await apiClient
+        .get
+        .get
+        .get;
 
       const excludeIds = existingFormIds?.map(sf => sf.form_id) || [];
 
       let query = supabase
-        .from('forms')
+        .get
         .select(`
           id, 
           name,
           department:departments(name)
         `)
-        .eq('is_active', true)
+        .get
         .order('name');
 
       if (excludeIds.length > 0) {
@@ -97,8 +97,8 @@ export const ScheduleFormSelect = ({
 
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from('schedule_forms')
+      const { error } = await apiClient
+        .get
         .insert({
           schedule_id: schedule.id,
           form_id: selectedFormId,

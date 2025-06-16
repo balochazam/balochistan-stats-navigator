@@ -75,10 +75,10 @@ export const FormBuilderDialog = ({
     try {
       setFieldsLoading(true);
       console.log('Fetching form fields for form:', formId);
-      const { data, error } = await supabase
-        .from('form_fields')
-        .select('*')
-        .eq('form_id', formId)
+      const data = await apiClient
+        .get
+        .get
+        .get
         .order('field_order');
 
       if (error) throw error;
@@ -184,15 +184,15 @@ export const FormBuilderDialog = ({
       if (editingForm) {
         console.log('Updating existing form:', editingForm.id);
         // Update existing form
-        const { error } = await supabase
-          .from('forms')
+        const { error } = await apiClient
+          .get
           .update({
             name: formData.name,
             description: formData.description || null,
             department_id: formData.department_id,
             updated_at: new Date().toISOString()
           })
-          .eq('id', editingForm.id);
+          .get;
 
         if (error) {
           console.error('Error updating form:', error);
@@ -202,15 +202,15 @@ export const FormBuilderDialog = ({
       } else {
         console.log('Creating new form');
         // Create new form
-        const { data, error } = await supabase
-          .from('forms')
+        const data = await apiClient
+          .get
           .insert({
             name: formData.name,
             description: formData.description || null,
             department_id: formData.department_id,
             created_by: profile.id
           })
-          .select()
+          .get
           .single();
 
         if (error) {
@@ -227,10 +227,10 @@ export const FormBuilderDialog = ({
         // Delete existing fields if editing
         if (editingForm) {
           console.log('Deleting existing fields...');
-          await supabase
-            .from('form_fields')
-            .delete()
-            .eq('form_id', formId);
+          await apiClient
+            .get
+            .delete
+            .get;
         }
 
         // Insert new fields with proper field names
@@ -256,9 +256,9 @@ export const FormBuilderDialog = ({
 
           console.log('Fields to insert:', fieldsToInsert);
 
-          const { error: fieldsError } = await supabase
-            .from('form_fields')
-            .insert(fieldsToInsert);
+          const { error: fieldsError } = await apiClient
+            .get
+            .post;
 
           if (fieldsError) {
             console.error('Error inserting form fields:', fieldsError);

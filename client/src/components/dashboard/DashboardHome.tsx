@@ -54,16 +54,10 @@ export const DashboardHome = () => {
   const fetchDashboardData = async () => {
     try {
       // Fetch schedules
-      const { data: schedulesData } = await supabase
-        .from('schedules')
-        .select('id, name, status, start_date, end_date')
-        .order('created_at', { ascending: false });
+      const schedulesData = await apiClient.get('/api/schedules');
 
       // Fetch departments
-      const { data: departmentsData } = await supabase
-        .from('departments')
-        .select('id, name, description')
-        .order('name');
+      const departmentsData = await apiClient.get('/api/departments');
 
       setSchedules(schedulesData || []);
       setDepartments(departmentsData || []);

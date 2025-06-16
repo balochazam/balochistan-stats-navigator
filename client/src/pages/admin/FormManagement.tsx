@@ -52,13 +52,13 @@ export const FormManagement = () => {
   const fetchForms = async () => {
     try {
       console.log('Fetching forms...');
-      const { data, error } = await supabase
-        .from('forms')
+      const data = await apiClient
+        .get
         .select(`
           *,
           department:departments(name)
         `)
-        .eq('is_active', true)
+        .get
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -86,9 +86,9 @@ export const FormManagement = () => {
   const fetchDepartments = async () => {
     try {
       console.log('Fetching departments...');
-      const { data, error } = await supabase
-        .from('departments')
-        .select('id, name')
+      const data = await apiClient
+        .get
+        .get
         .order('name');
 
       if (error) {
@@ -121,10 +121,10 @@ export const FormManagement = () => {
 
     try {
       console.log('Deleting form:', formId);
-      const { error } = await supabase
-        .from('forms')
-        .update({ is_active: false })
-        .eq('id', formId);
+      const { error } = await apiClient
+        .get
+        .put
+        .get;
 
       if (error) throw error;
 

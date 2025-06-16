@@ -66,46 +66,38 @@ export const DataCollection = () => {
       setError(null);
       
       // Get active schedules (collection or open status)
-      const { data: schedulesData, error: schedulesError } = await supabase
-        .from('schedules')
-        .select('*')
-        .in('status', ['open', 'collection'])
-        .gte('end_date', new Date().toISOString().split('T')[0])
-        .order('start_date');
+      const schedulesData = await apiClient.get('/api/schedules');
+      const activeSchedules = schedulesData.filter((schedule: any) => 
+        ['open', 'collection'].includes(schedule.status) &&
+        new Date(schedule.end_date) >= new Date()
+      ).sort((a: any, b: any) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
 
-      if (schedulesError) throw schedulesError;
-
-      console.log('Schedules fetched:', schedulesData);
-      setSchedules(schedulesData || []);
+      console.log('Schedules fetched:', activeSchedules);
+      setSchedules(activeSchedules || []);
 
       // For admins, get all forms. For others, get forms from their department
-      if (schedulesData && schedulesData.length > 0) {
-        const scheduleIds = schedulesData.map(s => s.id);
+      if (activeSchedules && activeSchedules.length > 0) {
+        const scheduleIds = activeSchedules.map((s: any) => s.id);
         
-        let formsQuery = supabase
-          .from('schedule_forms')
-          .select(`
-            *,
-            form:forms!inner(
-              id,
-              name,
-              description,
-              department_id
-            )
-          `)
-          .in('schedule_id', scheduleIds);
+        // Get schedule forms for active schedules
+        const allScheduleForms = await apiClient.get('/api/schedule-forms');
+        const relevantScheduleForms = allScheduleForms.filter((sf: any) => 
+          scheduleIds.includes(sf.schedule_id)
+        );
 
-        // If not admin, filter by department
+        // Get forms and filter by department if not admin
+        const allForms = await apiClient.get('/api/forms');
+        let filteredScheduleForms = relevantScheduleForms;
+
         if (profile?.role !== 'admin' && profile?.department_id) {
-          formsQuery = formsQuery.eq('form.department_id', profile.department_id);
+          filteredScheduleForms = relevantScheduleForms.filter((sf: any) => {
+            const form = allForms.find((f: any) => f.id === sf.form_id);
+            return form && form.department_id === profile.department_id;
+          });
         }
 
-        const { data: formsData, error: formsError } = await formsQuery;
-
-        if (formsError) throw formsError;
-
-        console.log('Schedule forms fetched:', formsData);
-        setScheduleForms(formsData || []);
+        console.log('Schedule forms fetched:', filteredScheduleForms);
+        setScheduleForms(filteredScheduleForms || []);
       }
     } catch (error) {
       console.error('Error fetching schedules:', error);
@@ -123,12 +115,7 @@ export const DataCollection = () => {
 
     try {
       console.log('Fetching user submissions...');
-      const { data, error } = await supabase
-        .from('form_submissions')
-        .select('id, form_id, schedule_id, submitted_at')
-        .eq('submitted_by', profile.id);
-
-      if (error) throw error;
+      const data = await apiClient.get(`/api/form-submissions?userId=${profile.id}`);
 
       console.log('Submissions fetched:', data);
       setSubmissions(data || []);
@@ -142,12 +129,7 @@ export const DataCollection = () => {
 
     try {
       console.log('Fetching user completions...');
-      const { data, error } = await supabase
-        .rpc('get_user_completions', {
-          p_user_id: profile.id
-        });
-
-      if (error) throw error;
+      const data = await apiClient.get(`/api/schedule-form-completions?userId=${profile.id}`);
 
       console.log('Completions fetched:', data);
       setCompletions(data || []);

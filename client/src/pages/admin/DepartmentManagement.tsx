@@ -41,9 +41,9 @@ export const DepartmentManagement = () => {
   const fetchDepartments = async () => {
     try {
       // Fetch departments with user count
-      const { data: deptData, error: deptError } = await supabase
-        .from('departments')
-        .select('*')
+      const data = await apiClient
+        .get
+        .get
         .order('created_at', { ascending: false });
 
       if (deptError) {
@@ -59,10 +59,10 @@ export const DepartmentManagement = () => {
       // Fetch user counts for each department
       const departmentsWithCounts = await Promise.all(
         (deptData || []).map(async (dept) => {
-          const { count } = await supabase
-            .from('profiles')
-            .select('*', { count: 'exact', head: true })
-            .eq('department_id', dept.id);
+          const { count } = await apiClient
+            .get
+            .get
+            .get;
           
           return {
             ...dept,
@@ -85,14 +85,14 @@ export const DepartmentManagement = () => {
     try {
       if (editingDepartment) {
         // Update existing department
-        const { error } = await supabase
-          .from('departments')
+        const { error } = await apiClient
+          .get
           .update({
             name: formData.name,
             description: formData.description || null,
             updated_at: new Date().toISOString()
           })
-          .eq('id', editingDepartment.id);
+          .get;
 
         if (error) throw error;
 
@@ -102,8 +102,8 @@ export const DepartmentManagement = () => {
         });
       } else {
         // Create new department
-        const { error } = await supabase
-          .from('departments')
+        const { error } = await apiClient
+          .get
           .insert({
             name: formData.name,
             description: formData.description || null
@@ -147,10 +147,10 @@ export const DepartmentManagement = () => {
     }
 
     try {
-      const { error } = await supabase
-        .from('departments')
-        .delete()
-        .eq('id', departmentId);
+      const { error } = await apiClient
+        .get
+        .delete
+        .get;
 
       if (error) throw error;
 

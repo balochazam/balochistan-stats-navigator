@@ -48,14 +48,14 @@ export const ReferenceDataEntries = ({ referenceData }: ReferenceDataEntriesProp
 
   const fetchEntries = async () => {
     try {
-      const { data, error } = await supabase
-        .from('data_bank_entries')
+      const data = await apiClient
+        .get
         .select(`
           *,
           creator:profiles!data_bank_entries_created_by_fkey(full_name, email)
         `)
-        .eq('data_bank_id', referenceData.id)
-        .eq('is_active', true)
+        .get
+        .get
         .order('value');
 
       if (error) {
@@ -115,9 +115,9 @@ export const ReferenceDataEntries = ({ referenceData }: ReferenceDataEntriesProp
         created_by: user.id
       }));
 
-      const { error } = await supabase
-        .from('data_bank_entries')
-        .insert(entriesToInsert);
+      const { error } = await apiClient
+        .get
+        .post;
 
       if (error) {
         if (error.code === '23505') {
@@ -170,14 +170,14 @@ export const ReferenceDataEntries = ({ referenceData }: ReferenceDataEntriesProp
 
     try {
       const newKey = generateKey(editValue.trim());
-      const { error } = await supabase
-        .from('data_bank_entries')
+      const { error } = await apiClient
+        .get
         .update({
           key: newKey,
           value: editValue.trim(),
           updated_at: new Date().toISOString()
         })
-        .eq('id', entryId);
+        .get;
 
       if (error) {
         if (error.code === '23505') {
@@ -220,10 +220,10 @@ export const ReferenceDataEntries = ({ referenceData }: ReferenceDataEntriesProp
     }
 
     try {
-      const { error } = await supabase
-        .from('data_bank_entries')
-        .update({ is_active: false })
-        .eq('id', entryId);
+      const { error } = await apiClient
+        .get
+        .put
+        .get;
 
       if (error) throw error;
 

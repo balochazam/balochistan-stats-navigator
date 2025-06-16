@@ -88,8 +88,8 @@ export const ScheduleDialog = ({
     setLoading(true);
     try {
       if (editingSchedule) {
-        const { error } = await supabase
-          .from('schedules')
+        const { error } = await apiClient
+          .get
           .update({
             name: formData.name,
             description: formData.description || null,
@@ -98,12 +98,12 @@ export const ScheduleDialog = ({
             status: formData.status,
             updated_at: new Date().toISOString()
           })
-          .eq('id', editingSchedule.id);
+          .get;
 
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('schedules')
+        const { error } = await apiClient
+          .get
           .insert({
             name: formData.name,
             description: formData.description || null,

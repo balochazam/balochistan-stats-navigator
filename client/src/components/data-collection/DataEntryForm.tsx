@@ -74,10 +74,10 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
       setError(null);
       console.log('Fetching form fields for form:', scheduleForm.form_id);
       
-      const { data, error } = await supabase
-        .from('form_fields')
-        .select('*')
-        .eq('form_id', scheduleForm.form_id)
+      const data = await apiClient
+        .get
+        .get
+        .get
         .order('field_order');
 
       if (error) throw error;
@@ -109,25 +109,14 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
 
     try {
       // Get submission count for this user
-      const { data: submissions, error: submissionsError } = await supabase
-        .from('form_submissions')
-        .select('id')
-        .eq('form_id', scheduleForm.form_id)
-        .eq('schedule_id', schedule.id)
-        .eq('submitted_by', profile.id);
-
-      if (submissionsError) throw submissionsError;
+      const submissions = await apiClient.get(`/api/form-submissions?formId=${form.id}&userId=${profile.id}`);
       
       setSubmissionCount(submissions?.length || 0);
 
       // Check if user has marked this form as complete
-      const { data: completion, error: completionError } = await supabase
-        .rpc('get_schedule_form_completion', {
-          p_schedule_form_id: scheduleForm.id,
-          p_user_id: profile.id
-        });
+      const completions = await apiClient.get(`/api/schedule-form-completions?scheduleFormId=${scheduleForm.id}&userId=${profile.id}`);
 
-      if (completionError && completionError.code !== 'PGRST116') {
+      if (completions && completions.length > 0) {
         console.error('Error checking completion status:', completionError);
       } else {
         setIsCompleted(!!completion);
@@ -211,8 +200,8 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
     try {
       console.log('Submitting form with data:', formData);
       
-      const { error } = await supabase
-        .from('form_submissions')
+      const { error } = await apiClient
+        .get
         .insert({
           schedule_id: schedule.id,
           form_id: scheduleForm.form_id,
@@ -260,7 +249,7 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
 
     setIsMarkingComplete(true);
     try {
-      const { error } = await supabase
+      const { error } = await apiClient
         .rpc('mark_schedule_form_complete', {
           p_schedule_form_id: scheduleForm.id,
           p_user_id: profile?.id

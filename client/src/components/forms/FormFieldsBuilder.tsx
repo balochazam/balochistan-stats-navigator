@@ -67,10 +67,10 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
       
       console.log('Fetching reference data sets...');
       
-      const { data, error: fetchError } = await supabase
-        .from('data_banks')
-        .select('name')
-        .eq('is_active', true)
+      const data = await apiClient
+        .get
+        .get
+        .get
         .order('name');
 
       if (fetchError) {

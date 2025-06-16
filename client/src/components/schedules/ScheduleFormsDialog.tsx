@@ -57,8 +57,8 @@ export const ScheduleFormsDialog = ({
     if (!schedule) return;
 
     try {
-      const { data, error } = await supabase
-        .from('schedule_forms')
+      const data = await apiClient
+        .get
         .select(`
           *,
           form:forms(
@@ -66,7 +66,7 @@ export const ScheduleFormsDialog = ({
             department:departments(name)
           )
         `)
-        .eq('schedule_id', schedule.id)
+        .get
         .order('created_at');
 
       if (error) {
@@ -95,10 +95,10 @@ export const ScheduleFormsDialog = ({
     }
 
     try {
-      const { error } = await supabase
-        .from('schedule_forms')
-        .delete()
-        .eq('id', scheduleFormId);
+      const { error } = await apiClient
+        .get
+        .delete
+        .get;
 
       if (error) throw error;
 
@@ -119,10 +119,10 @@ export const ScheduleFormsDialog = ({
 
   const handleUpdateScheduleForm = async (scheduleFormId: string, updates: Partial<ScheduleForm>) => {
     try {
-      const { error } = await supabase
-        .from('schedule_forms')
-        .update(updates)
-        .eq('id', scheduleFormId);
+      const { error } = await apiClient
+        .get
+        .put
+        .get;
 
       if (error) throw error;
 

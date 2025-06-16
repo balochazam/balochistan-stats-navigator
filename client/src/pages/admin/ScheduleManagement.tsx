@@ -69,9 +69,9 @@ export const ScheduleManagement = () => {
 
   const fetchSchedules = async () => {
     try {
-      const { data, error } = await supabase
-        .from('schedules')
-        .select('*')
+      const data = await apiClient
+        .get
+        .get
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -113,13 +113,13 @@ export const ScheduleManagement = () => {
 
   const handleStatusChange = async (scheduleId: string, newStatus: string) => {
     try {
-      const { error } = await supabase
-        .from('schedules')
+      const { error } = await apiClient
+        .get
         .update({ 
           status: newStatus,
           updated_at: new Date().toISOString()
         })
-        .eq('id', scheduleId);
+        .get;
 
       if (error) throw error;
 
@@ -144,10 +144,10 @@ export const ScheduleManagement = () => {
     }
 
     try {
-      const { error } = await supabase
-        .from('schedules')
-        .delete()
-        .eq('id', scheduleId);
+      const { error } = await apiClient
+        .get
+        .delete
+        .get;
 
       if (error) throw error;
 

@@ -53,14 +53,14 @@ export const DataBankManagement = () => {
 
   const fetchReferenceData = async () => {
     try {
-      const { data, error } = await supabase
-        .from('data_banks')
+      const data = await apiClient
+        .get
         .select(`
           *,
           department:departments(name),
           creator:profiles!data_banks_created_by_fkey(full_name, email)
         `)
-        .eq('is_active', true)
+        .get
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -82,9 +82,9 @@ export const DataBankManagement = () => {
 
   const fetchDepartments = async () => {
     try {
-      const { data, error } = await supabase
-        .from('departments')
-        .select('id, name')
+      const data = await apiClient
+        .get
+        .get
         .order('name');
 
       if (error) {
@@ -113,10 +113,10 @@ export const DataBankManagement = () => {
     }
 
     try {
-      const { error } = await supabase
-        .from('data_banks')
-        .update({ is_active: false })
-        .eq('id', referenceDataId);
+      const { error } = await apiClient
+        .get
+        .put
+        .get;
 
       if (error) throw error;
 

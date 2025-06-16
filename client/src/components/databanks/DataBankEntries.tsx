@@ -47,14 +47,14 @@ export const DataBankEntries = ({ dataBank }: DataBankEntriesProps) => {
 
   const fetchEntries = async () => {
     try {
-      const { data, error } = await supabase
-        .from('data_bank_entries')
+      const data = await apiClient
+        .get
         .select(`
           *,
           creator:profiles!data_bank_entries_created_by_fkey(full_name, email)
         `)
-        .eq('data_bank_id', dataBank.id)
-        .eq('is_active', true)
+        .get
+        .get
         .order('key');
 
       if (error) {
@@ -85,8 +85,8 @@ export const DataBankEntries = ({ dataBank }: DataBankEntriesProps) => {
     }
 
     try {
-      const { error } = await supabase
-        .from('data_bank_entries')
+      const { error } = await apiClient
+        .get
         .insert({
           data_bank_id: dataBank.id,
           key: newEntry.key.trim(),
@@ -145,14 +145,14 @@ export const DataBankEntries = ({ dataBank }: DataBankEntriesProps) => {
     }
 
     try {
-      const { error } = await supabase
-        .from('data_bank_entries')
+      const { error } = await apiClient
+        .get
         .update({
           key: editData.key.trim(),
           value: editData.value.trim(),
           updated_at: new Date().toISOString()
         })
-        .eq('id', entryId);
+        .get;
 
       if (error) {
         if (error.code === '23505') { // Unique constraint violation
@@ -195,10 +195,10 @@ export const DataBankEntries = ({ dataBank }: DataBankEntriesProps) => {
     }
 
     try {
-      const { error } = await supabase
-        .from('data_bank_entries')
-        .update({ is_active: false })
-        .eq('id', entryId);
+      const { error } = await apiClient
+        .get
+        .put
+        .get;
 
       if (error) throw error;
 

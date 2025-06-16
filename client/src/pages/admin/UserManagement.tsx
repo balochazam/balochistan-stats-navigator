@@ -39,9 +39,9 @@ export const UserManagement = () => {
 
   const fetchUsers = async () => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
+      const data = await apiClient
+        .get
+        .get
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -63,9 +63,9 @@ export const UserManagement = () => {
 
   const fetchDepartments = async () => {
     try {
-      const { data, error } = await supabase
-        .from('departments')
-        .select('id, name')
+      const data = await apiClient
+        .get
+        .get
         .order('name');
 
       if (error) {
@@ -80,10 +80,10 @@ export const UserManagement = () => {
 
   const updateUserRole = async (userId: string, newRole: 'admin' | 'department_user' | 'data_entry_user') => {
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ role: newRole })
-        .eq('id', userId);
+      const { error } = await apiClient
+        .get
+        .put
+        .get;
 
       if (error) {
         console.error('Error updating user role:', error);
@@ -106,10 +106,10 @@ export const UserManagement = () => {
 
   const updateUserDepartment = async (userId: string, departmentId: string | null) => {
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ department_id: departmentId === 'none' ? null : departmentId })
-        .eq('id', userId);
+      const { error } = await apiClient
+        .get
+        .put
+        .get;
 
       if (error) {
         console.error('Error updating user department:', error);

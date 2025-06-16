@@ -75,8 +75,8 @@ export const ScheduleDataCollectionDialog = ({
 
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('schedule_forms')
+      const data = await apiClient
+        .get
         .select(`
           *,
           form:forms(
@@ -87,7 +87,7 @@ export const ScheduleDataCollectionDialog = ({
             department:departments(name)
           )
         `)
-        .eq('schedule_id', schedule.id)
+        .get
         .order('created_at');
 
       if (error) {
@@ -111,10 +111,10 @@ export const ScheduleDataCollectionDialog = ({
     if (!schedule) return;
 
     try {
-      const { data, error } = await supabase
-        .from('form_submissions')
-        .select('*')
-        .eq('schedule_id', schedule.id)
+      const data = await apiClient
+        .get
+        .get
+        .get
         .order('submitted_at', { ascending: false });
 
       if (error) {

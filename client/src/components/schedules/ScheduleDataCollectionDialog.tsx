@@ -62,11 +62,13 @@ export const ScheduleDataCollectionDialog = ({
   const [submissions, setSubmissions] = useState<FormSubmission[]>([]);
   const [selectedScheduleForm, setSelectedScheduleForm] = useState<ScheduleForm | null>(null);
   const [loading, setLoading] = useState(false);
+  const [completions, setCompletions] = useState<any[]>([]);
 
   useEffect(() => {
     if (schedule && isOpen) {
       fetchScheduleForms();
       fetchSubmissions();
+      fetchCompletions();
     }
   }, [schedule, isOpen]);
 

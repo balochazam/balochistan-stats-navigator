@@ -103,7 +103,7 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
 
     try {
       // Get submission count for this user
-      const submissions = await apiClient.get(`/api/form-submissions?formId=${form.id}&userId=${profile.id}`);
+      const submissions = await apiClient.get(`/api/form-submissions?formId=${scheduleForm.form_id}&userId=${profile.id}`);
       
       setSubmissionCount(submissions?.length || 0);
 
@@ -233,15 +233,10 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
 
     setIsMarkingComplete(true);
     try {
-      const { error } = await apiClient
-        .rpc('mark_schedule_form_complete', {
-          p_schedule_form_id: scheduleForm.id,
-          p_user_id: profile?.id
-        });
-
-      if (error) {
-        throw error;
-      }
+      await apiClient.post('/api/schedule-form-completions', {
+        schedule_form_id: scheduleForm.id,
+        user_id: profile?.id
+      });
 
       setIsCompleted(true);
       toast({

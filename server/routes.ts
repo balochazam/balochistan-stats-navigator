@@ -627,12 +627,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/schedule-form-completions', requireAuth, async (req, res) => {
+    try {
+      const { scheduleFormId, userId } = req.query;
+      if (scheduleFormId && userId) {
+        const completions = await storage.getScheduleFormCompletions(scheduleFormId as string);
+        const userCompletions = completions.filter(c => c.user_id === userId);
+        res.json(userCompletions);
+      } else {
+        res.status(400).json({ error: 'scheduleFormId and userId are required' });
+      }
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch schedule form completions' });
+    }
+  });
+
   app.post('/api/schedule-forms/:scheduleFormId/completions', requireAuth, async (req, res) => {
     try {
       const validatedData = insertScheduleFormCompletionSchema.parse({
         schedule_form_id: req.params.scheduleFormId,
         user_id: req.userId
       });
+      const completion = await storage.createScheduleFormCompletion(validatedData);
+      res.status(201).json(completion);
+    } catch (error) {
+      res.status(400).json({ error: 'Invalid schedule form completion data' });
+    }
+  });
+
+  app.post('/api/schedule-form-completions', requireAuth, async (req, res) => {
+    try {
+      const validatedData = insertScheduleFormCompletionSchema.parse(req.body);
       const completion = await storage.createScheduleFormCompletion(validatedData);
       res.status(201).json(completion);
     } catch (error) {

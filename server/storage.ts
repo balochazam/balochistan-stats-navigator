@@ -289,10 +289,40 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Schedule Form methods
-  async getScheduleForms(scheduleId: string): Promise<ScheduleForm[]> {
-    return await db.select().from(schedule_forms)
-      .where(eq(schedule_forms.schedule_id, scheduleId))
-      .orderBy(asc(schedule_forms.created_at));
+  async getScheduleForms(scheduleId: string): Promise<any[]> {
+    const results = await db.select({
+      id: schedule_forms.id,
+      schedule_id: schedule_forms.schedule_id,
+      form_id: schedule_forms.form_id,
+      is_required: schedule_forms.is_required,
+      due_date: schedule_forms.due_date,
+      created_at: schedule_forms.created_at,
+      form_id_ref: forms.id,
+      form_name: forms.name,
+      form_description: forms.description,
+      form_department_id: forms.department_id
+    })
+    .from(schedule_forms)
+    .leftJoin(forms, eq(schedule_forms.form_id, forms.id))
+    .where(eq(schedule_forms.schedule_id, scheduleId))
+    .orderBy(asc(schedule_forms.created_at));
+
+    // Transform the flat structure into the nested structure expected by frontend
+    return results.map(row => ({
+      id: row.id,
+      schedule_id: row.schedule_id,
+      form_id: row.form_id,
+      is_required: row.is_required,
+      due_date: row.due_date,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      form: {
+        id: row.form_id_ref,
+        name: row.form_name,
+        description: row.form_description,
+        department_id: row.form_department_id
+      }
+    }));
   }
 
   async createScheduleForm(scheduleForm: InsertScheduleForm): Promise<ScheduleForm> {

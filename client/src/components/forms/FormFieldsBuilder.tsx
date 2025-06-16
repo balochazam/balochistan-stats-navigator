@@ -67,22 +67,7 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
       
       console.log('Fetching reference data sets...');
       
-      const data = await apiClient
-        .get
-        .get
-        .get
-        .order('name');
-
-      if (fetchError) {
-        console.error('Error fetching reference data sets:', fetchError);
-        setError(`Failed to fetch reference data: ${fetchError.message}`);
-        toast({
-          title: "Error",
-          description: "Failed to fetch reference data sets",
-          variant: "destructive",
-        });
-        return;
-      }
+      const data = await apiClient.get('/api/data-banks');
 
       console.log('Reference data sets fetched:', data);
       setReferenceDataSets(data || []);

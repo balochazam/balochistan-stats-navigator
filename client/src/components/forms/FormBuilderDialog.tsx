@@ -75,13 +75,7 @@ export const FormBuilderDialog = ({
     try {
       setFieldsLoading(true);
       console.log('Fetching form fields for form:', formId);
-      const data = await apiClient
-        .get
-        .get
-        .get
-        .order('field_order');
-
-      if (error) throw error;
+      const data = await apiClient.get(`/api/form-fields/${formId}`);
       console.log('Form fields fetched:', data);
       setFields(data || []);
     } catch (error) {
@@ -184,39 +178,22 @@ export const FormBuilderDialog = ({
       if (editingForm) {
         console.log('Updating existing form:', editingForm.id);
         // Update existing form
-        const { error } = await apiClient
-          .get
-          .put({
-            name: formData.name,
-            description: formData.description || null,
-            department_id: formData.department_id,
-            updated_at: new Date().toISOString()
-          })
-          .get;
-
-        if (error) {
-          console.error('Error updating form:', error);
-          throw error;
-        }
+        await apiClient.put(`/api/forms/${editingForm.id}`, {
+          name: formData.name,
+          description: formData.description || null,
+          department_id: formData.department_id,
+          updated_at: new Date().toISOString()
+        });
         console.log('Form updated successfully');
       } else {
         console.log('Creating new form');
         // Create new form
-        const data = await apiClient
-          .get
-          .post({
-            name: formData.name,
-            description: formData.description || null,
-            department_id: formData.department_id,
-            created_by: profile.id
-          })
-          .get
-          .single();
-
-        if (error) {
-          console.error('Error creating form:', error);
-          throw error;
-        }
+        const data = await apiClient.post('/api/forms', {
+          name: formData.name,
+          description: formData.description || null,
+          department_id: formData.department_id,
+          created_by: profile.id
+        });
         console.log('Form created successfully:', data);
         formId = data.id;
       }
@@ -227,10 +204,7 @@ export const FormBuilderDialog = ({
         // Delete existing fields if editing
         if (editingForm) {
           console.log('Deleting existing fields...');
-          await apiClient
-            .get
-            .delete
-            .get;
+          await apiClient.delete(`/api/form-fields/${formId}`);
         }
 
         // Insert new fields with proper field names
@@ -256,14 +230,7 @@ export const FormBuilderDialog = ({
 
           console.log('Fields to insert:', fieldsToInsert);
 
-          const { error: fieldsError } = await apiClient
-            .get
-            .post;
-
-          if (fieldsError) {
-            console.error('Error inserting form fields:', fieldsError);
-            throw fieldsError;
-          }
+          await apiClient.post('/api/form-fields', fieldsToInsert);
           console.log('Form fields inserted successfully');
         }
       }

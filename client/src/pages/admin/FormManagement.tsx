@@ -52,30 +52,13 @@ export const FormManagement = () => {
   const fetchForms = async () => {
     try {
       console.log('Fetching forms...');
-      const data = await apiClient
-        .get
-        .get(`
-          *,
-          department:departments(name)
-        `)
-        .get
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching forms:', error);
-        toast({
-          title: "Error",
-          description: "Failed to fetch forms",
-          variant: "destructive",
-        });
-      } else {
-        console.log('Forms fetched successfully:', data);
-        const formsWithCreator = (data || []).map(form => ({
-          ...form,
-          creator: undefined
-        }));
-        setForms(formsWithCreator);
-      }
+      const data = await apiClient.get('/api/forms');
+      console.log('Forms fetched successfully:', data);
+      const formsWithCreator = (data || []).map((form: any) => ({
+        ...form,
+        creator: undefined
+      }));
+      setForms(formsWithCreator);
     } catch (error) {
       console.error('Error in fetchForms:', error);
     } finally {
@@ -86,17 +69,9 @@ export const FormManagement = () => {
   const fetchDepartments = async () => {
     try {
       console.log('Fetching departments...');
-      const data = await apiClient
-        .get
-        .get
-        .order('name');
-
-      if (error) {
-        console.error('Error fetching departments:', error);
-      } else {
-        console.log('Departments fetched successfully:', data);
-        setDepartments(data || []);
-      }
+      const data = await apiClient.get('/api/departments');
+      console.log('Departments fetched successfully:', data);
+      setDepartments(data || []);
     } catch (error) {
       console.error('Error in fetchDepartments:', error);
     }
@@ -121,12 +96,7 @@ export const FormManagement = () => {
 
     try {
       console.log('Deleting form:', formId);
-      const { error } = await apiClient
-        .get
-        .put
-        .get;
-
-      if (error) throw error;
+      await apiClient.delete(`/api/forms/${formId}`);
 
       console.log('Form deleted successfully');
       toast({

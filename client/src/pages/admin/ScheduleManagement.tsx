@@ -69,21 +69,8 @@ export const ScheduleManagement = () => {
 
   const fetchSchedules = async () => {
     try {
-      const data = await apiClient
-        .get
-        .get
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching schedules:', error);
-        toast({
-          title: "Error",
-          description: "Failed to fetch schedules",
-          variant: "destructive",
-        });
-      } else {
-        setSchedules(data || []);
-      }
+      const data = await apiClient.get('/api/schedules');
+      setSchedules(data || []);
     } catch (error) {
       console.error('Error in fetchSchedules:', error);
     } finally {
@@ -113,15 +100,10 @@ export const ScheduleManagement = () => {
 
   const handleStatusChange = async (scheduleId: string, newStatus: string) => {
     try {
-      const { error } = await apiClient
-        .get
-        .put({ 
-          status: newStatus,
-          updated_at: new Date().toISOString()
-        })
-        .get;
-
-      if (error) throw error;
+      await apiClient.put(`/api/schedules/${scheduleId}`, { 
+        status: newStatus,
+        updated_at: new Date().toISOString()
+      });
 
       toast({
         title: "Success",
@@ -144,12 +126,7 @@ export const ScheduleManagement = () => {
     }
 
     try {
-      const { error } = await apiClient
-        .get
-        .delete
-        .get;
-
-      if (error) throw error;
+      await apiClient.delete(`/api/schedules/${scheduleId}`);
 
       toast({
         title: "Success",

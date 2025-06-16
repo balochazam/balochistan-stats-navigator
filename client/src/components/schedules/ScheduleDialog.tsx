@@ -101,12 +101,10 @@ export const ScheduleDialog = ({
           name: formData.name,
           description: formData.description || null,
           start_date: formData.start_date,
-            end_date: formData.end_date,
-            status: formData.status,
-            created_by: profile.id
-          });
-
-        if (error) throw error;
+          end_date: formData.end_date,
+          status: formData.status,
+          created_by: profile.id
+        });
       }
 
       toast({

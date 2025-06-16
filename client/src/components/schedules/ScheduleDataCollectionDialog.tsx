@@ -75,31 +75,8 @@ export const ScheduleDataCollectionDialog = ({
 
     try {
       setLoading(true);
-      const data = await apiClient
-        .get
-        .get(`
-          *,
-          form:forms(
-            id,
-            name,
-            description,
-            department_id,
-            department:departments(name)
-          )
-        `)
-        .get
-        .order('created_at');
-
-      if (error) {
-        console.error('Error fetching schedule forms:', error);
-        toast({
-          title: "Error",
-          description: "Failed to fetch schedule forms",
-          variant: "destructive",
-        });
-      } else {
-        setScheduleForms(data || []);
-      }
+      const data = await apiClient.get(`/api/schedules/${schedule.id}/forms`);
+      setScheduleForms(data || []);
     } catch (error) {
       console.error('Error in fetchScheduleForms:', error);
     } finally {
@@ -111,17 +88,8 @@ export const ScheduleDataCollectionDialog = ({
     if (!schedule) return;
 
     try {
-      const data = await apiClient
-        .get
-        .get
-        .get
-        .order('submitted_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching submissions:', error);
-      } else {
-        setSubmissions(data || []);
-      }
+      const data = await apiClient.get(`/api/form-submissions?scheduleId=${schedule.id}`);
+      setSubmissions(data || []);
     } catch (error) {
       console.error('Error in fetchSubmissions:', error);
     }

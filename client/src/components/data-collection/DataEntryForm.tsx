@@ -74,13 +74,7 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
       setError(null);
       console.log('Fetching form fields for form:', scheduleForm.form_id);
       
-      const data = await apiClient
-        .get
-        .get
-        .get
-        .order('field_order');
-
-      if (error) throw error;
+      const data = await apiClient.get(`/api/form-fields/${scheduleForm.form_id}`);
       
       console.log('Form fields fetched successfully:', data);
       setFormFields(data || []);
@@ -196,19 +190,13 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
     try {
       console.log('Submitting form with data:', formData);
       
-      const { error } = await apiClient
-        .get
-        .post({
-          schedule_id: schedule.id,
-          form_id: scheduleForm.form_id,
-          submitted_by: profile?.id,
-          data: formData,
-          submitted_at: new Date().toISOString()
-        });
-
-      if (error) {
-        throw error;
-      }
+      await apiClient.post('/api/form-submissions', {
+        schedule_id: schedule.id,
+        form_id: scheduleForm.form_id,
+        submitted_by: profile?.id,
+        data: formData,
+        submitted_at: new Date().toISOString()
+      });
 
       console.log('Form submitted successfully');
       toast({

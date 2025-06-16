@@ -66,9 +66,12 @@ export const ScheduleDataCollectionDialog = ({
 
   useEffect(() => {
     if (schedule && isOpen) {
-      fetchScheduleForms();
-      fetchSubmissions();
-      fetchCompletions();
+      const loadData = async () => {
+        await fetchScheduleForms();
+        await fetchSubmissions();
+        await fetchCompletions();
+      };
+      loadData();
     }
   }, [schedule, isOpen]);
 
@@ -97,12 +100,40 @@ export const ScheduleDataCollectionDialog = ({
     }
   };
 
+  const fetchCompletions = async () => {
+    if (!schedule || !profile?.id) return;
+
+    try {
+      // Fetch completion status for all forms in this schedule
+      const allCompletions = [];
+      for (const form of scheduleForms) {
+        const completionData = await apiClient.get(`/api/schedule-form-completions?scheduleFormId=${form.id}&userId=${profile.id}`);
+        if (completionData && completionData.length > 0) {
+          allCompletions.push(...completionData);
+        }
+      }
+      setCompletions(allCompletions);
+    } catch (error) {
+      console.error('Error fetching completions:', error);
+    }
+  };
+
   const handleFormSubmitted = () => {
     setSelectedScheduleForm(null);
     fetchSubmissions();
     toast({
       title: "Success",
       description: "Form submitted successfully",
+    });
+  };
+
+  const handleFormCompleted = () => {
+    setSelectedScheduleForm(null);
+    fetchSubmissions();
+    fetchCompletions();
+    toast({
+      title: "Success",
+      description: "Form marked as complete",
     });
   };
 
@@ -115,6 +146,10 @@ export const ScheduleDataCollectionDialog = ({
 
   const getSubmissionCount = (formId: string) => {
     return submissions.filter(sub => sub.form_id === formId).length;
+  };
+
+  const isFormCompleted = (scheduleFormId: string) => {
+    return completions.some(completion => completion.schedule_form_id === scheduleFormId);
   };
 
   if (!schedule) return null;
@@ -131,6 +166,7 @@ export const ScheduleDataCollectionDialog = ({
             scheduleForm={selectedScheduleForm}
             onSubmitted={handleFormSubmitted}
             onCancel={() => setSelectedScheduleForm(null)}
+            onCompleted={handleFormCompleted}
           />
         </DialogContent>
       </Dialog>
@@ -185,6 +221,7 @@ export const ScheduleDataCollectionDialog = ({
                 {scheduleForms.map((scheduleForm) => {
                   const isSubmitted = isFormSubmitted(scheduleForm.form_id);
                   const submissionCount = getSubmissionCount(scheduleForm.form_id);
+                  const isCompleted = isFormCompleted(scheduleForm.id);
                   const isPastDue = scheduleForm.due_date && new Date(scheduleForm.due_date) < new Date();
                   const canSubmit = schedule.status === 'collection' && profile?.id;
                   
@@ -208,6 +245,12 @@ export const ScheduleDataCollectionDialog = ({
                                 <Badge className="bg-green-500 text-white flex items-center space-x-1">
                                   <CheckCircle className="h-3 w-3" />
                                   <span>{submissionCount} Entries</span>
+                                </Badge>
+                              )}
+                              {isCompleted && (
+                                <Badge className="bg-blue-500 text-white flex items-center space-x-1">
+                                  <CheckCircle className="h-3 w-3" />
+                                  <span>Complete</span>
                                 </Badge>
                               )}
                               {isPastDue && !isSubmitted && (

@@ -50,7 +50,7 @@ export const ReferenceDataEntries = ({ referenceData }: ReferenceDataEntriesProp
     try {
       const data = await apiClient
         .get
-        .select(`
+        .get(`
           *,
           creator:profiles!data_bank_entries_created_by_fkey(full_name, email)
         `)
@@ -172,7 +172,7 @@ export const ReferenceDataEntries = ({ referenceData }: ReferenceDataEntriesProp
       const newKey = generateKey(editValue.trim());
       const { error } = await apiClient
         .get
-        .update({
+        .put({
           key: newKey,
           value: editValue.trim(),
           updated_at: new Date().toISOString()
@@ -361,7 +361,7 @@ export const ReferenceDataEntries = ({ referenceData }: ReferenceDataEntriesProp
                     </TableCell>
                     <TableCell>
                       <span className="text-xs text-gray-500">
-                        {new Date(entry.updated_at).toLocaleDateString()}
+                        {new Date(entry.putd_at).toLocaleDateString()}
                       </span>
                     </TableCell>
                     <TableCell>

@@ -59,7 +59,7 @@ export const ScheduleFormsDialog = ({
     try {
       const data = await apiClient
         .get
-        .select(`
+        .get(`
           *,
           form:forms(
             name,

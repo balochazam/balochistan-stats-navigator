@@ -116,11 +116,7 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
       // Check if user has marked this form as complete
       const completions = await apiClient.get(`/api/schedule-form-completions?scheduleFormId=${scheduleForm.id}&userId=${profile.id}`);
 
-      if (completions && completions.length > 0) {
-        console.error('Error checking completion status:', completionError);
-      } else {
-        setIsCompleted(!!completion);
-      }
+      setIsCompleted(completions && completions.length > 0);
 
     } catch (error) {
       console.error('Error fetching submission status:', error);
@@ -202,7 +198,7 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
       
       const { error } = await apiClient
         .get
-        .insert({
+        .post({
           schedule_id: schedule.id,
           form_id: scheduleForm.form_id,
           submitted_by: profile?.id,

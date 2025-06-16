@@ -76,7 +76,7 @@ export const DataBankForm = ({
         // Update existing data bank
         const { error } = await apiClient
           .get
-          .update({
+          .put({
             name: formData.name,
             description: formData.description || null,
             department_id: formData.department_id || null,
@@ -94,7 +94,7 @@ export const DataBankForm = ({
         // Create new data bank
         const { error } = await apiClient
           .get
-          .insert({
+          .post({
             name: formData.name,
             description: formData.description || null,
             department_id: formData.department_id || null,

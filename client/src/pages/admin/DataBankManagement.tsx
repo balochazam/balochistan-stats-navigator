@@ -55,7 +55,7 @@ export const DataBankManagement = () => {
     try {
       const data = await apiClient
         .get
-        .select(`
+        .get(`
           *,
           department:departments(name),
           creator:profiles!data_banks_created_by_fkey(full_name, email)

@@ -87,7 +87,7 @@ export const DepartmentManagement = () => {
         // Update existing department
         const { error } = await apiClient
           .get
-          .update({
+          .put({
             name: formData.name,
             description: formData.description || null,
             updated_at: new Date().toISOString()
@@ -104,7 +104,7 @@ export const DepartmentManagement = () => {
         // Create new department
         const { error } = await apiClient
           .get
-          .insert({
+          .post({
             name: formData.name,
             description: formData.description || null
           });

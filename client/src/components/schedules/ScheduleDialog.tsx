@@ -90,7 +90,7 @@ export const ScheduleDialog = ({
       if (editingSchedule) {
         const { error } = await apiClient
           .get
-          .update({
+          .put({
             name: formData.name,
             description: formData.description || null,
             start_date: formData.start_date,
@@ -104,7 +104,7 @@ export const ScheduleDialog = ({
       } else {
         const { error } = await apiClient
           .get
-          .insert({
+          .post({
             name: formData.name,
             description: formData.description || null,
             start_date: formData.start_date,

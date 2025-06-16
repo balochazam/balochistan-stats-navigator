@@ -45,28 +45,16 @@ export const ScheduleFormSelect = ({
   const fetchAvailableForms = async () => {
     try {
       // Get forms that are not already in this schedule
-      const data = await apiClient
-        .get
-        .get
-        .get;
+      const forms = await apiClient.get('/api/forms');
 
       const excludeIds = existingFormIds?.map(sf => sf.form_id) || [];
 
-      let query = supabase
-        .get
-        .select(`
-          id, 
-          name,
-          department:departments(name)
-        `)
-        .get
-        .order('name');
+      // Filter out forms that are already in this schedule
+      const availableForms = forms.filter((form: any) => 
+        !excludeIds.includes(form.id)
+      ).sort((a: any, b: any) => a.name.localeCompare(b.name));
 
-      if (excludeIds.length > 0) {
-        query = query.not('id', 'in', `(${excludeIds.join(',')})`);
-      }
-
-      const { data, error } = await query;
+      const formsData = availableForms;
 
       if (error) {
         console.error('Error fetching available forms:', error);
@@ -99,7 +87,7 @@ export const ScheduleFormSelect = ({
     try {
       const { error } = await apiClient
         .get
-        .insert({
+        .post({
           schedule_id: schedule.id,
           form_id: selectedFormId,
           is_required: isRequired,

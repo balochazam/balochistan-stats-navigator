@@ -115,7 +115,7 @@ export const ScheduleManagement = () => {
     try {
       const { error } = await apiClient
         .get
-        .update({ 
+        .put({ 
           status: newStatus,
           updated_at: new Date().toISOString()
         })

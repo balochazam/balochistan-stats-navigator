@@ -77,7 +77,7 @@ export const ScheduleDataCollectionDialog = ({
       setLoading(true);
       const data = await apiClient
         .get
-        .select(`
+        .get(`
           *,
           form:forms(
             id,

@@ -49,7 +49,7 @@ export const DataBankEntries = ({ dataBank }: DataBankEntriesProps) => {
     try {
       const data = await apiClient
         .get
-        .select(`
+        .get(`
           *,
           creator:profiles!data_bank_entries_created_by_fkey(full_name, email)
         `)
@@ -87,7 +87,7 @@ export const DataBankEntries = ({ dataBank }: DataBankEntriesProps) => {
     try {
       const { error } = await apiClient
         .get
-        .insert({
+        .post({
           data_bank_id: dataBank.id,
           key: newEntry.key.trim(),
           value: newEntry.value.trim(),
@@ -147,7 +147,7 @@ export const DataBankEntries = ({ dataBank }: DataBankEntriesProps) => {
     try {
       const { error } = await apiClient
         .get
-        .update({
+        .put({
           key: editData.key.trim(),
           value: editData.value.trim(),
           updated_at: new Date().toISOString()
@@ -345,7 +345,7 @@ export const DataBankEntries = ({ dataBank }: DataBankEntriesProps) => {
                     </TableCell>
                     <TableCell>
                       <span className="text-xs text-gray-500">
-                        {new Date(entry.updated_at).toLocaleDateString()}
+                        {new Date(entry.putd_at).toLocaleDateString()}
                       </span>
                     </TableCell>
                     <TableCell>

@@ -54,7 +54,7 @@ export const FormManagement = () => {
       console.log('Fetching forms...');
       const data = await apiClient
         .get
-        .select(`
+        .get(`
           *,
           department:departments(name)
         `)

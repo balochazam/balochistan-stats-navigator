@@ -41,32 +41,16 @@ export const DepartmentManagement = () => {
   const fetchDepartments = async () => {
     try {
       // Fetch departments with user count
-      const data = await apiClient
-        .get
-        .get
-        .order('created_at', { ascending: false });
-
-      if (deptError) {
-        console.error('Error fetching departments:', deptError);
-        toast({
-          title: "Error",
-          description: "Failed to fetch departments",
-          variant: "destructive",
-        });
-        return;
-      }
+      const deptData = await apiClient.get('/api/departments');
 
       // Fetch user counts for each department
       const departmentsWithCounts = await Promise.all(
-        (deptData || []).map(async (dept) => {
-          const { count } = await apiClient
-            .get
-            .get
-            .get;
+        (deptData || []).map(async (dept: any) => {
+          const profiles = await apiClient.get(`/api/profiles?department_id=${dept.id}`);
           
           return {
             ...dept,
-            user_count: count || 0
+            user_count: profiles?.length || 0
           };
         })
       );
@@ -85,16 +69,11 @@ export const DepartmentManagement = () => {
     try {
       if (editingDepartment) {
         // Update existing department
-        const { error } = await apiClient
-          .get
-          .put({
-            name: formData.name,
-            description: formData.description || null,
-            updated_at: new Date().toISOString()
-          })
-          .get;
-
-        if (error) throw error;
+        await apiClient.put(`/api/departments/${editingDepartment.id}`, {
+          name: formData.name,
+          description: formData.description || null,
+          updated_at: new Date().toISOString()
+        });
 
         toast({
           title: "Success",
@@ -102,14 +81,10 @@ export const DepartmentManagement = () => {
         });
       } else {
         // Create new department
-        const { error } = await apiClient
-          .get
-          .post({
-            name: formData.name,
-            description: formData.description || null
-          });
-
-        if (error) throw error;
+        await apiClient.post('/api/departments', {
+          name: formData.name,
+          description: formData.description || null
+        });
 
         toast({
           title: "Success",

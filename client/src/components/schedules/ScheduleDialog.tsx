@@ -88,26 +88,19 @@ export const ScheduleDialog = ({
     setLoading(true);
     try {
       if (editingSchedule) {
-        const { error } = await apiClient
-          .get
-          .put({
-            name: formData.name,
-            description: formData.description || null,
-            start_date: formData.start_date,
-            end_date: formData.end_date,
-            status: formData.status,
-            updated_at: new Date().toISOString()
-          })
-          .get;
-
-        if (error) throw error;
+        await apiClient.put(`/api/schedules/${editingSchedule.id}`, {
+          name: formData.name,
+          description: formData.description || null,
+          start_date: formData.start_date,
+          end_date: formData.end_date,
+          status: formData.status,
+          updated_at: new Date().toISOString()
+        });
       } else {
-        const { error } = await apiClient
-          .get
-          .post({
-            name: formData.name,
-            description: formData.description || null,
-            start_date: formData.start_date,
+        await apiClient.post('/api/schedules', {
+          name: formData.name,
+          description: formData.description || null,
+          start_date: formData.start_date,
             end_date: formData.end_date,
             status: formData.status,
             created_by: profile.id

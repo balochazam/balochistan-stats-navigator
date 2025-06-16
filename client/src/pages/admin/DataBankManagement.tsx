@@ -53,18 +53,10 @@ export const DataBankManagement = () => {
 
   const fetchReferenceData = async () => {
     try {
-      const data = await apiClient
-        .get
-        .get(`
-          *,
-          department:departments(name),
-          creator:profiles!data_banks_created_by_fkey(full_name, email)
-        `)
-        .get
-        .order('created_at', { ascending: false });
+      const data = await apiClient.get('/api/data-banks');
 
-      if (error) {
-        console.error('Error fetching reference data:', error);
+      if (!data) {
+        console.error('Error fetching reference data');
         toast({
           title: "Error",
           description: "Failed to fetch reference data",

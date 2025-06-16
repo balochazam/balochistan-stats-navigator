@@ -315,7 +315,6 @@ export class DatabaseStorage implements IStorage {
       is_required: row.is_required,
       due_date: row.due_date,
       created_at: row.created_at,
-      updated_at: row.updated_at,
       form: {
         id: row.form_id_ref,
         name: row.form_name,

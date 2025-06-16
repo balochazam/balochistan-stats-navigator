@@ -299,6 +299,11 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
+  async updateScheduleForm(id: string, updates: Partial<ScheduleForm>): Promise<ScheduleForm | undefined> {
+    const result = await db.update(schedule_forms).set(updates).where(eq(schedule_forms.id, id)).returning();
+    return result[0];
+  }
+
   async deleteScheduleForm(id: string): Promise<boolean> {
     const result = await db.delete(schedule_forms).where(eq(schedule_forms.id, id));
     return (result.rowCount ?? 0) > 0;

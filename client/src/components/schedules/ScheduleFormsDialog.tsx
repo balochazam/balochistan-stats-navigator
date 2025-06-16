@@ -57,28 +57,8 @@ export const ScheduleFormsDialog = ({
     if (!schedule) return;
 
     try {
-      const data = await apiClient
-        .get
-        .get(`
-          *,
-          form:forms(
-            name,
-            department:departments(name)
-          )
-        `)
-        .get
-        .order('created_at');
-
-      if (error) {
-        console.error('Error fetching schedule forms:', error);
-        toast({
-          title: "Error",
-          description: "Failed to fetch schedule forms",
-          variant: "destructive",
-        });
-      } else {
-        setScheduleForms(data || []);
-      }
+      const data = await apiClient.get(`/api/schedules/${schedule.id}/forms`);
+      setScheduleForms(data || []);
     } catch (error) {
       console.error('Error in fetchScheduleForms:', error);
     }
@@ -95,12 +75,7 @@ export const ScheduleFormsDialog = ({
     }
 
     try {
-      const { error } = await apiClient
-        .get
-        .delete
-        .get;
-
-      if (error) throw error;
+      await apiClient.delete(`/api/schedule-forms/${scheduleFormId}`);
 
       toast({
         title: "Success",
@@ -119,12 +94,7 @@ export const ScheduleFormsDialog = ({
 
   const handleUpdateScheduleForm = async (scheduleFormId: string, updates: Partial<ScheduleForm>) => {
     try {
-      const { error } = await apiClient
-        .get
-        .put
-        .get;
-
-      if (error) throw error;
+      await apiClient.put(`/api/schedule-forms/${scheduleFormId}`, updates);
 
       toast({
         title: "Success",

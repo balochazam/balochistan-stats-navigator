@@ -550,6 +550,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put('/api/schedule-forms/:id', requireAuth, async (req, res) => {
+    try {
+      const scheduleForm = await storage.updateScheduleForm(req.params.id, req.body);
+      if (!scheduleForm) {
+        return res.status(404).json({ error: 'Schedule form not found' });
+      }
+      res.json(scheduleForm);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to update schedule form' });
+    }
+  });
+
   // Form Submission routes
   app.get('/api/form-submissions', requireAuth, async (req, res) => {
     try {

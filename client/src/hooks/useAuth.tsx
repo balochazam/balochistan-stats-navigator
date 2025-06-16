@@ -1,7 +1,15 @@
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { apiClient } from '@/lib/api';
 
-import { useState, useEffect, createContext, useContext } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+interface User {
+  id: string;
+  email: string;
+}
+
+interface Session {
+  access_token: string;
+  user: User;
+}
 
 interface Profile {
   id: string;
@@ -29,7 +37,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
@@ -44,233 +52,152 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   console.log('AuthProvider render - loading:', loading, 'user:', !!user);
 
-  const fetchProfile = async (userId: string): Promise<Profile | null> => {
-    try {
-      console.log('Fetching profile for user:', userId);
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (error) {
-        console.error('Error fetching profile:', error.message);
-        if (error.code === 'PGRST116') {
-          console.log('Profile not found, creating default profile');
-          const { data: newProfile, error: createError } = await supabase
-            .from('profiles')
-            .insert({
-              id: userId,
-              email: user?.email || '',
-              full_name: user?.user_metadata?.full_name || '',
-              role: 'data_entry_user'
-            })
-            .select()
-            .single();
-          
-          if (createError) {
-            console.error('Error creating profile:', createError);
-            return null;
-          }
-          
-          console.log('Profile created successfully:', newProfile);
-          return newProfile;
-        }
-        return null;
-      }
-
-      console.log('Profile fetched successfully:', data);
-      return data;
-    } catch (error) {
-      console.error('Error in fetchProfile:', error);
-      return null;
-    }
-  };
-
   useEffect(() => {
-    let mounted = true;
-    let profileFetchAborted = false;
-
+    console.log('Initializing auth...');
+    
     const initializeAuth = async () => {
       try {
-        console.log('Initializing auth...');
-        setError(null);
-        
-        // Set up auth state listener first
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          (event, session) => {
-            if (!mounted) return;
-            
-            console.log('Auth state changed:', event, !!session?.user);
-            
-            setSession(session);
-            setUser(session?.user ?? null);
-
-            if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
-              // Use setTimeout to prevent blocking the auth state change
-              setTimeout(async () => {
-                if (!mounted || profileFetchAborted) return;
-                
-                try {
-                  const profileData = await fetchProfile(session.user.id);
-                  if (mounted && !profileFetchAborted) {
-                    setProfile(profileData);
-                  }
-                } catch (error) {
-                  console.error('Error fetching profile in auth state change:', error);
-                  if (mounted) {
-                    setError('Failed to load user profile');
-                  }
-                }
-              }, 0);
-            } else if (!session?.user) {
-              if (mounted) {
-                setProfile(null);
-              }
-            }
-          }
-        );
-
-        // Get initial session
-        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error('Error getting initial session:', error);
-          if (mounted) {
-            setError('Failed to initialize authentication');
-            setLoading(false);
-          }
-          return;
-        }
-
-        console.log('Got initial session:', !!initialSession);
-        
-        if (mounted) {
-          setSession(initialSession);
-          setUser(initialSession?.user ?? null);
-
-          if (initialSession?.user) {
-            try {
-              const profileData = await fetchProfile(initialSession.user.id);
-              if (mounted && !profileFetchAborted) {
-                setProfile(profileData);
-              }
-            } catch (error) {
-              console.error('Error fetching initial profile:', error);
-              if (mounted) {
-                setError('Failed to load user profile');
-              }
-            }
-          }
+        const token = localStorage.getItem('auth_token');
+        if (token) {
+          apiClient.setToken(token);
+          const userData = await apiClient.getCurrentUser();
           
-          console.log('Initial auth setup complete, setting loading to false');
-          setLoading(false);
+          console.log('Auth state changed:', 'INITIAL_SESSION', !!userData);
+          console.log('Got initial session:', !!userData);
+          
+          setSession(userData.session);
+          setUser(userData.user);
+          setProfile(userData.profile);
+        } else {
+          console.log('No stored token found');
         }
-
-        return () => {
-          subscription.unsubscribe();
-        };
-      } catch (error) {
-        console.error('Error in initializeAuth:', error);
-        if (mounted) {
-          setError('Authentication initialization failed');
-          setLoading(false);
-        }
+        
+        console.log('Initial auth setup complete, setting loading to false');
+        setLoading(false);
+      } catch (err) {
+        console.error('Auth initialization error:', err);
+        // Clear invalid token
+        localStorage.removeItem('auth_token');
+        apiClient.setToken(null);
+        setError(err instanceof Error ? err.message : 'Authentication error');
+        setLoading(false);
       }
     };
 
-    // Add timeout to prevent infinite loading
-    const timeoutId = setTimeout(() => {
-      if (mounted && loading) {
-        console.warn('Auth initialization timeout');
-        setError('Authentication timeout - please refresh the page');
-        setLoading(false);
-      }
-    }, 10000); // 10 second timeout
+    // Add timeout for auth initialization
+    const timeout = setTimeout(() => {
+      console.warn('Auth initialization timeout');
+      setLoading(false);
+    }, 5000);
 
     initializeAuth();
 
     return () => {
-      mounted = false;
-      profileFetchAborted = true;
-      clearTimeout(timeoutId);
+      clearTimeout(timeout);
     };
-  }, []); // Empty dependency array is correct here
+  }, []);
 
   const signUp = async (email: string, password: string, fullName: string) => {
-    setError(null);
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          full_name: fullName
-        }
-      }
-    });
-    
-    if (error) {
-      setError(error.message);
+    try {
+      setError(null);
+      setLoading(true);
+      
+      const data = await apiClient.register(email, password, fullName);
+      
+      // Set token and update state
+      apiClient.setToken(data.session.access_token);
+      setSession(data.session);
+      setUser(data.user);
+      setProfile(data.profile);
+
+      return { error: null };
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Signup failed';
+      setError(errorMessage);
+      return { error: { message: errorMessage } };
+    } finally {
+      setLoading(false);
     }
-    
-    return { error };
   };
 
   const signIn = async (email: string, password: string) => {
-    setError(null);
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-    
-    if (error) {
-      setError(error.message);
+    try {
+      setError(null);
+      setLoading(true);
+      
+      const data = await apiClient.login(email, password);
+      
+      // Set token and update state
+      apiClient.setToken(data.session.access_token);
+      setSession(data.session);
+      setUser(data.user);
+      setProfile(data.profile);
+
+      return { error: null };
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Signin failed';
+      setError(errorMessage);
+      return { error: { message: errorMessage } };
+    } finally {
+      setLoading(false);
     }
-    
-    return { error };
   };
 
   const signOut = async () => {
-    setError(null);
-    await supabase.auth.signOut();
+    try {
+      setError(null);
+      await apiClient.logout();
+      
+      // Clear state and token
+      apiClient.setToken(null);
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+    } catch (err) {
+      console.error('Signout error:', err);
+      setError(err instanceof Error ? err.message : 'Signout failed');
+      
+      // Clear state anyway
+      apiClient.setToken(null);
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+      
+      throw err;
+    }
   };
 
   const updateProfile = async (updates: Partial<Profile>) => {
-    if (!user) return { error: 'No user logged in' };
+    try {
+      setError(null);
+      
+      if (!user) {
+        const error = { message: 'No user logged in' };
+        setError(error.message);
+        return { error };
+      }
 
-    setError(null);
-    const { error } = await supabase
-      .from('profiles')
-      .update(updates)
-      .eq('id', user.id);
-
-    if (!error && profile) {
-      setProfile({ ...profile, ...updates });
-    } else if (error) {
-      setError(error.message);
+      const data = await apiClient.patch(`/api/profiles/${user.id}`, updates);
+      setProfile(data);
+      return { error: null };
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Profile update failed';
+      setError(errorMessage);
+      return { error: { message: errorMessage } };
     }
-
-    return { error };
   };
 
-  return (
-    <AuthContext.Provider value={{
-      user,
-      profile,
-      session,
-      loading,
-      error,
-      signUp,
-      signIn,
-      signOut,
-      updateProfile
-    }}>
-      {children}
-    </AuthContext.Provider>
-  );
-};
+  const value = {
+    user,
+    profile,
+    session,
+    loading,
+    error,
+    signUp,
+    signIn,
+    signOut,
+    updateProfile,
+  };
 
-export default AuthProvider;
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};

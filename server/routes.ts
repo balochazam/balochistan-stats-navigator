@@ -4,13 +4,94 @@ import { storage } from "./storage";
 import { insertProfileSchema, insertDepartmentSchema, insertDataBankSchema, insertDataBankEntrySchema, insertFormSchema, insertFormFieldSchema, insertScheduleSchema, insertScheduleFormSchema, insertFormSubmissionSchema, insertScheduleFormCompletionSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Simple authentication routes for demo purposes
+  app.post('/api/auth/register', async (req, res) => {
+    try {
+      const { email, password, full_name } = req.body;
+      
+      // Check if user already exists
+      const existingProfile = await storage.getProfileByEmail(email);
+      if (existingProfile) {
+        return res.status(400).json({ error: 'User already exists' });
+      }
+
+      // Create a simple user ID (in production, use proper auth service)
+      const userId = crypto.randomUUID();
+      
+      const profile = await storage.createProfile({
+        id: userId,
+        email,
+        full_name: full_name || '',
+        role: 'data_entry_user'
+      });
+
+      res.status(201).json({ 
+        user: { id: profile.id, email: profile.email },
+        profile,
+        session: { access_token: userId, user: { id: profile.id, email: profile.email } }
+      });
+    } catch (error) {
+      res.status(500).json({ error: 'Registration failed' });
+    }
+  });
+
+  app.post('/api/auth/login', async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      
+      const profile = await storage.getProfileByEmail(email);
+      if (!profile) {
+        return res.status(401).json({ error: 'Invalid credentials' });
+      }
+
+      // In production, verify password properly
+      res.json({
+        user: { id: profile.id, email: profile.email },
+        profile,
+        session: { access_token: profile.id, user: { id: profile.id, email: profile.email } }
+      });
+    } catch (error) {
+      res.status(500).json({ error: 'Login failed' });
+    }
+  });
+
+  app.post('/api/auth/logout', (req, res) => {
+    res.json({ message: 'Logged out successfully' });
+  });
+
+  app.get('/api/auth/user', async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'No token provided' });
+      }
+
+      const token = authHeader.substring(7);
+      const profile = await storage.getProfile(token);
+      
+      if (!profile) {
+        return res.status(401).json({ error: 'Invalid token' });
+      }
+
+      res.json({
+        user: { id: profile.id, email: profile.email },
+        profile,
+        session: { access_token: token, user: { id: profile.id, email: profile.email } }
+      });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to get user' });
+    }
+  });
+
   // Authentication middleware
   const requireAuth = (req: any, res: any, next: any) => {
-    const userId = req.headers['x-user-id'];
-    if (!userId) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ error: 'Authentication required' });
     }
-    req.userId = userId;
+    
+    const token = authHeader.substring(7);
+    req.userId = token; // In production, verify and decode the token properly
     next();
   };
 

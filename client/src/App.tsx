@@ -8,6 +8,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import { Dashboard } from "./pages/Dashboard";
 import { Profile } from "./pages/Profile";
+import { AuthPage } from "./pages/AuthPage";
 import NotFound from "./pages/NotFound";
 import { UserManagement } from "./pages/admin/UserManagement";
 import { DepartmentManagement } from "./pages/admin/DepartmentManagement";
@@ -27,6 +28,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/auth" element={<AuthPage />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/data-collection" element={<DataCollection />} />

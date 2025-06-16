@@ -282,7 +282,7 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
                     </SelectTrigger>
                     <SelectContent>
                       {referenceDataSets.length === 0 ? (
-                        <SelectItem value="" disabled>
+                        <SelectItem value="no-data" disabled>
                           No reference data sets available
                         </SelectItem>
                       ) : (

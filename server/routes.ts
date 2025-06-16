@@ -388,6 +388,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Alternative route for form fields (used by client)
+  app.get('/api/form-fields/:formId', requireAuth, async (req, res) => {
+    try {
+      const fields = await storage.getFormFields(req.params.formId);
+      res.json(fields);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch form fields' });
+    }
+  });
+
   app.post('/api/forms/:formId/fields', requireAuth, async (req, res) => {
     try {
       const validatedData = insertFormFieldSchema.parse({

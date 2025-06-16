@@ -288,10 +288,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!success) {
         return res.status(404).json({ error: 'Data bank entry not found' });
       }
-      res.status(204).send();
+      return res.status(204).send();
     } catch (error) {
       console.error('Error deleting data bank entry:', error);
-      res.status(500).json({ error: 'Failed to delete data bank entry' });
+      return res.status(500).json({ error: 'Failed to delete data bank entry' });
     }
   });
 

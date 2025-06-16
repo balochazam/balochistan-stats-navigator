@@ -121,7 +121,7 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
   const updateField = (index: number, updates: Partial<FormField>) => {
     const updatedFields = fields.map((field, i) => {
       if (i === index) {
-        const updatedField = { ...field, ...puts };
+        const updatedField = { ...field, ...updates };
         
         // Auto-generate field_name from field_label if field_name is empty
         if (updates.field_label && (!field.field_name || field.field_name === '')) {

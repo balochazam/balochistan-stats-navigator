@@ -74,16 +74,8 @@ export const DataBankManagement = () => {
 
   const fetchDepartments = async () => {
     try {
-      const data = await apiClient
-        .get
-        .get
-        .order('name');
-
-      if (error) {
-        console.error('Error fetching departments:', error);
-      } else {
-        setDepartments(data || []);
-      }
+      const data = await apiClient.get('/api/departments');
+      setDepartments(data || []);
     } catch (error) {
       console.error('Error in fetchDepartments:', error);
     }
@@ -105,12 +97,20 @@ export const DataBankManagement = () => {
     }
 
     try {
-      const { error } = await apiClient
-        .get
-        .put
-        .get;
-
-      if (error) throw error;
+      if (editingReferenceData) {
+        await apiClient.put(`/api/data-banks/${editingReferenceData.id}`, {
+          name: form.getValues('name'),
+          description: form.getValues('description') || null,
+          updated_at: new Date().toISOString()
+        });
+      } else {
+        await apiClient.post('/api/data-banks', {
+          name: form.getValues('name'),
+          description: form.getValues('description') || null,
+          department_id: form.getValues('department_id') || null,
+          created_by: profile!.id
+        });
+      }
 
       toast({
         title: "Success",

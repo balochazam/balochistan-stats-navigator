@@ -122,12 +122,7 @@ export const DepartmentManagement = () => {
     }
 
     try {
-      const { error } = await apiClient
-        .get
-        .delete
-        .get;
-
-      if (error) throw error;
+      await apiClient.delete(`/api/departments/${departmentId}`);
 
       toast({
         title: "Success",

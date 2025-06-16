@@ -19,16 +19,10 @@ export const useReferenceData = (referenceDataName: string) => {
         setError(null);
 
         // First, find the reference data set by name
-        const { data: referenceDataSet, error: dataSetError } = await supabase
-          .from('data_banks')
-          .select('id')
-          .eq('name', referenceDataName)
-          .eq('is_active', true)
-          .maybeSingle();
-
-        if (dataSetError) {
-          throw dataSetError;
-        }
+        const dataBanks = await apiClient.get('/api/data-banks');
+        const referenceDataSet = dataBanks.find((bank: any) => 
+          bank.name === referenceDataName && bank.is_active
+        );
 
         if (!referenceDataSet) {
           setError(`Reference data set "${referenceDataName}" not found`);
@@ -37,16 +31,7 @@ export const useReferenceData = (referenceDataName: string) => {
         }
 
         // Then fetch the entries
-        const { data: entries, error: entriesError } = await supabase
-          .from('data_bank_entries')
-          .select('key, value')
-          .eq('data_bank_id', referenceDataSet.id)
-          .eq('is_active', true)
-          .order('value');
-
-        if (entriesError) {
-          throw entriesError;
-        }
+        const entries = await apiClient.get(`/api/data-banks/${referenceDataSet.id}/entries`);
 
         setOptions(entries || []);
       } catch (err) {

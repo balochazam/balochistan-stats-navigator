@@ -401,6 +401,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk form fields creation
+  app.post('/api/form-fields', requireAuth, async (req, res) => {
+    try {
+      if (!Array.isArray(req.body)) {
+        return res.status(400).json({ error: 'Request body must be an array of form fields' });
+      }
+
+      const createdFields = [];
+      for (const fieldData of req.body) {
+        const validatedData = insertFormFieldSchema.parse(fieldData);
+        const field = await storage.createFormField(validatedData);
+        createdFields.push(field);
+      }
+      
+      res.status(201).json(createdFields);
+    } catch (error) {
+      console.error('Error creating form fields:', error);
+      res.status(400).json({ error: 'Invalid form field data' });
+    }
+  });
+
   app.patch('/api/form-fields/:id', requireAuth, async (req, res) => {
     try {
       const field = await storage.updateFormField(req.params.id, req.body);

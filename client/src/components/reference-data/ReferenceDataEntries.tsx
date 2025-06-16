@@ -48,26 +48,8 @@ export const ReferenceDataEntries = ({ referenceData }: ReferenceDataEntriesProp
 
   const fetchEntries = async () => {
     try {
-      const data = await apiClient
-        .get
-        .get(`
-          *,
-          creator:profiles!data_bank_entries_created_by_fkey(full_name, email)
-        `)
-        .get
-        .get
-        .order('value');
-
-      if (error) {
-        console.error('Error fetching entries:', error);
-        toast({
-          title: "Error",
-          description: "Failed to fetch options",
-          variant: "destructive",
-        });
-      } else {
-        setEntries(data || []);
-      }
+      const data = await apiClient.get(`/api/data-banks/${referenceData.id}/entries`);
+      setEntries(data || []);
     } catch (error) {
       console.error('Error in fetchEntries:', error);
     } finally {
@@ -115,26 +97,12 @@ export const ReferenceDataEntries = ({ referenceData }: ReferenceDataEntriesProp
         created_by: user.id
       }));
 
-      const { error } = await apiClient
-        .get
-        .post;
+      await apiClient.post(`/api/data-banks/${referenceData.id}/entries`, entriesToInsert);
 
-      if (error) {
-        if (error.code === '23505') {
-          toast({
-            title: "Warning",
-            description: "Some entries already exist and were skipped",
-            variant: "destructive",
-          });
-        } else {
-          throw error;
-        }
-      } else {
-        toast({
-          title: "Success",
-          description: `${entryValues.length} option(s) added successfully`,
-        });
-      }
+      toast({
+        title: "Success",
+        description: `${entryValues.length} option(s) added successfully`,
+      });
 
       setBulkEntries('');
       setIsAddingBulk(false);
@@ -170,27 +138,11 @@ export const ReferenceDataEntries = ({ referenceData }: ReferenceDataEntriesProp
 
     try {
       const newKey = generateKey(editValue.trim());
-      const { error } = await apiClient
-        .get
-        .put({
-          key: newKey,
-          value: editValue.trim(),
-          updated_at: new Date().toISOString()
-        })
-        .get;
-
-      if (error) {
-        if (error.code === '23505') {
-          toast({
-            title: "Error",
-            description: "An option with this value already exists",
-            variant: "destructive",
-          });
-        } else {
-          throw error;
-        }
-        return;
-      }
+      await apiClient.put(`/api/data-banks/${referenceData.id}/entries/${entryId}`, {
+        key: newKey,
+        value: editValue.trim(),
+        updated_at: new Date().toISOString()
+      });
 
       toast({
         title: "Success",
@@ -220,12 +172,7 @@ export const ReferenceDataEntries = ({ referenceData }: ReferenceDataEntriesProp
     }
 
     try {
-      const { error } = await apiClient
-        .get
-        .put
-        .get;
-
-      if (error) throw error;
+      await apiClient.delete(`/api/data-banks/${referenceData.id}/entries/${entryId}`);
 
       toast({
         title: "Success",

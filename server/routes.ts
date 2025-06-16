@@ -268,12 +268,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put('/api/data-banks/:dataBankId/entries/:entryId', requireAuth, async (req, res) => {
     try {
+      console.log('Updating entry:', req.params.entryId, 'with data:', req.body);
       const entry = await storage.updateDataBankEntry(req.params.entryId, req.body);
       if (!entry) {
         return res.status(404).json({ error: 'Data bank entry not found' });
       }
       res.json(entry);
     } catch (error) {
+      console.error('Error updating data bank entry:', error);
       res.status(400).json({ error: 'Failed to update data bank entry' });
     }
   });

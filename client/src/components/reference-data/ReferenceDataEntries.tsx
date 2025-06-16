@@ -140,8 +140,7 @@ export const ReferenceDataEntries = ({ referenceData }: ReferenceDataEntriesProp
       const newKey = generateKey(editValue.trim());
       await apiClient.put(`/api/data-banks/${referenceData.id}/entries/${entryId}`, {
         key: newKey,
-        value: editValue.trim(),
-        updated_at: new Date().toISOString()
+        value: editValue.trim()
       });
 
       toast({

@@ -197,7 +197,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateDataBankEntry(id: string, updates: Partial<DataBankEntry>): Promise<DataBankEntry | undefined> {
-    const result = await db.update(data_bank_entries).set(updates).where(eq(data_bank_entries.id, id)).returning();
+    // Remove any read-only fields that shouldn't be updated
+    const { id: _, created_at, creator, ...cleanUpdates } = updates as any;
+    
+    // Add updated_at timestamp
+    const updateData = {
+      ...cleanUpdates,
+      updated_at: new Date()
+    };
+    
+    const result = await db.update(data_bank_entries).set(updateData).where(eq(data_bank_entries.id, id)).returning();
     return result[0];
   }
 

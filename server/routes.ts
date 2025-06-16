@@ -503,6 +503,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put('/api/schedules/:id', requireAuth, async (req, res) => {
+    try {
+      const schedule = await storage.updateSchedule(req.params.id, req.body);
+      if (!schedule) {
+        return res.status(404).json({ error: 'Schedule not found' });
+      }
+      res.json(schedule);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to update schedule' });
+    }
+  });
+
   app.delete('/api/schedules/:id', requireAuth, async (req, res) => {
     try {
       const success = await storage.deleteSchedule(req.params.id);

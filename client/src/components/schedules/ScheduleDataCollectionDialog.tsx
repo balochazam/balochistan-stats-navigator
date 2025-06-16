@@ -202,10 +202,10 @@ export const ScheduleDataCollectionDialog = ({
                               {scheduleForm.is_required && (
                                 <Badge variant="destructive">Required</Badge>
                               )}
-                              {isSubmitted && (
+                              {submissionCount > 0 && (
                                 <Badge className="bg-green-500 text-white flex items-center space-x-1">
                                   <CheckCircle className="h-3 w-3" />
-                                  <span>Submitted</span>
+                                  <span>{submissionCount} Entries</span>
                                 </Badge>
                               )}
                               {isPastDue && !isSubmitted && (
@@ -231,10 +231,9 @@ export const ScheduleDataCollectionDialog = ({
                             {canSubmit && (
                               <Button
                                 onClick={() => setSelectedScheduleForm(scheduleForm)}
-                                disabled={isSubmitted}
                                 size="sm"
                               >
-                                {isSubmitted ? 'Completed' : 'Fill Form'}
+                                {submissionCount > 0 ? 'Add Entry' : 'Fill Form'}
                               </Button>
                             )}
                             {!canSubmit && schedule.status === 'open' && (

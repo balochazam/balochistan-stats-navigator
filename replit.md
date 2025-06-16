@@ -103,6 +103,7 @@ This is a full-stack data collection management system built with React, Node.js
 ```
 Changelog:
 - June 16, 2025. Initial setup
+- June 16, 2025. Fixed data collection functionality - users can now submit multiple entries per form, removed artificial completion limits
 ```
 
 ## User Preferences

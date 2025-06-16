@@ -284,6 +284,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log('Deleting entry:', req.params.entryId);
       const success = await storage.deleteDataBankEntry(req.params.entryId);
+      console.log('Delete success:', success);
       if (!success) {
         return res.status(404).json({ error: 'Data bank entry not found' });
       }

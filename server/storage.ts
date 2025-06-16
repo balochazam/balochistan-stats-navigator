@@ -83,6 +83,7 @@ export interface IStorage {
   // Schedule Form methods
   getScheduleForms(scheduleId: string): Promise<ScheduleForm[]>;
   createScheduleForm(scheduleForm: InsertScheduleForm): Promise<ScheduleForm>;
+  updateScheduleForm(id: string, updates: Partial<ScheduleForm>): Promise<ScheduleForm | undefined>;
   deleteScheduleForm(id: string): Promise<boolean>;
 
   // Form Submission methods

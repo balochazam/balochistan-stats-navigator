@@ -39,21 +39,8 @@ export const UserManagement = () => {
 
   const fetchUsers = async () => {
     try {
-      const data = await apiClient
-        .get
-        .get
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching users:', error);
-        toast({
-          title: "Error",
-          description: "Failed to fetch users",
-          variant: "destructive",
-        });
-      } else {
-        setUsers(data || []);
-      }
+      const data = await apiClient.get('/api/profiles');
+      setUsers(data || []);
     } catch (error) {
       console.error('Error in fetchUsers:', error);
     } finally {
@@ -63,16 +50,8 @@ export const UserManagement = () => {
 
   const fetchDepartments = async () => {
     try {
-      const data = await apiClient
-        .get
-        .get
-        .order('name');
-
-      if (error) {
-        console.error('Error fetching departments:', error);
-      } else {
-        setDepartments(data || []);
-      }
+      const data = await apiClient.get('/api/departments');
+      setDepartments(data || []);
     } catch (error) {
       console.error('Error in fetchDepartments:', error);
     }
@@ -80,25 +59,16 @@ export const UserManagement = () => {
 
   const updateUserRole = async (userId: string, newRole: 'admin' | 'department_user' | 'data_entry_user') => {
     try {
-      const { error } = await apiClient
-        .get
-        .put
-        .get;
+      await apiClient.put(`/api/profiles/${userId}`, {
+        role: newRole,
+        updated_at: new Date().toISOString()
+      });
 
-      if (error) {
-        console.error('Error updating user role:', error);
-        toast({
-          title: "Error",
-          description: "Failed to update user role",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Success",
-          description: "User role updated successfully",
-        });
-        fetchUsers(); // Refresh the list
-      }
+      toast({
+        title: "Success",
+        description: "User role updated successfully",
+      });
+      fetchUsers(); // Refresh the list
     } catch (error) {
       console.error('Error in updateUserRole:', error);
     }
@@ -106,25 +76,16 @@ export const UserManagement = () => {
 
   const updateUserDepartment = async (userId: string, departmentId: string | null) => {
     try {
-      const { error } = await apiClient
-        .get
-        .put
-        .get;
+      await apiClient.put(`/api/profiles/${userId}`, {
+        department_id: departmentId,
+        updated_at: new Date().toISOString()
+      });
 
-      if (error) {
-        console.error('Error updating user department:', error);
-        toast({
-          title: "Error",
-          description: "Failed to update user department",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Success",
-          description: "User department updated successfully",
-        });
-        fetchUsers(); // Refresh the list
-      }
+      toast({
+        title: "Success",
+        description: "User department updated successfully",
+      });
+      fetchUsers(); // Refresh the list
     } catch (error) {
       console.error('Error in updateUserDepartment:', error);
     }

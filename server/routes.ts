@@ -538,6 +538,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/schedule-forms', requireAuth, async (req, res) => {
+    try {
+      const validatedData = insertScheduleFormSchema.parse(req.body);
+      const scheduleForm = await storage.createScheduleForm(validatedData);
+      res.status(201).json(scheduleForm);
+    } catch (error) {
+      res.status(400).json({ error: 'Invalid schedule form data' });
+    }
+  });
+
   app.delete('/api/schedule-forms/:id', requireAuth, async (req, res) => {
     try {
       const success = await storage.deleteScheduleForm(req.params.id);

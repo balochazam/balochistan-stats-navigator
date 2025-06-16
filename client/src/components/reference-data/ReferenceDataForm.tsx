@@ -74,17 +74,12 @@ export const ReferenceDataForm = ({
     try {
       if (editingReferenceData) {
         // Update existing reference data
-        const { error } = await apiClient
-          .get
-          .put({
-            name: formData.name,
-            description: formData.description || null,
-            department_id: formData.department_id || null,
-            updated_at: new Date().toISOString()
-          })
-          .get;
-
-        if (error) throw error;
+        await apiClient.put(`/api/data-banks/${editingReferenceData.id}`, {
+          name: formData.name,
+          description: formData.description || null,
+          department_id: formData.department_id || null,
+          updated_at: new Date().toISOString()
+        });
 
         toast({
           title: "Success",
@@ -92,16 +87,12 @@ export const ReferenceDataForm = ({
         });
       } else {
         // Create new reference data
-        const { error } = await apiClient
-          .get
-          .post({
-            name: formData.name,
-            description: formData.description || null,
-            department_id: formData.department_id || null,
-            created_by: user.id
-          });
-
-        if (error) throw error;
+        await apiClient.post('/api/data-banks', {
+          name: formData.name,
+          description: formData.description || null,
+          department_id: formData.department_id || null,
+          created_by: user.id
+        });
 
         toast({
           title: "Success",

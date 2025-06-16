@@ -282,12 +282,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/data-banks/:dataBankId/entries/:entryId', requireAuth, async (req, res) => {
     try {
+      console.log('Deleting entry:', req.params.entryId);
       const success = await storage.deleteDataBankEntry(req.params.entryId);
       if (!success) {
         return res.status(404).json({ error: 'Data bank entry not found' });
       }
       res.status(204).send();
     } catch (error) {
+      console.error('Error deleting data bank entry:', error);
       res.status(500).json({ error: 'Failed to delete data bank entry' });
     }
   });

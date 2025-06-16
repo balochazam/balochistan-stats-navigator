@@ -138,7 +138,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteDepartment(id: string): Promise<boolean> {
     const result = await db.delete(departments).where(eq(departments.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   // Data Bank methods
@@ -163,7 +163,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteDataBank(id: string): Promise<boolean> {
     const result = await db.update(data_banks).set({ is_active: false }).where(eq(data_banks.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   // Data Bank Entry methods
@@ -212,7 +212,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteDataBankEntry(id: string): Promise<boolean> {
     const result = await db.update(data_bank_entries).set({ is_active: false }).where(eq(data_bank_entries.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   // Form methods
@@ -237,7 +237,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteForm(id: string): Promise<boolean> {
     const result = await db.update(forms).set({ is_active: false }).where(eq(forms.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   // Form Field methods
@@ -259,7 +259,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteFormField(id: string): Promise<boolean> {
     const result = await db.delete(form_fields).where(eq(form_fields.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   // Schedule methods
@@ -284,7 +284,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteSchedule(id: string): Promise<boolean> {
     const result = await db.delete(schedules).where(eq(schedules.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   // Schedule Form methods
@@ -301,7 +301,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteScheduleForm(id: string): Promise<boolean> {
     const result = await db.delete(schedule_forms).where(eq(schedule_forms.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   // Form Submission methods
@@ -342,7 +342,7 @@ export class DatabaseStorage implements IStorage {
         eq(schedule_form_completions.schedule_form_id, scheduleFormId),
         eq(schedule_form_completions.user_id, userId)
       ));
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 }
 

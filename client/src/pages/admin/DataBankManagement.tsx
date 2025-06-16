@@ -99,15 +99,15 @@ export const DataBankManagement = () => {
     try {
       if (editingReferenceData) {
         await apiClient.put(`/api/data-banks/${editingReferenceData.id}`, {
-          name: form.getValues('name'),
-          description: form.getValues('description') || null,
+          name: editingReferenceData.name,
+          description: editingReferenceData.description || null,
           updated_at: new Date().toISOString()
         });
       } else {
         await apiClient.post('/api/data-banks', {
-          name: form.getValues('name'),
-          description: form.getValues('description') || null,
-          department_id: form.getValues('department_id') || null,
+          name: 'New Data Bank',
+          description: null,
+          department_id: null,
           created_by: profile!.id
         });
       }

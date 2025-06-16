@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { apiClient } from '@/lib/api';
 import {
   LayoutDashboard,
   Users,
@@ -35,8 +35,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
   const handleSignOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      await apiClient.logout();
       navigate('/');
     } catch (error) {
       console.error('Error signing out:', error);

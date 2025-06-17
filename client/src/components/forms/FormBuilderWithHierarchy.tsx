@@ -56,24 +56,24 @@ export const FormBuilderWithHierarchy: React.FC<FormBuilderWithHierarchyProps> =
   }, [editingForm, form]);
 
   // Fetch field groups for editing form
-  const { data: fieldGroups = [] } = useQuery({
+  const { data: fieldGroups = [] } = useQuery<FieldGroup[]>({
     queryKey: ['/api/forms', editingForm?.id, 'groups'],
     enabled: !!editingForm?.id,
   });
 
   // Fetch form fields for editing form
-  const { data: formFields = [] } = useQuery({
+  const { data: formFields = [] } = useQuery<FormField[]>({
     queryKey: ['/api/forms', editingForm?.id, 'fields'],
     enabled: !!editingForm?.id,
   });
 
   // Update local state when data is loaded
   useEffect(() => {
-    if (fieldGroups.length > 0) {
-      setSavedGroups(fieldGroups);
+    if (fieldGroups && Array.isArray(fieldGroups) && fieldGroups.length > 0) {
+      setSavedGroups(fieldGroups as FieldGroup[]);
     }
-    if (formFields.length > 0) {
-      setSavedFields(formFields);
+    if (formFields && Array.isArray(formFields) && formFields.length > 0) {
+      setSavedFields(formFields as FormField[]);
     }
   }, [fieldGroups, formFields]);
 
@@ -225,8 +225,9 @@ export const FormBuilderWithHierarchy: React.FC<FormBuilderWithHierarchyProps> =
 
               <TabsContent value="fields">
                 <FormFieldsBuilder
-                  formId={editingForm?.id}
-                  onSave={handleFieldsChange}
+                  fields={savedFields}
+                  onFieldsChange={setSavedFields}
+                  referenceDataSets={[]}
                 />
               </TabsContent>
             </Tabs>

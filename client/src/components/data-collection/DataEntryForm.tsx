@@ -138,10 +138,32 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
         ...prev,
         [fieldName]: value
       };
-      console.log('Updated form data:', updated);
-      return updated;
+      
+      // Calculate aggregate fields when number fields change
+      const updatedWithAggregates = { ...updated };
+      formFields.forEach(field => {
+        if (field.field_type === 'aggregate' && field.aggregate_fields?.length) {
+          let sum = 0;
+          let hasValidNumbers = false;
+          
+          field.aggregate_fields.forEach(aggregateFieldName => {
+            const fieldValue = updatedWithAggregates[aggregateFieldName];
+            const numValue = parseFloat(fieldValue);
+            if (!isNaN(numValue)) {
+              sum += numValue;
+              hasValidNumbers = true;
+            }
+          });
+          
+          // Only set the aggregate value if at least one valid number exists
+          updatedWithAggregates[field.field_name] = hasValidNumbers ? sum.toString() : '';
+        }
+      });
+      
+      console.log('Updated form data with aggregates:', updatedWithAggregates);
+      return updatedWithAggregates;
     });
-  }, []);
+  }, [formFields]);
 
   const handleNumberChange = useCallback((fieldName: string, value: string) => {
     console.log(`Number field "${fieldName}" input:`, value);

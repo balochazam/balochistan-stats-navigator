@@ -75,6 +75,7 @@ export const form_fields = pgTable("form_fields", {
   is_secondary_column: boolean("is_secondary_column").notNull().default(false),
   reference_data_name: text("reference_data_name"),
   placeholder_text: text("placeholder_text"),
+  aggregate_fields: jsonb("aggregate_fields"), // Array of field names to aggregate
   field_order: integer("field_order").notNull().default(0),
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),

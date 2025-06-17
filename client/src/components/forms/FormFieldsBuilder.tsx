@@ -20,6 +20,7 @@ interface FormField {
   is_secondary_column: boolean;
   reference_data_name?: string;
   placeholder_text?: string;
+  aggregate_fields?: string[];
   field_order: number;
 }
 
@@ -39,7 +40,8 @@ const FIELD_TYPES = [
   { value: 'email', label: 'Email' },
   { value: 'date', label: 'Date' },
   { value: 'select', label: 'Dropdown (Select)' },
-  { value: 'radio', label: 'Radio Buttons' }
+  { value: 'radio', label: 'Radio Buttons' },
+  { value: 'aggregate', label: 'Aggregate (Sum of Fields)' }
 ];
 
 const generateFieldName = (label: string): string => {
@@ -249,6 +251,42 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
                 />
               </div>
             </div>
+
+            {field.field_type === 'aggregate' && (
+              <div className="space-y-2">
+                <Label>Fields to Aggregate *</Label>
+                <p className="text-xs text-gray-500 mb-2">
+                  Select two or more number fields to sum together. Only number fields are available for aggregation.
+                </p>
+                <div className="space-y-2 max-h-32 overflow-y-auto border rounded-md p-2">
+                  {fields
+                    .filter((f, i) => i !== index && f.field_type === 'number' && f.field_label)
+                    .map((numberField, i) => (
+                      <div key={i} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`aggregate-${index}-${i}`}
+                          checked={field.aggregate_fields?.includes(numberField.field_name) || false}
+                          onCheckedChange={(checked) => {
+                            const currentFields = field.aggregate_fields || [];
+                            const updatedFields = checked
+                              ? [...currentFields, numberField.field_name]
+                              : currentFields.filter(name => name !== numberField.field_name);
+                            updateField(index, { aggregate_fields: updatedFields });
+                          }}
+                        />
+                        <Label htmlFor={`aggregate-${index}-${i}`} className="text-sm">
+                          {numberField.field_label} ({numberField.field_name})
+                        </Label>
+                      </div>
+                    ))}
+                  {fields.filter((f, i) => i !== index && f.field_type === 'number' && f.field_label).length === 0 && (
+                    <p className="text-sm text-gray-500 italic">
+                      No number fields available. Add number fields first.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
 
             {requiresReferenceData(field.field_type) && (
               <div className="space-y-2">

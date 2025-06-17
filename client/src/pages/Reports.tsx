@@ -175,33 +175,38 @@ export const Reports = () => {
       primaryGroups.get(primaryValue)?.push(submission);
     });
 
-    // Create a simplified structure that groups all data by secondary field (institution type)
-    // This matches the format where institutions are sub-rows under primary categories
-    const institutionGroups = new Map();
-    formSubmissions.forEach(submission => {
-      const primaryValue = primaryField?.field_name ? 
-        submission.data?.[primaryField.field_name] || 'Unknown' : 'Unknown';
-      const secondaryValue = secondaryField?.field_name ? 
-        submission.data?.[secondaryField.field_name] || 'Unknown' : 'All';
-      
-      const key = `${primaryValue}|${secondaryValue}`;
-      if (!institutionGroups.has(key)) {
-        institutionGroups.set(key, {
-          primary: primaryValue,
-          secondary: secondaryValue,
-          submissions: []
-        });
+    // Get all unique secondary values for column headers
+    const secondaryValues: string[] = [];
+    const seen = new Set<string>();
+    formSubmissions.forEach((s: any) => {
+      const value = secondaryField?.field_name ? s.data?.[secondaryField.field_name] || 'Unknown' : 'All';
+      if (!seen.has(value)) {
+        seen.add(value);
+        secondaryValues.push(value);
       }
-      institutionGroups.get(key).submissions.push(submission);
     });
+    secondaryValues.sort();
 
-    // Group by primary value for rendering
+    // Group data by primary column for rows
     const structuredData = new Map();
-    institutionGroups.forEach((group, key) => {
-      if (!structuredData.has(group.primary)) {
-        structuredData.set(group.primary, []);
-      }
-      structuredData.get(group.primary).push(group);
+    primaryGroups.forEach((submissions, primaryValue) => {
+      const rowData = new Map();
+      
+      // Initialize all secondary values with empty arrays
+      secondaryValues.forEach(secValue => {
+        rowData.set(secValue, []);
+      });
+      
+      // Populate with actual submissions
+      submissions.forEach((submission: any) => {
+        const secondaryValue = secondaryField?.field_name ? 
+          submission.data?.[secondaryField.field_name] || 'Unknown' : 'All';
+        if (rowData.has(secondaryValue)) {
+          rowData.get(secondaryValue)?.push(submission);
+        }
+      });
+      
+      structuredData.set(primaryValue, rowData);
     });
 
     const htmlContent = `
@@ -212,9 +217,10 @@ export const Reports = () => {
         <style>
           body { 
             font-family: Arial, sans-serif; 
-            margin: 15px; 
+            margin: 20px auto; 
             font-size: 10px;
             color: black;
+            max-width: 800px;
           }
           .header {
             text-align: center;
@@ -237,34 +243,39 @@ export const Reports = () => {
             font-size: 9px;
           }
           table {
-            width: 100%;
+            width: auto;
             border-collapse: collapse;
-            margin-bottom: 15px;
+            margin: 0 auto 15px;
             font-size: 9px;
           }
           th, td {
             border: 1px solid #000;
-            padding: 4px 6px;
+            padding: 4px 8px;
             text-align: center;
             vertical-align: middle;
+            white-space: nowrap;
           }
           .primary-header {
             font-weight: bold;
             background-color: #f5f5f5;
             text-align: left;
             padding-left: 8px;
+            min-width: 120px;
           }
           .secondary-header {
             font-weight: bold;
             font-size: 9px;
             background-color: #f9f9f9;
+            min-width: 60px;
           }
           .data-header {
             font-size: 8px;
             font-weight: bold;
+            min-width: 35px;
           }
           .data-cell {
             font-size: 9px;
+            min-width: 35px;
           }
           .source {
             text-align: right;
@@ -272,13 +283,8 @@ export const Reports = () => {
             font-style: italic;
             margin-top: 15px;
           }
-          .category-cell {
-            text-align: left;
-            padding-left: 10px;
-            font-weight: normal;
-          }
           @media print {
-            body { margin: 10px; }
+            body { margin: 15px auto; max-width: none; }
             .no-print { display: none; }
           }
         </style>
@@ -295,51 +301,47 @@ export const Reports = () => {
           <thead>
             <tr>
               <th rowspan="2" class="primary-header">${primaryField?.field_label || 'Category'}</th>
-              ${dataFields.map(field => `
-                <th colspan="2" class="secondary-header">${field.field_label}</th>
+              ${secondaryValues.map(secValue => `
+                <th colspan="2" class="secondary-header">${secValue}</th>
               `).join('')}
             </tr>
             <tr>
-              ${dataFields.map(field => `
+              ${secondaryValues.map(secValue => `
                 <th class="data-header">No.</th>
-                <th class="data-header">No.</th>
+                <th class="data-header">Beds</th>
               `).join('')}
             </tr>
           </thead>
           <tbody>
-            ${Array.from(structuredData.entries()).map(([primaryValue, groups]) => {
-              let rows = '';
-              let isFirstRow = true;
-              
-              groups.forEach((group: any) => {
-                if (isFirstRow) {
-                  rows += `<tr>
-                    <td rowspan="${groups.length}" class="primary-header">${primaryValue}</td>`;
-                  isFirstRow = false;
-                } else {
-                  rows += `<tr>`;
-                }
-                
-                // For each data field, aggregate the values from submissions
-                dataFields.forEach((field: any) => {
-                  const fieldValues = group.submissions.map((s: any) => s.data?.[field.field_name]).filter((v: any) => v && v !== '');
-                  const count = fieldValues.length;
-                  const aggregatedValue = fieldValues.reduce((sum: number, val: any) => {
-                    const num = parseFloat(val);
-                    return sum + (isNaN(num) ? 0 : num);
-                  }, 0);
+            ${Array.from(structuredData.entries()).map(([primaryValue, rowData]) => `
+              <tr>
+                <td class="primary-header">${primaryValue}</td>
+                ${secondaryValues.map(secValue => {
+                  const submissions = rowData.get(secValue) || [];
+                  // Get the first data field that's not primary/secondary for bed count
+                  const bedField = dataFields.find(f => !f.is_primary_column && !f.is_secondary_column);
                   
-                  rows += `
-                    <td class="data-cell">${count}</td>
-                    <td class="data-cell">${aggregatedValue || '-'}</td>
-                  `;
-                });
-                
-                rows += `</tr>`;
-              });
-              
-              return rows;
-            }).join('')}
+                  if (bedField) {
+                    const bedValues = submissions.map((s: any) => s.data?.[bedField.field_name]).filter((v: any) => v && v !== '');
+                    const count = submissions.length;
+                    const totalBeds = bedValues.reduce((sum: number, val: any) => {
+                      const num = parseFloat(val);
+                      return sum + (isNaN(num) ? 0 : num);
+                    }, 0);
+                    
+                    return `
+                      <td class="data-cell">${count}</td>
+                      <td class="data-cell">${totalBeds || '-'}</td>
+                    `;
+                  } else {
+                    return `
+                      <td class="data-cell">${submissions.length}</td>
+                      <td class="data-cell">-</td>
+                    `;
+                  }
+                }).join('')}
+              </tr>
+            `).join('')}
           </tbody>
         </table>
         

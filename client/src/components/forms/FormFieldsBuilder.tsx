@@ -261,24 +261,40 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
                 <div className="space-y-2 max-h-32 overflow-y-auto border rounded-md p-2">
                   {fields
                     .filter((f, i) => i !== index && f.field_type === 'number' && f.field_label)
-                    .map((numberField, i) => (
-                      <div key={`${numberField.field_name}-${i}`} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`aggregate-${index}-${numberField.field_name}`}
-                          checked={field.aggregate_fields?.includes(numberField.field_name) || false}
-                          onCheckedChange={(checked) => {
-                            const currentFields = field.aggregate_fields || [];
-                            const updatedFields = checked
-                              ? [...currentFields, numberField.field_name]
-                              : currentFields.filter(name => name !== numberField.field_name);
-                            updateField(index, { aggregate_fields: updatedFields });
-                          }}
-                        />
-                        <Label htmlFor={`aggregate-${index}-${numberField.field_name}`} className="text-sm">
-                          {numberField.field_label} ({numberField.field_name})
-                        </Label>
-                      </div>
-                    ))}
+                    .map((numberField, i) => {
+                      const isChecked = field.aggregate_fields?.includes(numberField.field_name) || false;
+                      const checkboxId = `aggregate-${index}-field-${numberField.field_name || i}`;
+                      
+                      return (
+                        <div key={numberField.field_name || `number-field-${i}`} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={checkboxId}
+                            checked={isChecked}
+                            onCheckedChange={(checked) => {
+                              const currentFields = field.aggregate_fields || [];
+                              let updatedFields;
+                              
+                              if (checked) {
+                                // Add field if not already present
+                                if (!currentFields.includes(numberField.field_name)) {
+                                  updatedFields = [...currentFields, numberField.field_name];
+                                } else {
+                                  updatedFields = currentFields;
+                                }
+                              } else {
+                                // Remove field
+                                updatedFields = currentFields.filter(name => name !== numberField.field_name);
+                              }
+                              
+                              updateField(index, { aggregate_fields: updatedFields });
+                            }}
+                          />
+                          <Label htmlFor={checkboxId} className="text-sm cursor-pointer">
+                            {numberField.field_label} ({numberField.field_name || 'unnamed'})
+                          </Label>
+                        </div>
+                      );
+                    })}
                   {fields.filter((f, i) => i !== index && f.field_type === 'number' && f.field_label).length === 0 && (
                     <p className="text-sm text-gray-500 italic">
                       No number fields available. Add number fields first.

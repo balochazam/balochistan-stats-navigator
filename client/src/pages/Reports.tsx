@@ -187,26 +187,28 @@ export const Reports = () => {
     });
     secondaryValues.sort();
 
-    // Group data by primary column for rows
+    // Create a simple structure for the cross-tabulation
     const structuredData = new Map();
-    primaryGroups.forEach((submissions, primaryValue) => {
+    
+    // Initialize the structure for each primary value
+    Array.from(primaryGroups.keys()).forEach(primaryValue => {
       const rowData = new Map();
-      
-      // Initialize all secondary values with empty arrays
       secondaryValues.forEach(secValue => {
         rowData.set(secValue, []);
       });
-      
-      // Populate with actual submissions
-      submissions.forEach((submission: any) => {
-        const secondaryValue = secondaryField?.field_name ? 
-          submission.data?.[secondaryField.field_name] || 'Unknown' : 'All';
-        if (rowData.has(secondaryValue)) {
-          rowData.get(secondaryValue)?.push(submission);
-        }
-      });
-      
       structuredData.set(primaryValue, rowData);
+    });
+    
+    // Populate with submissions based on their actual primary and secondary values
+    formSubmissions.forEach((submission: any) => {
+      const primaryValue = primaryField?.field_name ? 
+        submission.data?.[primaryField.field_name] || 'Unknown' : 'Unknown';
+      const secondaryValue = secondaryField?.field_name ? 
+        submission.data?.[secondaryField.field_name] || 'Unknown' : 'All';
+      
+      if (structuredData.has(primaryValue) && structuredData.get(primaryValue)?.has(secondaryValue)) {
+        structuredData.get(primaryValue)?.get(secondaryValue)?.push(submission);
+      }
     });
 
     const htmlContent = `
@@ -318,10 +320,11 @@ export const Reports = () => {
                 <td class="primary-header">${primaryValue}</td>
                 ${secondaryValues.map(secValue => {
                   const submissions = rowData.get(secValue) || [];
-                  // Get the first data field that's not primary/secondary for bed count
+                  
+                  // Get the bed count field (should be the data field, not primary/secondary)
                   const bedField = dataFields.find(f => !f.is_primary_column && !f.is_secondary_column);
                   
-                  if (bedField) {
+                  if (submissions.length > 0 && bedField) {
                     const bedValues = submissions.map((s: any) => s.data?.[bedField.field_name]).filter((v: any) => v && v !== '');
                     const count = submissions.length;
                     const totalBeds = bedValues.reduce((sum: number, val: any) => {
@@ -331,11 +334,11 @@ export const Reports = () => {
                     
                     return `
                       <td class="data-cell">${count}</td>
-                      <td class="data-cell">${totalBeds || '-'}</td>
+                      <td class="data-cell">${totalBeds}</td>
                     `;
                   } else {
                     return `
-                      <td class="data-cell">${submissions.length}</td>
+                      <td class="data-cell">0</td>
                       <td class="data-cell">-</td>
                     `;
                   }

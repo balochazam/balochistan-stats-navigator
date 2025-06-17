@@ -13,7 +13,17 @@ interface HierarchicalFormBuilderProps {
   onSave: (groups: FieldGroup[], fields: FormField[]) => void;
 }
 
-interface GroupNode extends FieldGroup {
+interface GroupNode {
+  id: string;
+  form_id: string;
+  group_name: string;
+  group_label: string;
+  parent_group_id: string | null;
+  group_type: string;
+  display_order: number;
+  is_repeatable: boolean;
+  created_at: string;
+  updated_at: string;
   children: GroupNode[];
   fields: FormField[];
   expanded?: boolean;
@@ -73,6 +83,8 @@ export const HierarchicalFormBuilder: React.FC<HierarchicalFormBuilderProps> = (
     flatGroups.forEach(group => {
       groupMap.set(group.id, {
         ...group,
+        created_at: typeof group.created_at === 'string' ? group.created_at : group.created_at.toISOString(),
+        updated_at: typeof group.updated_at === 'string' ? group.updated_at : group.updated_at.toISOString(),
         children: [],
         fields: [],
         expanded: true
@@ -142,7 +154,7 @@ export const HierarchicalFormBuilder: React.FC<HierarchicalFormBuilderProps> = (
           field_group_id: group.id,
           field_name: `${group.group_name}_${fieldTemplate.name}`,
           field_label: fieldTemplate.label,
-          field_type: fieldTemplate.type,
+          field_type: fieldTemplate.type as any,
           is_required: false,
           is_primary_column: false,
           is_secondary_column: false,
@@ -150,8 +162,8 @@ export const HierarchicalFormBuilder: React.FC<HierarchicalFormBuilderProps> = (
           placeholder_text: null,
           aggregate_fields: null,
           field_order: group.fields.length + index,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          created_at: new Date() as any,
+          updated_at: new Date() as any
         };
         group.fields.push(newField);
       });

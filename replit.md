@@ -115,6 +115,9 @@ Changelog:
 - June 16, 2025. Initial setup
 - June 16, 2025. Fixed data collection functionality - users can now submit multiple entries per form, removed artificial completion limits
 - June 16, 2025. Added comprehensive reporting system - schedules can be published when all forms are complete, published schedules show tabular data reports with CSV export functionality
+- June 17, 2025. Implemented hierarchical sub-header system for complex nested forms (Province → Medical Personnel → Doctors/Dentists/Specialists → Gender breakdowns)
+- June 17, 2025. Fixed form creation bug where sub-header data wasn't being saved to database
+- June 17, 2025. Enhanced validation logic - fields with sub-headers skip required validation and hide main input field
 ```
 
 ## User Preferences

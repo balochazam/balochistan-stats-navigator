@@ -224,6 +224,7 @@ export const FormBuilderDialog = ({
               is_secondary_column: field.is_secondary_column,
               reference_data_name: field.reference_data_name || null,
               placeholder_text: field.placeholder_text || null,
+              aggregate_fields: field.aggregate_fields || null,
               field_order: index
             };
           });

@@ -78,6 +78,12 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
       const data = await apiClient.get(`/api/form-fields/${scheduleForm.form_id}`);
       
       console.log('Form fields fetched successfully:', data);
+      // Debug aggregate fields
+      data?.forEach((field: any) => {
+        if (field.field_type === 'aggregate') {
+          console.log('Aggregate field found:', field.field_name, 'aggregate_fields:', field.aggregate_fields);
+        }
+      });
       setFormFields(data || []);
       
       // Initialize form data with empty values for each field

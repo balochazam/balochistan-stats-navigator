@@ -336,34 +336,21 @@ export const Reports = () => {
                   const submissions = rowData.get(secValue) || [];
                   
                   if (submissions.length > 0) {
-                    // Find the bed count field (numeric field that's not primary/secondary)
-                    const bedField = dataFields.find(f => 
-                      !f.is_primary_column && 
-                      !f.is_secondary_column && 
-                      (f.field_name.toLowerCase().includes('bed') || 
-                       f.field_name.toLowerCase().includes('no') ||
-                       f.field_type === 'number')
-                    );
+                    // Get count (number of submissions)
+                    const institutionCount = submissions.length;
                     
-                    const count = submissions.length;
+                    // Get total beds by summing the "Beds" field for all submissions of this secondary value
+                    const totalBeds = submissions.reduce((sum: number, s: any) => {
+                      // Look for the Beds field value in this submission
+                      const bedsValue = s.data?.['Beds'] || s.data?.['beds'] || 0;
+                      const num = parseFloat(bedsValue);
+                      return sum + (isNaN(num) ? 0 : num);
+                    }, 0);
                     
-                    if (bedField) {
-                      const totalBeds = submissions.reduce((sum: number, s: any) => {
-                        const bedValue = s.data?.[bedField.field_name];
-                        const num = parseFloat(bedValue);
-                        return sum + (isNaN(num) ? 0 : num);
-                      }, 0);
-                      
-                      return `
-                        <td class="data-cell">${count}</td>
-                        <td class="data-cell">${totalBeds}</td>
-                      `;
-                    } else {
-                      return `
-                        <td class="data-cell">${count}</td>
-                        <td class="data-cell">-</td>
-                      `;
-                    }
+                    return `
+                      <td class="data-cell">${institutionCount}</td>
+                      <td class="data-cell">${totalBeds}</td>
+                    `;
                   } else {
                     return `
                       <td class="data-cell">0</td>

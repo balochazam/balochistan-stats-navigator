@@ -206,9 +206,23 @@ export const Reports = () => {
       const secondaryValue = secondaryField?.field_name ? 
         submission.data?.[secondaryField.field_name] || 'Unknown' : 'All';
       
-      if (structuredData.has(primaryValue) && structuredData.get(primaryValue)?.has(secondaryValue)) {
-        structuredData.get(primaryValue)?.get(secondaryValue)?.push(submission);
+      // Ensure the primary value exists in our structure
+      if (!structuredData.has(primaryValue)) {
+        const newRowData = new Map();
+        secondaryValues.forEach(secValue => {
+          newRowData.set(secValue, []);
+        });
+        structuredData.set(primaryValue, newRowData);
       }
+      
+      // Ensure the secondary value exists for this primary value
+      const rowData = structuredData.get(primaryValue);
+      if (!rowData?.has(secondaryValue)) {
+        rowData?.set(secondaryValue, []);
+      }
+      
+      // Add the submission to the correct cell
+      rowData?.get(secondaryValue)?.push(submission);
     });
 
     const htmlContent = `
@@ -321,21 +335,35 @@ export const Reports = () => {
                 ${secondaryValues.map(secValue => {
                   const submissions = rowData.get(secValue) || [];
                   
-                  // Get the bed count field (should be the data field, not primary/secondary)
-                  const bedField = dataFields.find(f => !f.is_primary_column && !f.is_secondary_column);
-                  
-                  if (submissions.length > 0 && bedField) {
-                    const bedValues = submissions.map((s: any) => s.data?.[bedField.field_name]).filter((v: any) => v && v !== '');
-                    const count = submissions.length;
-                    const totalBeds = bedValues.reduce((sum: number, val: any) => {
-                      const num = parseFloat(val);
-                      return sum + (isNaN(num) ? 0 : num);
-                    }, 0);
+                  if (submissions.length > 0) {
+                    // Find the bed count field (numeric field that's not primary/secondary)
+                    const bedField = dataFields.find(f => 
+                      !f.is_primary_column && 
+                      !f.is_secondary_column && 
+                      (f.field_name.toLowerCase().includes('bed') || 
+                       f.field_name.toLowerCase().includes('no') ||
+                       f.field_type === 'number')
+                    );
                     
-                    return `
-                      <td class="data-cell">${count}</td>
-                      <td class="data-cell">${totalBeds}</td>
-                    `;
+                    const count = submissions.length;
+                    
+                    if (bedField) {
+                      const totalBeds = submissions.reduce((sum: number, s: any) => {
+                        const bedValue = s.data?.[bedField.field_name];
+                        const num = parseFloat(bedValue);
+                        return sum + (isNaN(num) ? 0 : num);
+                      }, 0);
+                      
+                      return `
+                        <td class="data-cell">${count}</td>
+                        <td class="data-cell">${totalBeds}</td>
+                      `;
+                    } else {
+                      return `
+                        <td class="data-cell">${count}</td>
+                        <td class="data-cell">-</td>
+                      `;
+                    }
                   } else {
                     return `
                       <td class="data-cell">0</td>

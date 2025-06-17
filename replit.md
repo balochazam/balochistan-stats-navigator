@@ -56,6 +56,13 @@ This is a full-stack data collection management system built with React, Node.js
 - Progress monitoring for administrators
 - Department-based data organization
 
+### Reporting System
+- Schedule publishing capability when all forms are completed
+- Tabular data visualization for published schedules
+- Form-specific data reports with submission details
+- CSV export functionality for data analysis
+- Completion status tracking and validation
+
 ## Data Flow
 
 1. **Admin Setup**: Administrators create departments, reference data, and forms
@@ -63,6 +70,9 @@ This is a full-stack data collection management system built with React, Node.js
 3. **User Assignment**: Users are assigned to departments and given appropriate roles
 4. **Data Collection**: Users access assigned forms through schedules and submit data
 5. **Progress Tracking**: Admins monitor completion status and collected data
+6. **Form Completion**: Users mark forms as complete when finished with data entry
+7. **Schedule Publishing**: Admins publish schedules when all forms are completed
+8. **Report Generation**: Published schedules provide tabular data views and CSV exports
 
 ## External Dependencies
 
@@ -104,6 +114,7 @@ This is a full-stack data collection management system built with React, Node.js
 Changelog:
 - June 16, 2025. Initial setup
 - June 16, 2025. Fixed data collection functionality - users can now submit multiple entries per form, removed artificial completion limits
+- June 16, 2025. Added comprehensive reporting system - schedules can be published when all forms are complete, published schedules show tabular data reports with CSV export functionality
 ```
 
 ## User Preferences

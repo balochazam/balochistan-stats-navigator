@@ -99,6 +99,29 @@ export const ScheduleManagement = () => {
   };
 
   const handleStatusChange = async (scheduleId: string, newStatus: string) => {
+    // If trying to publish, check completion status first
+    if (newStatus === 'published') {
+      try {
+        const completionStatus = await apiClient.get(`/api/schedules/${scheduleId}/completion-status`);
+        if (!completionStatus.canPublish) {
+          toast({
+            title: "Cannot Publish",
+            description: completionStatus.reason || "Not all forms are completed",
+            variant: "destructive",
+          });
+          return;
+        }
+      } catch (error) {
+        console.error('Error checking completion status:', error);
+        toast({
+          title: "Error",
+          description: "Failed to check completion status",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     try {
       await apiClient.put(`/api/schedules/${scheduleId}`, { 
         status: newStatus,

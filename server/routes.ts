@@ -533,6 +533,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Check if schedule can be published (all forms completed)
+  app.get('/api/schedules/:id/completion-status', requireAuth, async (req, res) => {
+    try {
+      const scheduleId = req.params.id;
+      const scheduleForms = await storage.getScheduleForms(scheduleId);
+      
+      if (scheduleForms.length === 0) {
+        return res.json({ canPublish: false, reason: 'No forms in schedule' });
+      }
+
+      let allFormsCompleted = true;
+      const formStatuses = [];
+
+      for (const scheduleForm of scheduleForms) {
+        const completions = await storage.getScheduleFormCompletions(scheduleForm.id);
+        const isCompleted = completions.length > 0;
+        
+        formStatuses.push({
+          formId: scheduleForm.form_id,
+          formName: scheduleForm.form?.name || 'Unknown Form',
+          isCompleted
+        });
+
+        if (!isCompleted) {
+          allFormsCompleted = false;
+        }
+      }
+
+      res.json({ 
+        canPublish: allFormsCompleted, 
+        formStatuses,
+        reason: allFormsCompleted ? 'All forms completed' : 'Some forms not completed'
+      });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to check completion status' });
+    }
+  });
+
   // Schedule Form routes
   app.get('/api/schedules/:scheduleId/forms', requireAuth, async (req, res) => {
     try {

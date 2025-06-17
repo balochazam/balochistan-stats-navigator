@@ -303,13 +303,13 @@ export const insertFormFieldSchema = createInsertSchema(form_fields).omit({
       field_order: z.number(),
       reference_data_name: z.string().optional(),
       placeholder_text: z.string().optional(),
-      aggregate_fields: z.array(z.string()).optional(),
+      aggregate_fields: z.array(z.string()).nullable().optional().transform(val => val === null ? [] : val),
       is_secondary_column: z.boolean().optional(),
       has_sub_headers: z.boolean().optional(),
       sub_headers: z.array(z.any()).optional()
     }))
   })).optional(),
-  aggregate_fields: z.array(z.string()).optional()
+  aggregate_fields: z.array(z.string()).nullable().optional().transform(val => val === null ? [] : val)
 });
 
 export const insertScheduleSchema = createInsertSchema(schedules).omit({

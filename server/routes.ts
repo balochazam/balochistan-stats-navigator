@@ -475,6 +475,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const createdFields = [];
       for (const fieldData of req.body) {
+        // Handle null aggregate_fields by converting to empty array
+        if (fieldData.aggregate_fields === null) {
+          fieldData.aggregate_fields = [];
+        }
         const validatedData = insertFormFieldSchema.parse(fieldData);
         const field = await storage.createFormField(validatedData);
         createdFields.push(field);

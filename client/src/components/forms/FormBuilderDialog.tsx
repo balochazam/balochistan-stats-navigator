@@ -25,6 +25,13 @@ interface Form {
   department_id: string | null;
 }
 
+interface SubHeader {
+  id?: string;
+  name: string;
+  label: string;
+  fields: any[];
+}
+
 interface FormField {
   id?: string;
   field_name: string;
@@ -36,6 +43,9 @@ interface FormField {
   reference_data_name?: string;
   placeholder_text?: string;
   field_order: number;
+  aggregate_fields?: string[];
+  has_sub_headers?: boolean;
+  sub_headers?: SubHeader[];
 }
 
 interface FormBuilderDialogProps {

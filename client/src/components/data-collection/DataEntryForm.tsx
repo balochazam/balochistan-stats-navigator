@@ -174,22 +174,52 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
       
       // Calculate aggregate fields when number fields change
       const updatedWithAggregates = { ...updated };
+      
+      // Function to calculate aggregates for any field structure
+      const calculateAggregatesForFields = (fields: any[], parentPrefix = '') => {
+        fields.forEach(field => {
+          const fieldKey = parentPrefix ? `${parentPrefix}_${field.field_name}` : field.field_name;
+          
+          if (field.field_type === 'aggregate' && field.aggregate_fields?.length) {
+            let sum = 0;
+            let hasValidNumbers = false;
+            
+            field.aggregate_fields.forEach((aggregateFieldName: string) => {
+              const fullFieldName = parentPrefix ? `${parentPrefix}_${aggregateFieldName}` : aggregateFieldName;
+              const fieldValue = updatedWithAggregates[fullFieldName];
+              const numValue = parseFloat(fieldValue);
+              if (!isNaN(numValue)) {
+                sum += numValue;
+                hasValidNumbers = true;
+              }
+            });
+            
+            // Only set the aggregate value if at least one valid number exists
+            updatedWithAggregates[fieldKey] = hasValidNumbers ? sum.toString() : '';
+          }
+        });
+      };
+      
+      // Calculate aggregates for top-level fields
+      calculateAggregatesForFields(formFields);
+      
+      // Calculate aggregates for sub-header fields
       formFields.forEach(field => {
-        if (field.field_type === 'aggregate' && field.aggregate_fields?.length) {
-          let sum = 0;
-          let hasValidNumbers = false;
-          
-          field.aggregate_fields.forEach((aggregateFieldName: string) => {
-            const fieldValue = updatedWithAggregates[aggregateFieldName];
-            const numValue = parseFloat(fieldValue);
-            if (!isNaN(numValue)) {
-              sum += numValue;
-              hasValidNumbers = true;
-            }
+        if (field.has_sub_headers && field.sub_headers) {
+          field.sub_headers.forEach((subHeader: any) => {
+            const subHeaderPrefix = `${field.field_name}_${subHeader.name}`;
+            calculateAggregatesForFields(subHeader.fields, subHeaderPrefix);
+            
+            // Calculate aggregates for nested sub-header fields (e.g., Medical/Dental under Specialists)
+            subHeader.fields.forEach((subField: any) => {
+              if (subField.has_sub_headers && subField.sub_headers) {
+                subField.sub_headers.forEach((nestedSubHeader: any) => {
+                  const nestedPrefix = `${subHeaderPrefix}_${subField.field_name}_${nestedSubHeader.name}`;
+                  calculateAggregatesForFields(nestedSubHeader.fields, nestedPrefix);
+                });
+              }
+            });
           });
-          
-          // Only set the aggregate value if at least one valid number exists
-          updatedWithAggregates[field.field_name] = hasValidNumbers ? sum.toString() : '';
         }
       });
       
@@ -859,7 +889,29 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
                                   {subField.field_label}
                                   {subField.is_required && <span className="text-red-500 ml-1">*</span>}
                                 </Label>
-                                {renderSubHeaderField(subField, field.field_name, subHeader.name)}
+                                {subField.has_sub_headers && subField.sub_headers ? (
+                                  <div className="space-y-3">
+                                    {renderSubHeaderField(subField, field.field_name, subHeader.name)}
+                                    {subField.sub_headers.map((nestedSubHeader) => (
+                                      <div key={nestedSubHeader.name} className="border rounded-md p-3 bg-white">
+                                        <h5 className="font-medium text-sm mb-2 text-gray-700">{nestedSubHeader.label || nestedSubHeader.name}</h5>
+                                        <div className="grid grid-cols-1 gap-2">
+                                          {nestedSubHeader.fields.map((nestedField) => (
+                                            <div key={nestedField.field_name} className="space-y-1">
+                                              <Label htmlFor={`${field.field_name}_${subHeader.name}_${subField.field_name}_${nestedSubHeader.name}_${nestedField.field_name}`} className="text-xs font-medium">
+                                                {nestedField.field_label}
+                                                {nestedField.is_required && <span className="text-red-500 ml-1">*</span>}
+                                              </Label>
+                                              {renderNestedSubHeaderField(nestedField, field.field_name, subHeader.name, subField.field_name, nestedSubHeader.name)}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  renderSubHeaderField(subField, field.field_name, subHeader.name)
+                                )}
                               </div>
                             ))}
                           </div>

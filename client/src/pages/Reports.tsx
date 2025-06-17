@@ -138,6 +138,60 @@ export const Reports = () => {
     }
   };
 
+  // Helper function to check if form has hierarchical structure
+  const isHierarchicalForm = () => {
+    return formFields.some((field: any) => field.has_sub_headers && field.sub_headers?.length > 0);
+  };
+
+  // Helper function to get all hierarchical columns
+  const getHierarchicalColumns = () => {
+    const columns: any[] = [];
+    
+    // Add primary column first (usually Province)
+    const primaryField = formFields.find((field: any) => field.is_primary_column);
+    if (primaryField) {
+      columns.push({
+        key: primaryField.field_name,
+        label: primaryField.field_label,
+        type: 'primary'
+      });
+    }
+    
+    // Add hierarchical columns
+    formFields.forEach((field: any) => {
+      if (field.has_sub_headers && field.sub_headers) {
+        field.sub_headers.forEach((subHeader: any) => {
+          subHeader.fields.forEach((subField: any) => {
+            if (subField.has_sub_headers && subField.sub_headers) {
+              // Handle nested sub-headers (e.g., Medical/Dental under Specialists)
+              subField.sub_headers.forEach((nestedSubHeader: any) => {
+                nestedSubHeader.fields.forEach((nestedField: any) => {
+                  columns.push({
+                    key: `${field.field_name}_${subHeader.name}_${subField.field_name}_${nestedSubHeader.name}_${nestedField.field_name}`,
+                    label: `${subHeader.label || subHeader.name} ${nestedSubHeader.label || nestedSubHeader.name} ${nestedField.field_label}`,
+                    type: 'hierarchical',
+                    category: subHeader.label || subHeader.name,
+                    subcategory: nestedSubHeader.label || nestedSubHeader.name
+                  });
+                });
+              });
+            } else {
+              // Regular sub-header fields
+              columns.push({
+                key: `${field.field_name}_${subHeader.name}_${subField.field_name}`,
+                label: `${subHeader.label || subHeader.name} ${subField.field_label}`,
+                type: 'hierarchical',
+                category: subHeader.label || subHeader.name
+              });
+            }
+          });
+        });
+      }
+    });
+    
+    return columns;
+  };
+
   // Helper function to extract hierarchical field data
   const getFieldValue = (submission: FormSubmission, field: any) => {
     // First try direct field name match (for simple forms)
@@ -181,14 +235,25 @@ export const Reports = () => {
   const exportToCSV = () => {
     if (!selectedForm || !formFields.length || !formSubmissions.length) return;
     
-    const headers = ['Submission Date', ...formFields.map(field => field.field_label)];
-    const rows = formSubmissions.map(submission => [
-      new Date(submission.submitted_at).toLocaleDateString(),
-      ...formFields.map(field => {
-        const value = getFieldValue(submission, field);
-        return value || '';
-      })
-    ]);
+    let headers: string[];
+    let rows: string[][];
+    
+    if (isHierarchicalForm()) {
+      // Use hierarchical column structure for CSV
+      const columns = getHierarchicalColumns();
+      headers = ['Submission Date', ...columns.map(col => col.label)];
+      rows = formSubmissions.map(submission => [
+        new Date(submission.submitted_at).toLocaleDateString(),
+        ...columns.map(col => submission.data?.[col.key] || '')
+      ]);
+    } else {
+      // Use simple structure for non-hierarchical forms
+      headers = ['Submission Date', ...formFields.map(field => field.field_label)];
+      rows = formSubmissions.map(submission => [
+        new Date(submission.submitted_at).toLocaleDateString(),
+        ...formFields.map(field => submission.data?.[field.field_name] || '')
+      ]);
+    }
     
     const csvContent = [headers, ...rows]
       .map(row => row.map(cell => `"${cell}"`).join(','))
@@ -655,30 +720,68 @@ export const Reports = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Submission Date</TableHead>
-                          {formFields.map((field) => (
-                            <TableHead key={field.id}>{field.field_label}</TableHead>
-                          ))}
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {formSubmissions.map((submission) => (
-                          <TableRow key={submission.id}>
-                            <TableCell>
-                              {new Date(submission.submitted_at).toLocaleDateString()}
-                            </TableCell>
-                            {formFields.map((field) => (
-                              <TableCell key={field.id}>
-                                {getFieldValue(submission, field) || '-'}
-                              </TableCell>
+                    {isHierarchicalForm() ? (
+                      // Hierarchical table with proper column structure
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="bg-gray-50">Submission Date</TableHead>
+                            {getHierarchicalColumns().map((column) => (
+                              <TableHead key={column.key} className={
+                                column.type === 'primary' ? 'bg-blue-50 font-semibold' : 
+                                column.category === 'Doctors' ? 'bg-green-50' :
+                                column.category === 'Dentists' ? 'bg-blue-50' :
+                                column.category === 'Specialists' ? 'bg-purple-50' : 'bg-gray-50'
+                              }>
+                                {column.label}
+                              </TableHead>
                             ))}
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                        </TableHeader>
+                        <TableBody>
+                          {formSubmissions.map((submission) => (
+                            <TableRow key={submission.id}>
+                              <TableCell className="font-medium">
+                                {new Date(submission.submitted_at).toLocaleDateString()}
+                              </TableCell>
+                              {getHierarchicalColumns().map((column) => (
+                                <TableCell key={column.key} className={
+                                  column.type === 'primary' ? 'font-medium bg-blue-25' : ''
+                                }>
+                                  {submission.data?.[column.key] || '-'}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    ) : (
+                      // Simple table for non-hierarchical forms
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Submission Date</TableHead>
+                            {formFields.map((field) => (
+                              <TableHead key={field.id}>{field.field_label}</TableHead>
+                            ))}
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {formSubmissions.map((submission) => (
+                            <TableRow key={submission.id}>
+                              <TableCell>
+                                {new Date(submission.submitted_at).toLocaleDateString()}
+                              </TableCell>
+                              {formFields.map((field) => (
+                                <TableCell key={field.id}>
+                                  {submission.data?.[field.field_name] || '-'}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
                   </div>
                 </CardContent>
               </Card>

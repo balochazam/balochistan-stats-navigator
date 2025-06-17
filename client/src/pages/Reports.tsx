@@ -333,15 +333,19 @@ export const Reports = () => {
               <tr>
                 <td class="primary-header">${primaryValue}</td>
                 ${secondaryValues.map(secValue => {
-                  const submissions = rowData.get(secValue) || [];
+                  // Filter submissions for this specific primary-secondary combination
+                  const cellSubmissions = formSubmissions.filter((s: any) => {
+                    const sPrimary = primaryField?.field_name ? s.data?.[primaryField.field_name] : '';
+                    const sSecondary = secondaryField?.field_name ? s.data?.[secondaryField.field_name] : '';
+                    return sPrimary === primaryValue && sSecondary === secValue;
+                  });
                   
-                  if (submissions.length > 0) {
-                    // Get count (number of submissions)
-                    const institutionCount = submissions.length;
+                  if (cellSubmissions.length > 0) {
+                    // Count institutions
+                    const institutionCount = cellSubmissions.length;
                     
-                    // Get total beds by summing the "Beds" field for all submissions of this secondary value
-                    const totalBeds = submissions.reduce((sum: number, s: any) => {
-                      // Look for the Beds field value in this submission
+                    // Sum beds from the actual data
+                    const totalBeds = cellSubmissions.reduce((sum: number, s: any) => {
                       const bedsValue = s.data?.['Beds'] || s.data?.['beds'] || 0;
                       const num = parseFloat(bedsValue);
                       return sum + (isNaN(num) ? 0 : num);
@@ -352,6 +356,7 @@ export const Reports = () => {
                       <td class="data-cell">${totalBeds}</td>
                     `;
                   } else {
+                    // No data for this combination - show 0 and -
                     return `
                       <td class="data-cell">0</td>
                       <td class="data-cell">-</td>

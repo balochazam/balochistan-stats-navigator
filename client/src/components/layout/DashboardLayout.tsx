@@ -15,6 +15,7 @@ import {
   FileText,
   Calendar,
   ClipboardList,
+  BarChart3,
   Settings,
   LogOut,
   User,
@@ -88,6 +89,12 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       title: 'Schedule Management',
       icon: Calendar,
       path: '/admin/schedules',
+      roles: ['admin']
+    },
+    {
+      title: 'Reports',
+      icon: BarChart3,
+      path: '/reports',
       roles: ['admin']
     }
   ];

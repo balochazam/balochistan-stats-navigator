@@ -12,15 +12,41 @@ import { ReferenceDataSelect } from '@/components/reference-data/ReferenceDataSe
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { CheckCircle, Plus } from 'lucide-react';
 
+interface SubHeaderField {
+  id?: string;
+  field_name: string;
+  field_label: string;
+  field_type: string;
+  is_required: boolean;
+  field_order: number;
+  reference_data_name?: string;
+  placeholder_text?: string;
+  aggregate_fields?: string[];
+  is_secondary_column?: boolean;
+  has_sub_headers?: boolean;
+  sub_headers?: SubHeader[];
+}
+
+interface SubHeader {
+  id?: string;
+  name: string;
+  label: string;
+  fields: SubHeaderField[];
+}
+
 interface FormField {
   id: string;
   field_name: string;
   field_type: string;
   field_label: string;
   is_required: boolean;
+  is_primary_column?: boolean;
+  is_secondary_column?: boolean;
   reference_data_name?: string;
   placeholder_text?: string;
   aggregate_fields?: string[];
+  has_sub_headers?: boolean;
+  sub_headers?: SubHeader[];
 }
 
 interface Form {
@@ -288,9 +314,143 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
     }
   };
 
+  const renderSubHeaderField = useCallback((field: SubHeaderField, parentFieldName: string, subHeaderName: string) => {
+    const fieldKey = `${parentFieldName}_${subHeaderName}_${field.field_name}`;
+    const fieldValue = formData[fieldKey] || '';
+    
+    switch (field.field_type) {
+      case 'text':
+        return (
+          <Input
+            id={fieldKey}
+            name={fieldKey}
+            value={fieldValue}
+            onChange={(e) => handleFieldChange(fieldKey, e.target.value)}
+            placeholder={field.placeholder_text}
+            required={field.is_required}
+          />
+        );
+      
+      case 'textarea':
+        return (
+          <Textarea
+            id={fieldKey}
+            name={fieldKey}
+            value={fieldValue}
+            onChange={(e) => handleFieldChange(fieldKey, e.target.value)}
+            placeholder={field.placeholder_text}
+            required={field.is_required}
+          />
+        );
+      
+      case 'select':
+        if (field.reference_data_name) {
+          return (
+            <ReferenceDataSelect
+              referenceDataName={field.reference_data_name}
+              value={fieldValue}
+              onValueChange={(value) => handleFieldChange(fieldKey, value)}
+              placeholder={field.placeholder_text || "Select an option"}
+            />
+          );
+        }
+        return (
+          <Select
+            value={fieldValue}
+            onValueChange={(value) => handleFieldChange(fieldKey, value)}
+          >
+            <SelectTrigger id={fieldKey}>
+              <SelectValue placeholder={field.placeholder_text || "Select an option"} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="option1">Option 1</SelectItem>
+              <SelectItem value="option2">Option 2</SelectItem>
+              <SelectItem value="option3">Option 3</SelectItem>
+            </SelectContent>
+          </Select>
+        );
+      
+      case 'number':
+        return (
+          <Input
+            id={fieldKey}
+            name={fieldKey}
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            value={fieldValue}
+            onChange={(e) => handleNumberChange(fieldKey, e.target.value)}
+            placeholder={field.placeholder_text}
+            required={field.is_required}
+          />
+        );
+      
+      case 'email':
+        return (
+          <Input
+            id={fieldKey}
+            name={fieldKey}
+            type="email"
+            value={fieldValue}
+            onChange={(e) => handleFieldChange(fieldKey, e.target.value)}
+            placeholder={field.placeholder_text}
+            required={field.is_required}
+          />
+        );
+      
+      case 'date':
+        return (
+          <Input
+            id={fieldKey}
+            name={fieldKey}
+            type="date"
+            value={fieldValue}
+            onChange={(e) => handleFieldChange(fieldKey, e.target.value)}
+            required={field.is_required}
+          />
+        );
+      
+      default:
+        return (
+          <Input
+            id={fieldKey}
+            name={fieldKey}
+            value={fieldValue}
+            onChange={(e) => handleFieldChange(fieldKey, e.target.value)}
+            placeholder={field.placeholder_text}
+            required={field.is_required}
+          />
+        );
+    }
+  }, [formData, handleFieldChange, handleNumberChange]);
+
   const renderField = useCallback((field: FormField) => {
     const fieldValue = formData[field.field_name] || '';
     console.log(`Rendering field: "${field.field_name}", type: ${field.field_type}, value:`, fieldValue);
+    
+    // If this field has sub-headers, render the sub-header structure
+    if (field.has_sub_headers && field.sub_headers && field.sub_headers.length > 0) {
+      return (
+        <div className="space-y-4">
+          {field.sub_headers.map((subHeader, subIndex) => (
+            <div key={subIndex} className="border rounded-lg p-4">
+              <h4 className="font-semibold text-lg mb-3">{subHeader.label}</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {subHeader.fields.map((subField, fieldIndex) => (
+                  <div key={fieldIndex}>
+                    <Label htmlFor={`${field.field_name}_${subHeader.name}_${subField.field_name}`}>
+                      {subField.field_label}
+                      {subField.is_required && <span className="text-red-500 ml-1">*</span>}
+                    </Label>
+                    {renderSubHeaderField(subField, field.field_name, subHeader.name)}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
     
     switch (field.field_type) {
       case 'text':

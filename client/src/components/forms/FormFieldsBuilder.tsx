@@ -262,9 +262,9 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
                   {fields
                     .filter((f, i) => i !== index && f.field_type === 'number' && f.field_label)
                     .map((numberField, i) => (
-                      <div key={i} className="flex items-center space-x-2">
+                      <div key={`${numberField.field_name}-${i}`} className="flex items-center space-x-2">
                         <Checkbox
-                          id={`aggregate-${index}-${i}`}
+                          id={`aggregate-${index}-${numberField.field_name}`}
                           checked={field.aggregate_fields?.includes(numberField.field_name) || false}
                           onCheckedChange={(checked) => {
                             const currentFields = field.aggregate_fields || [];
@@ -274,7 +274,7 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
                             updateField(index, { aggregate_fields: updatedFields });
                           }}
                         />
-                        <Label htmlFor={`aggregate-${index}-${i}`} className="text-sm">
+                        <Label htmlFor={`aggregate-${index}-${numberField.field_name}`} className="text-sm">
                           {numberField.field_label} ({numberField.field_name})
                         </Label>
                       </div>

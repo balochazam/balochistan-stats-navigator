@@ -159,20 +159,49 @@ export const Reports = () => {
       return a.field_order - b.field_order;
     });
 
-    // Group data by primary column
+    // Group data by primary column (e.g., "Under Control")
     const primaryField = sortedFields.find(f => f.is_primary_column);
     const secondaryField = sortedFields.find(f => f.is_secondary_column);
     const dataFields = sortedFields.filter(f => !f.is_primary_column && !f.is_secondary_column);
 
-    const groupedData = new Map();
-    
+    // Group submissions by primary field value
+    const primaryGroups = new Map();
     formSubmissions.forEach(submission => {
       const primaryValue = primaryField?.field_name ? 
         submission.data?.[primaryField.field_name] || 'Unknown' : 'Unknown';
-      if (!groupedData.has(primaryValue)) {
-        groupedData.set(primaryValue, []);
+      if (!primaryGroups.has(primaryValue)) {
+        primaryGroups.set(primaryValue, []);
       }
-      groupedData.get(primaryValue)?.push(submission);
+      primaryGroups.get(primaryValue)?.push(submission);
+    });
+
+    // Create a simplified structure that groups all data by secondary field (institution type)
+    // This matches the format where institutions are sub-rows under primary categories
+    const institutionGroups = new Map();
+    formSubmissions.forEach(submission => {
+      const primaryValue = primaryField?.field_name ? 
+        submission.data?.[primaryField.field_name] || 'Unknown' : 'Unknown';
+      const secondaryValue = secondaryField?.field_name ? 
+        submission.data?.[secondaryField.field_name] || 'Unknown' : 'All';
+      
+      const key = `${primaryValue}|${secondaryValue}`;
+      if (!institutionGroups.has(key)) {
+        institutionGroups.set(key, {
+          primary: primaryValue,
+          secondary: secondaryValue,
+          submissions: []
+        });
+      }
+      institutionGroups.get(key).submissions.push(submission);
+    });
+
+    // Group by primary value for rendering
+    const structuredData = new Map();
+    institutionGroups.forEach((group, key) => {
+      if (!structuredData.has(group.primary)) {
+        structuredData.set(group.primary, []);
+      }
+      structuredData.get(group.primary).push(group);
     });
 
     const htmlContent = `
@@ -183,59 +212,73 @@ export const Reports = () => {
         <style>
           body { 
             font-family: Arial, sans-serif; 
-            margin: 20px; 
-            font-size: 12px;
+            margin: 15px; 
+            font-size: 10px;
+            color: black;
           }
           .header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
           }
           .title {
-            font-size: 14px;
-            font-weight: bold;
-            text-decoration: underline;
-            margin-bottom: 10px;
-          }
-          .subtitle {
             font-size: 12px;
             font-weight: bold;
-            margin-bottom: 20px;
+            text-decoration: underline;
+            margin-bottom: 8px;
+          }
+          .subtitle {
+            font-size: 10px;
+            font-weight: bold;
+            margin-bottom: 15px;
           }
           .period {
             text-align: right;
-            margin-bottom: 20px;
-            font-size: 10px;
+            margin-bottom: 15px;
+            font-size: 9px;
           }
           table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
+            font-size: 9px;
           }
           th, td {
-            border: 1px solid black;
-            padding: 6px;
+            border: 1px solid #000;
+            padding: 4px 6px;
             text-align: center;
             vertical-align: middle;
           }
           .primary-header {
             font-weight: bold;
-            background-color: #f0f0f0;
+            background-color: #f5f5f5;
+            text-align: left;
+            padding-left: 8px;
           }
           .secondary-header {
             font-weight: bold;
-            font-size: 11px;
+            font-size: 9px;
+            background-color: #f9f9f9;
           }
           .data-header {
-            font-size: 10px;
+            font-size: 8px;
+            font-weight: bold;
+          }
+          .data-cell {
+            font-size: 9px;
           }
           .source {
             text-align: right;
-            font-size: 10px;
+            font-size: 8px;
             font-style: italic;
-            margin-top: 20px;
+            margin-top: 15px;
+          }
+          .category-cell {
+            text-align: left;
+            padding-left: 10px;
+            font-weight: normal;
           }
           @media print {
-            body { margin: 0; }
+            body { margin: 10px; }
             .no-print { display: none; }
           }
         </style>
@@ -252,27 +295,51 @@ export const Reports = () => {
           <thead>
             <tr>
               <th rowspan="2" class="primary-header">${primaryField?.field_label || 'Category'}</th>
-              ${secondaryField ? `<th colspan="${dataFields.length * 2}" class="secondary-header">${secondaryField.field_label}</th>` : 
-                dataFields.map(field => `<th colspan="2" class="secondary-header">${field.field_label}</th>`).join('')}
+              ${dataFields.map(field => `
+                <th colspan="2" class="secondary-header">${field.field_label}</th>
+              `).join('')}
             </tr>
             <tr>
-              ${secondaryField ? 
-                dataFields.map(field => `<th class="data-header">No.</th><th class="data-header">${field.field_label}</th>`).join('') :
-                dataFields.map(field => `<th class="data-header">No.</th><th class="data-header">Value</th>`).join('')}
+              ${dataFields.map(field => `
+                <th class="data-header">No.</th>
+                <th class="data-header">No.</th>
+              `).join('')}
             </tr>
           </thead>
           <tbody>
-            ${Array.from(groupedData.entries()).map(([primaryValue, submissions]) => `
-              <tr>
-                <td class="primary-header">${primaryValue}</td>
-                ${dataFields.map(field => {
-                  const values = (submissions as any[]).map((s: any) => s.data?.[field.field_name]).filter((v: any) => v);
-                  const count = values.length;
-                  const value = values[0] || '-';
-                  return `<td>${count}</td><td>${value}</td>`;
-                }).join('')}
-              </tr>
-            `).join('')}
+            ${Array.from(structuredData.entries()).map(([primaryValue, groups]) => {
+              let rows = '';
+              let isFirstRow = true;
+              
+              groups.forEach((group: any) => {
+                if (isFirstRow) {
+                  rows += `<tr>
+                    <td rowspan="${groups.length}" class="primary-header">${primaryValue}</td>`;
+                  isFirstRow = false;
+                } else {
+                  rows += `<tr>`;
+                }
+                
+                // For each data field, aggregate the values from submissions
+                dataFields.forEach((field: any) => {
+                  const fieldValues = group.submissions.map((s: any) => s.data?.[field.field_name]).filter((v: any) => v && v !== '');
+                  const count = fieldValues.length;
+                  const aggregatedValue = fieldValues.reduce((sum: number, val: any) => {
+                    const num = parseFloat(val);
+                    return sum + (isNaN(num) ? 0 : num);
+                  }, 0);
+                  
+                  rows += `
+                    <td class="data-cell">${count}</td>
+                    <td class="data-cell">${aggregatedValue || '-'}</td>
+                  `;
+                });
+                
+                rows += `</tr>`;
+              });
+              
+              return rows;
+            }).join('')}
           </tbody>
         </table>
         

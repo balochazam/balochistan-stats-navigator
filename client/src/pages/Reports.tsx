@@ -369,12 +369,51 @@ export const Reports = () => {
                 }).join('')}
               </tr>
             `).join('')}
+            
+            <tr style="border-top: 2px solid #000;">
+              <td class="primary-header" style="background-color: #e0e0e0; font-weight: bold;">Aggregate</td>
+              ${secondaryValues.map(secValue => {
+                // Calculate totals for this secondary value across all primary values
+                const totalNo = Array.from(structuredData.entries()).reduce((sum, [primaryVal, rowData]) => {
+                  const cellSubmissions = formSubmissions.filter((s: any) => {
+                    const sPrimary = primaryField?.field_name ? s.data?.[primaryField.field_name] : '';
+                    const sSecondary = secondaryField?.field_name ? s.data?.[secondaryField.field_name] : '';
+                    return sPrimary === primaryVal && sSecondary === secValue;
+                  });
+                  
+                  const noValue = cellSubmissions.reduce((cellSum: number, s: any) => {
+                    const no = s.data?.['No.'] || s.data?.['No'] || s.data?.['no'] || 0;
+                    const num = parseFloat(no);
+                    return cellSum + (isNaN(num) ? 0 : num);
+                  }, 0);
+                  
+                  return sum + noValue;
+                }, 0);
+                
+                const totalBeds = Array.from(structuredData.entries()).reduce((sum, [primaryVal, rowData]) => {
+                  const cellSubmissions = formSubmissions.filter((s: any) => {
+                    const sPrimary = primaryField?.field_name ? s.data?.[primaryField.field_name] : '';
+                    const sSecondary = secondaryField?.field_name ? s.data?.[secondaryField.field_name] : '';
+                    return sPrimary === primaryVal && sSecondary === secValue;
+                  });
+                  
+                  const bedsValue = cellSubmissions.reduce((cellSum: number, s: any) => {
+                    const beds = s.data?.['Beds'] || s.data?.['beds'] || 0;
+                    const num = parseFloat(beds);
+                    return cellSum + (isNaN(num) ? 0 : num);
+                  }, 0);
+                  
+                  return sum + bedsValue;
+                }, 0);
+                
+                return `
+                  <td class="data-cell" style="background-color: #f0f0f0; font-weight: bold;">${totalNo}</td>
+                  <td class="data-cell" style="background-color: #f0f0f0; font-weight: bold;">${totalBeds}</td>
+                `;
+              }).join('')}
+            </tr>
           </tbody>
         </table>
-        
-        <div class="source">
-          Source: ${selectedForm.form.department?.name || 'Data Management System'}
-        </div>
         
         <div class="no-print" style="margin-top: 30px; text-align: center;">
           <button onclick="window.print()" style="padding: 10px 20px; font-size: 14px;">Print PDF</button>

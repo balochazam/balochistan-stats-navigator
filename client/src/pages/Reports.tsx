@@ -341,8 +341,12 @@ export const Reports = () => {
                   });
                   
                   if (cellSubmissions.length > 0) {
-                    // Count institutions
-                    const institutionCount = cellSubmissions.length;
+                    // Count institutions - this should be the count from the "No." field, not the number of submissions
+                    const noValue = cellSubmissions.reduce((sum: number, s: any) => {
+                      const no = s.data?.['No.'] || s.data?.['No'] || s.data?.['no'] || 0;
+                      const num = parseFloat(no);
+                      return sum + (isNaN(num) ? 0 : num);
+                    }, 0);
                     
                     // Sum beds from the actual data
                     const totalBeds = cellSubmissions.reduce((sum: number, s: any) => {
@@ -352,7 +356,7 @@ export const Reports = () => {
                     }, 0);
                     
                     return `
-                      <td class="data-cell">${institutionCount}</td>
+                      <td class="data-cell">${noValue}</td>
                       <td class="data-cell">${totalBeds}</td>
                     `;
                   } else {

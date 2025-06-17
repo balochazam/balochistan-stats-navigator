@@ -10,7 +10,7 @@ import { insertFormSchema, type FieldGroup, type FormField, type Form as FormTyp
 import { HierarchicalFormBuilder } from './HierarchicalFormBuilder';
 import { FormFieldsBuilder } from './FormFieldsBuilder';
 import { useToast } from '@/hooks/use-toast';
-import { apiRequest } from '@/lib/queryClient';
+import { apiClient } from '@/lib/api';
 
 interface FormBuilderWithHierarchyProps {
   open: boolean;
@@ -80,10 +80,7 @@ export const FormBuilderWithHierarchy: React.FC<FormBuilderWithHierarchyProps> =
   // Create form mutation
   const createFormMutation = useMutation({
     mutationFn: async (formData: any) => {
-      return apiRequest('/api/forms', {
-        method: 'POST',
-        body: formData
-      });
+      return apiClient.post('/api/forms', formData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/forms'] });
@@ -97,10 +94,7 @@ export const FormBuilderWithHierarchy: React.FC<FormBuilderWithHierarchyProps> =
   // Update form mutation
   const updateFormMutation = useMutation({
     mutationFn: async (formData: any) => {
-      return apiRequest(`/api/forms/${editingForm?.id}`, {
-        method: 'PATCH',
-        body: formData
-      });
+      return apiClient.patch(`/api/forms/${editingForm?.id}`, formData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/forms'] });
@@ -114,10 +108,7 @@ export const FormBuilderWithHierarchy: React.FC<FormBuilderWithHierarchyProps> =
   // Save field groups mutation
   const saveGroupsMutation = useMutation({
     mutationFn: async (groups: FieldGroup[]) => {
-      return apiRequest('/api/field-groups', {
-        method: 'POST',
-        body: groups
-      });
+      return apiClient.post('/api/field-groups', groups);
     },
     onSuccess: () => {
       toast({
@@ -130,10 +121,7 @@ export const FormBuilderWithHierarchy: React.FC<FormBuilderWithHierarchyProps> =
   // Save form fields mutation
   const saveFieldsMutation = useMutation({
     mutationFn: async (fields: FormField[]) => {
-      return apiRequest('/api/form-fields', {
-        method: 'POST',
-        body: fields
-      });
+      return apiClient.post('/api/form-fields', fields);
     },
     onSuccess: () => {
       toast({

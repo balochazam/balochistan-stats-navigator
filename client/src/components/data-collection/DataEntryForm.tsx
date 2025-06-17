@@ -20,6 +20,7 @@ interface FormField {
   is_required: boolean;
   reference_data_name?: string;
   placeholder_text?: string;
+  aggregate_fields?: string[];
 }
 
 interface Form {
@@ -81,7 +82,7 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
       
       // Initialize form data with empty values for each field
       const initialData: Record<string, any> = {};
-      (data || []).forEach(field => {
+      (data || []).forEach((field: FormField) => {
         initialData[field.field_name] = '';
       });
       setFormData(initialData);
@@ -146,7 +147,7 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
           let sum = 0;
           let hasValidNumbers = false;
           
-          field.aggregate_fields.forEach(aggregateFieldName => {
+          field.aggregate_fields.forEach((aggregateFieldName: string) => {
             const fieldValue = updatedWithAggregates[aggregateFieldName];
             const numValue = parseFloat(fieldValue);
             if (!isNaN(numValue)) {
@@ -392,6 +393,25 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
             onChange={(e) => handleFieldChange(field.field_name, e.target.value)}
             required={field.is_required}
           />
+        );
+
+      case 'aggregate':
+        return (
+          <div className="relative">
+            <Input
+              id={field.field_name}
+              name={field.field_name}
+              type="text"
+              value={fieldValue}
+              readOnly
+              disabled
+              className="bg-gray-50 font-medium"
+              placeholder="Auto-calculated"
+            />
+            <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">
+              {field.aggregate_fields?.length ? `Sum of ${field.aggregate_fields.length} fields` : 'No fields selected'}
+            </div>
+          </div>
         );
       
       default:

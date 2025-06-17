@@ -289,6 +289,27 @@ export const insertFormFieldSchema = createInsertSchema(form_fields).omit({
   id: true,
   created_at: true,
   updated_at: true,
+}).extend({
+  sub_headers: z.array(z.object({
+    id: z.string().optional(),
+    name: z.string(),
+    label: z.string(),
+    fields: z.array(z.object({
+      id: z.string().optional(),
+      field_name: z.string(),
+      field_label: z.string(),
+      field_type: z.string(),
+      is_required: z.boolean(),
+      field_order: z.number(),
+      reference_data_name: z.string().optional(),
+      placeholder_text: z.string().optional(),
+      aggregate_fields: z.array(z.string()).optional(),
+      is_secondary_column: z.boolean().optional(),
+      has_sub_headers: z.boolean().optional(),
+      sub_headers: z.array(z.any()).optional()
+    }))
+  })).optional(),
+  aggregate_fields: z.array(z.string()).optional()
 });
 
 export const insertScheduleSchema = createInsertSchema(schedules).omit({

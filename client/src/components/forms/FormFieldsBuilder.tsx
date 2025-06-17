@@ -40,6 +40,9 @@ interface SubHeaderField {
   field_type: string;
   is_required: boolean;
   field_order: number;
+  reference_data_name?: string;
+  placeholder_text?: string;
+  aggregate_fields?: string[];
 }
 
 interface FormFieldsBuilderProps {
@@ -155,12 +158,16 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
   };
 
   const addSubHeaderField = (fieldIndex: number, subIndex: number) => {
+    const currentFields = fields[fieldIndex].sub_headers?.[subIndex]?.fields || [];
     const newField: SubHeaderField = {
       field_name: '',
       field_label: '',
-      field_type: 'number',
+      field_type: 'text',
       is_required: false,
-      field_order: 0
+      field_order: currentFields.length,
+      placeholder_text: '',
+      reference_data_name: undefined,
+      aggregate_fields: []
     };
     const updatedFields = [...fields];
     if (updatedFields[fieldIndex].sub_headers?.[subIndex]) {
@@ -185,37 +192,6 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
         ...updatedFields[fieldIndex].sub_headers![subIndex].fields[fieldIndex2],
         ...updates
       };
-      onChange(updatedFields);
-    }
-  };
-
-  // Template functions for quick field addition
-  const addGenderBreakdownFields = (fieldIndex: number, subIndex: number) => {
-    const genderFields: SubHeaderField[] = [
-      { field_name: 'total', field_label: 'Total', field_type: 'number', is_required: false, field_order: 0 },
-      { field_name: 'male', field_label: 'Male', field_type: 'number', is_required: false, field_order: 1 },
-      { field_name: 'female', field_label: 'Female', field_type: 'number', is_required: false, field_order: 2 }
-    ];
-    
-    const updatedFields = [...fields];
-    if (updatedFields[fieldIndex].sub_headers?.[subIndex]) {
-      updatedFields[fieldIndex].sub_headers![subIndex].fields.push(...genderFields);
-      onChange(updatedFields);
-    }
-  };
-
-  const addBasicCountField = (fieldIndex: number, subIndex: number) => {
-    const countField: SubHeaderField = {
-      field_name: 'count',
-      field_label: 'Count',
-      field_type: 'number',
-      is_required: false,
-      field_order: 0
-    };
-    
-    const updatedFields = [...fields];
-    if (updatedFields[fieldIndex].sub_headers?.[subIndex]) {
-      updatedFields[fieldIndex].sub_headers![subIndex].fields.push(countField);
       onChange(updatedFields);
     }
   };
@@ -558,36 +534,119 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
                         </div>
 
                         {/* Sub-header fields */}
-                        <div className="space-y-2">
+                        <div className="space-y-3">
                           <Label className="text-xs font-medium">Fields in this sub-header:</Label>
                           {subHeader.fields.map((subField, fieldIndex) => (
-                            <div key={fieldIndex} className="flex items-center space-x-2 p-2 bg-gray-50 rounded">
-                              <Input
-                                value={subField.field_label}
-                                onChange={(e) => updateSubHeaderField(index, subIndex, fieldIndex, { field_label: e.target.value, field_name: generateFieldName(e.target.value) })}
-                                placeholder="Field label"
-                                className="text-sm"
-                              />
-                              <Select
-                                value={subField.field_type}
-                                onValueChange={(value) => updateSubHeaderField(index, subIndex, fieldIndex, { field_type: value })}
-                              >
-                                <SelectTrigger className="w-32">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="number">Number</SelectItem>
-                                  <SelectItem value="text">Text</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => removeSubHeaderField(index, subIndex, fieldIndex)}
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
+                            <div key={fieldIndex} className="p-3 border rounded bg-gray-50">
+                              <div className="flex items-center justify-between mb-2">
+                                <Label className="text-xs font-medium">Field {fieldIndex + 1}</Label>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => removeSubHeaderField(index, subIndex, fieldIndex)}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                              
+                              <div className="grid grid-cols-2 gap-2 mb-2">
+                                <div>
+                                  <Label className="text-xs">Field Label *</Label>
+                                  <Input
+                                    value={subField.field_label}
+                                    onChange={(e) => updateSubHeaderField(index, subIndex, fieldIndex, { 
+                                      field_label: e.target.value, 
+                                      field_name: generateFieldName(e.target.value) 
+                                    })}
+                                    placeholder="e.g., Total, Male, Female"
+                                    className="text-sm"
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-xs">Field Type *</Label>
+                                  <Select
+                                    value={subField.field_type}
+                                    onValueChange={(value) => updateSubHeaderField(index, subIndex, fieldIndex, { field_type: value })}
+                                  >
+                                    <SelectTrigger className="text-sm">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {FIELD_TYPES.map((type) => (
+                                        <SelectItem key={type.value} value={type.value}>
+                                          {type.label}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+
+                              {requiresReferenceData(subField.field_type) && (
+                                <div className="mb-2">
+                                  <Label className="text-xs">Reference Data Set *</Label>
+                                  <Select
+                                    value={subField.reference_data_name || ''}
+                                    onValueChange={(value) => updateSubHeaderField(index, subIndex, fieldIndex, { reference_data_name: value })}
+                                  >
+                                    <SelectTrigger className="text-sm">
+                                      <SelectValue placeholder="Select reference data set" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {referenceDataSets.length === 0 ? (
+                                        <SelectItem value="no-data" disabled>
+                                          No reference data sets available
+                                        </SelectItem>
+                                      ) : (
+                                        referenceDataSets.map((dataSet) => (
+                                          <SelectItem key={dataSet.name} value={dataSet.name}>
+                                            {dataSet.name}
+                                          </SelectItem>
+                                        ))
+                                      )}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              )}
+
+                              {subField.field_type === 'aggregate' && (
+                                <div className="mb-2">
+                                  <Label className="text-xs">Aggregate Fields</Label>
+                                  <Input
+                                    value={subField.aggregate_fields?.join(', ') || ''}
+                                    onChange={(e) => updateSubHeaderField(index, subIndex, fieldIndex, { 
+                                      aggregate_fields: e.target.value.split(',').map(f => f.trim()).filter(f => f) 
+                                    })}
+                                    placeholder="field1, field2, field3"
+                                    className="text-sm"
+                                  />
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    Comma-separated list of field names to sum
+                                  </p>
+                                </div>
+                              )}
+
+                              <div className="mb-2">
+                                <Label className="text-xs">Placeholder Text</Label>
+                                <Input
+                                  value={subField.placeholder_text || ''}
+                                  onChange={(e) => updateSubHeaderField(index, subIndex, fieldIndex, { placeholder_text: e.target.value })}
+                                  placeholder="Placeholder text for this field"
+                                  className="text-sm"
+                                />
+                              </div>
+
+                              <div className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`sub-required-${index}-${subIndex}-${fieldIndex}`}
+                                  checked={subField.is_required}
+                                  onCheckedChange={(checked) => updateSubHeaderField(index, subIndex, fieldIndex, { is_required: !!checked })}
+                                />
+                                <Label htmlFor={`sub-required-${index}-${subIndex}-${fieldIndex}`} className="text-xs">
+                                  Required field
+                                </Label>
+                              </div>
                             </div>
                           ))}
                           
@@ -601,28 +660,6 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
                             <Plus className="h-3 w-3 mr-1" />
                             Add Field
                           </Button>
-
-                          {/* Quick templates */}
-                          <div className="flex space-x-2">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => addGenderBreakdownFields(index, subIndex)}
-                              className="text-xs"
-                            >
-                              + Gender Breakdown
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => addBasicCountField(index, subIndex)}
-                              className="text-xs"
-                            >
-                              + Basic Count
-                            </Button>
-                          </div>
                         </div>
                       </div>
                     ))}

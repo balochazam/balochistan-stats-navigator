@@ -327,6 +327,9 @@ export type InsertDataBankEntry = z.infer<typeof insertDataBankEntrySchema>;
 export type Form = typeof forms.$inferSelect;
 export type InsertForm = z.infer<typeof insertFormSchema>;
 
+export type FieldGroup = typeof field_groups.$inferSelect;
+export type InsertFieldGroup = z.infer<typeof insertFieldGroupSchema>;
+
 export type FormField = typeof form_fields.$inferSelect;
 export type InsertFormField = z.infer<typeof insertFormFieldSchema>;
 

@@ -67,6 +67,12 @@ export interface IStorage {
   updateForm(id: string, updates: Partial<Form>): Promise<Form | undefined>;
   deleteForm(id: string): Promise<boolean>;
 
+  // Field Group methods
+  getFieldGroups(formId: string): Promise<FieldGroup[]>;
+  createFieldGroup(group: InsertFieldGroup): Promise<FieldGroup>;
+  updateFieldGroup(id: string, updates: Partial<FieldGroup>): Promise<FieldGroup | undefined>;
+  deleteFieldGroup(id: string): Promise<boolean>;
+
   // Form Field methods
   getFormFields(formId: string): Promise<FormField[]>;
   createFormField(field: InsertFormField): Promise<FormField>;
@@ -238,6 +244,28 @@ export class DatabaseStorage implements IStorage {
 
   async deleteForm(id: string): Promise<boolean> {
     const result = await db.update(forms).set({ is_active: false }).where(eq(forms.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Field Group methods
+  async getFieldGroups(formId: string): Promise<FieldGroup[]> {
+    return await db.select().from(field_groups)
+      .where(eq(field_groups.form_id, formId))
+      .orderBy(asc(field_groups.display_order));
+  }
+
+  async createFieldGroup(group: InsertFieldGroup): Promise<FieldGroup> {
+    const result = await db.insert(field_groups).values(group).returning();
+    return result[0];
+  }
+
+  async updateFieldGroup(id: string, updates: Partial<FieldGroup>): Promise<FieldGroup | undefined> {
+    const result = await db.update(field_groups).set(updates).where(eq(field_groups.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteFieldGroup(id: string): Promise<boolean> {
+    const result = await db.delete(field_groups).where(eq(field_groups.id, id));
     return (result.rowCount ?? 0) > 0;
   }
 

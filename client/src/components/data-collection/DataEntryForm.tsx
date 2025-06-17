@@ -892,22 +892,24 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
                                 {subField.has_sub_headers && subField.sub_headers ? (
                                   <div className="space-y-3">
                                     {renderSubHeaderField(subField, field.field_name, subHeader.name)}
-                                    {subField.sub_headers.map((nestedSubHeader) => (
-                                      <div key={nestedSubHeader.name} className="border rounded-md p-3 bg-white">
-                                        <h5 className="font-medium text-sm mb-2 text-gray-700">{nestedSubHeader.label || nestedSubHeader.name}</h5>
-                                        <div className="grid grid-cols-1 gap-2">
-                                          {nestedSubHeader.fields.map((nestedField) => (
-                                            <div key={nestedField.field_name} className="space-y-1">
-                                              <Label htmlFor={`${field.field_name}_${subHeader.name}_${subField.field_name}_${nestedSubHeader.name}_${nestedField.field_name}`} className="text-xs font-medium">
-                                                {nestedField.field_label}
-                                                {nestedField.is_required && <span className="text-red-500 ml-1">*</span>}
-                                              </Label>
-                                              {renderNestedSubHeaderField(nestedField, field.field_name, subHeader.name, subField.field_name, nestedSubHeader.name)}
-                                            </div>
-                                          ))}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                                      {subField.sub_headers.map((nestedSubHeader) => (
+                                        <div key={nestedSubHeader.name} className="border rounded-md p-4 bg-white shadow-sm">
+                                          <h5 className="font-semibold text-base mb-3 text-gray-800 border-b pb-2">{nestedSubHeader.label || nestedSubHeader.name}</h5>
+                                          <div className="space-y-3">
+                                            {nestedSubHeader.fields.map((nestedField) => (
+                                              <div key={nestedField.field_name} className="space-y-1">
+                                                <Label htmlFor={`${field.field_name}_${subHeader.name}_${subField.field_name}_${nestedSubHeader.name}_${nestedField.field_name}`} className="text-sm font-medium text-gray-700">
+                                                  {nestedField.field_label}
+                                                  {nestedField.is_required && <span className="text-red-500 ml-1">*</span>}
+                                                </Label>
+                                                {renderNestedSubHeaderField(nestedField, field.field_name, subHeader.name, subField.field_name, nestedSubHeader.name)}
+                                              </div>
+                                            ))}
+                                          </div>
                                         </div>
-                                      </div>
-                                    ))}
+                                      ))}
+                                    </div>
                                   </div>
                                 ) : (
                                   renderSubHeaderField(subField, field.field_name, subHeader.name)

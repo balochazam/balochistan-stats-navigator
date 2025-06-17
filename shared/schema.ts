@@ -92,6 +92,8 @@ export const form_fields = pgTable("form_fields", {
   placeholder_text: text("placeholder_text"),
   aggregate_fields: jsonb("aggregate_fields"), // Array of field names to aggregate
   field_order: integer("field_order").notNull().default(0),
+  has_sub_headers: boolean("has_sub_headers").notNull().default(false),
+  sub_headers: jsonb("sub_headers"), // JSON array of sub-header objects
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

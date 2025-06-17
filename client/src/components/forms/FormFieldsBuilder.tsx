@@ -22,6 +22,24 @@ interface FormField {
   placeholder_text?: string;
   aggregate_fields?: string[];
   field_order: number;
+  has_sub_headers?: boolean;
+  sub_headers?: SubHeader[];
+}
+
+interface SubHeader {
+  id?: string;
+  name: string;
+  label: string;
+  fields: SubHeaderField[];
+}
+
+interface SubHeaderField {
+  id?: string;
+  field_name: string;
+  field_label: string;
+  field_type: string;
+  is_required: boolean;
+  field_order: number;
 }
 
 interface FormFieldsBuilderProps {
@@ -100,9 +118,106 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
       is_primary_column: false,
       is_secondary_column: false,
       placeholder_text: '',
-      field_order: fields.length
+      field_order: fields.length,
+      has_sub_headers: false,
+      sub_headers: []
     };
     onChange([...fields, newField]);
+  };
+
+  // Sub-header management functions
+  const addSubHeader = (fieldIndex: number) => {
+    const newSubHeader: SubHeader = {
+      name: '',
+      label: '',
+      fields: []
+    };
+    const updatedFields = [...fields];
+    updatedFields[fieldIndex].sub_headers = [...(updatedFields[fieldIndex].sub_headers || []), newSubHeader];
+    onChange(updatedFields);
+  };
+
+  const removeSubHeader = (fieldIndex: number, subIndex: number) => {
+    const updatedFields = [...fields];
+    updatedFields[fieldIndex].sub_headers = updatedFields[fieldIndex].sub_headers?.filter((_, i) => i !== subIndex) || [];
+    onChange(updatedFields);
+  };
+
+  const updateSubHeader = (fieldIndex: number, subIndex: number, updates: Partial<SubHeader>) => {
+    const updatedFields = [...fields];
+    if (updatedFields[fieldIndex].sub_headers) {
+      updatedFields[fieldIndex].sub_headers![subIndex] = { 
+        ...updatedFields[fieldIndex].sub_headers![subIndex], 
+        ...updates 
+      };
+      onChange(updatedFields);
+    }
+  };
+
+  const addSubHeaderField = (fieldIndex: number, subIndex: number) => {
+    const newField: SubHeaderField = {
+      field_name: '',
+      field_label: '',
+      field_type: 'number',
+      is_required: false,
+      field_order: 0
+    };
+    const updatedFields = [...fields];
+    if (updatedFields[fieldIndex].sub_headers?.[subIndex]) {
+      updatedFields[fieldIndex].sub_headers![subIndex].fields.push(newField);
+      onChange(updatedFields);
+    }
+  };
+
+  const removeSubHeaderField = (fieldIndex: number, subIndex: number, fieldIndex2: number) => {
+    const updatedFields = [...fields];
+    if (updatedFields[fieldIndex].sub_headers?.[subIndex]) {
+      updatedFields[fieldIndex].sub_headers![subIndex].fields = 
+        updatedFields[fieldIndex].sub_headers![subIndex].fields.filter((_, i) => i !== fieldIndex2);
+      onChange(updatedFields);
+    }
+  };
+
+  const updateSubHeaderField = (fieldIndex: number, subIndex: number, fieldIndex2: number, updates: Partial<SubHeaderField>) => {
+    const updatedFields = [...fields];
+    if (updatedFields[fieldIndex].sub_headers?.[subIndex]?.fields[fieldIndex2]) {
+      updatedFields[fieldIndex].sub_headers![subIndex].fields[fieldIndex2] = {
+        ...updatedFields[fieldIndex].sub_headers![subIndex].fields[fieldIndex2],
+        ...updates
+      };
+      onChange(updatedFields);
+    }
+  };
+
+  // Template functions for quick field addition
+  const addGenderBreakdownFields = (fieldIndex: number, subIndex: number) => {
+    const genderFields: SubHeaderField[] = [
+      { field_name: 'total', field_label: 'Total', field_type: 'number', is_required: false, field_order: 0 },
+      { field_name: 'male', field_label: 'Male', field_type: 'number', is_required: false, field_order: 1 },
+      { field_name: 'female', field_label: 'Female', field_type: 'number', is_required: false, field_order: 2 }
+    ];
+    
+    const updatedFields = [...fields];
+    if (updatedFields[fieldIndex].sub_headers?.[subIndex]) {
+      updatedFields[fieldIndex].sub_headers![subIndex].fields.push(...genderFields);
+      onChange(updatedFields);
+    }
+  };
+
+  const addBasicCountField = (fieldIndex: number, subIndex: number) => {
+    const countField: SubHeaderField = {
+      field_name: 'count',
+      field_label: 'Count',
+      field_type: 'number',
+      is_required: false,
+      field_order: 0
+    };
+    
+    const updatedFields = [...fields];
+    if (updatedFields[fieldIndex].sub_headers?.[subIndex]) {
+      updatedFields[fieldIndex].sub_headers![subIndex].fields.push(countField);
+      onChange(updatedFields);
+    }
   };
 
   const updateField = (index: number, updates: Partial<FormField>) => {
@@ -381,6 +496,150 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
                 <Label htmlFor={`secondary-${index}`} className="text-sm">Secondary column</Label>
               </div>
             </div>
+
+            {/* Sub-header management for secondary columns */}
+            {field.is_secondary_column && (
+              <div className="mt-4 p-4 border rounded-lg bg-gray-50">
+                <div className="flex items-center justify-between mb-3">
+                  <Label className="text-sm font-medium">Sub-headers (Optional)</Label>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`has-subheaders-${index}`}
+                      checked={field.has_sub_headers || false}
+                      onCheckedChange={(checked) => updateField(index, { 
+                        has_sub_headers: !!checked,
+                        sub_headers: checked ? (field.sub_headers || []) : []
+                      })}
+                    />
+                    <Label htmlFor={`has-subheaders-${index}`} className="text-sm">Enable sub-headers</Label>
+                  </div>
+                </div>
+                
+                {field.has_sub_headers && (
+                  <div className="space-y-3">
+                    <p className="text-xs text-gray-600">
+                      Add sub-categories like "Medical" and "Dental" under "Specialists"
+                    </p>
+                    
+                    {/* Sub-header list */}
+                    {(field.sub_headers || []).map((subHeader, subIndex) => (
+                      <div key={subIndex} className="p-3 border rounded bg-white">
+                        <div className="flex items-center justify-between mb-2">
+                          <Label className="text-sm font-medium">Sub-header {subIndex + 1}</Label>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeSubHeader(index, subIndex)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-3 mb-3">
+                          <div>
+                            <Label className="text-xs">Name (technical)</Label>
+                            <Input
+                              value={subHeader.name}
+                              onChange={(e) => updateSubHeader(index, subIndex, { name: e.target.value })}
+                              placeholder="medical"
+                              className="text-sm"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs">Label (display)</Label>
+                            <Input
+                              value={subHeader.label}
+                              onChange={(e) => updateSubHeader(index, subIndex, { label: e.target.value })}
+                              placeholder="Medical"
+                              className="text-sm"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Sub-header fields */}
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium">Fields in this sub-header:</Label>
+                          {subHeader.fields.map((subField, fieldIndex) => (
+                            <div key={fieldIndex} className="flex items-center space-x-2 p-2 bg-gray-50 rounded">
+                              <Input
+                                value={subField.field_label}
+                                onChange={(e) => updateSubHeaderField(index, subIndex, fieldIndex, { field_label: e.target.value, field_name: generateFieldName(e.target.value) })}
+                                placeholder="Field label"
+                                className="text-sm"
+                              />
+                              <Select
+                                value={subField.field_type}
+                                onValueChange={(value) => updateSubHeaderField(index, subIndex, fieldIndex, { field_type: value })}
+                              >
+                                <SelectTrigger className="w-32">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="number">Number</SelectItem>
+                                  <SelectItem value="text">Text</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeSubHeaderField(index, subIndex, fieldIndex)}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ))}
+                          
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => addSubHeaderField(index, subIndex)}
+                            className="text-xs"
+                          >
+                            <Plus className="h-3 w-3 mr-1" />
+                            Add Field
+                          </Button>
+
+                          {/* Quick templates */}
+                          <div className="flex space-x-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => addGenderBreakdownFields(index, subIndex)}
+                              className="text-xs"
+                            >
+                              + Gender Breakdown
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => addBasicCountField(index, subIndex)}
+                              className="text-xs"
+                            >
+                              + Basic Count
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => addSubHeader(index)}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Sub-header
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       ))}

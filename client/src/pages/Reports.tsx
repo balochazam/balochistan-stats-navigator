@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { FileText, Download, Eye, Calendar } from 'lucide-react';
+import { FileText, Download, Eye, Calendar, FileX } from 'lucide-react';
 
 interface Schedule {
   id: string;
@@ -121,10 +121,9 @@ export const Reports = () => {
   const exportToCSV = () => {
     if (!selectedForm || !formFields.length || !formSubmissions.length) return;
     
-    const headers = ['Submission Date', 'Submitted By', ...formFields.map(field => field.field_label)];
+    const headers = ['Submission Date', ...formFields.map(field => field.field_label)];
     const rows = formSubmissions.map(submission => [
       new Date(submission.submitted_at).toLocaleDateString(),
-      submission.submitter?.full_name || submission.submitted_by,
       ...formFields.map(field => {
         const value = submission.data?.[field.field_name];
         return value || '';
@@ -142,6 +141,155 @@ export const Reports = () => {
     a.download = `${selectedForm.form.name}_${selectedSchedule?.name}_report.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
+  };
+
+  const exportToPDF = () => {
+    if (!selectedForm || !formFields.length || !formSubmissions.length) return;
+    
+    // Create a new window for PDF generation
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    // Sort fields: primary first, then secondary, then others
+    const sortedFields = [...formFields].sort((a, b) => {
+      if (a.is_primary_column && !b.is_primary_column) return -1;
+      if (!a.is_primary_column && b.is_primary_column) return 1;
+      if (a.is_secondary_column && !b.is_secondary_column) return -1;
+      if (!a.is_secondary_column && b.is_secondary_column) return 1;
+      return a.field_order - b.field_order;
+    });
+
+    // Group data by primary column
+    const primaryField = sortedFields.find(f => f.is_primary_column);
+    const secondaryField = sortedFields.find(f => f.is_secondary_column);
+    const dataFields = sortedFields.filter(f => !f.is_primary_column && !f.is_secondary_column);
+
+    const groupedData = new Map();
+    
+    formSubmissions.forEach(submission => {
+      const primaryValue = primaryField?.field_name ? 
+        submission.data?.[primaryField.field_name] || 'Unknown' : 'Unknown';
+      if (!groupedData.has(primaryValue)) {
+        groupedData.set(primaryValue, []);
+      }
+      groupedData.get(primaryValue)?.push(submission);
+    });
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>${selectedForm.form.name} - ${selectedSchedule?.name}</title>
+        <style>
+          body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            font-size: 12px;
+          }
+          .header {
+            text-align: center;
+            margin-bottom: 30px;
+          }
+          .title {
+            font-size: 14px;
+            font-weight: bold;
+            text-decoration: underline;
+            margin-bottom: 10px;
+          }
+          .subtitle {
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 20px;
+          }
+          .period {
+            text-align: right;
+            margin-bottom: 20px;
+            font-size: 10px;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+          }
+          th, td {
+            border: 1px solid black;
+            padding: 6px;
+            text-align: center;
+            vertical-align: middle;
+          }
+          .primary-header {
+            font-weight: bold;
+            background-color: #f0f0f0;
+          }
+          .secondary-header {
+            font-weight: bold;
+            font-size: 11px;
+          }
+          .data-header {
+            font-size: 10px;
+          }
+          .source {
+            text-align: right;
+            font-size: 10px;
+            font-style: italic;
+            margin-top: 20px;
+          }
+          @media print {
+            body { margin: 0; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="title">${selectedForm.form.name.toUpperCase()}</div>
+          <div class="subtitle">${selectedForm.form.description || selectedSchedule?.description || ''}</div>
+        </div>
+        
+        <div class="period">${selectedSchedule?.name} (${selectedSchedule?.start_date ? new Date(selectedSchedule.start_date).getFullYear() : 'Year'})</div>
+        
+        <table>
+          <thead>
+            <tr>
+              <th rowspan="2" class="primary-header">${primaryField?.field_label || 'Category'}</th>
+              ${secondaryField ? `<th colspan="${dataFields.length * 2}" class="secondary-header">${secondaryField.field_label}</th>` : 
+                dataFields.map(field => `<th colspan="2" class="secondary-header">${field.field_label}</th>`).join('')}
+            </tr>
+            <tr>
+              ${secondaryField ? 
+                dataFields.map(field => `<th class="data-header">No.</th><th class="data-header">${field.field_label}</th>`).join('') :
+                dataFields.map(field => `<th class="data-header">No.</th><th class="data-header">Value</th>`).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            ${Array.from(groupedData.entries()).map(([primaryValue, submissions]) => `
+              <tr>
+                <td class="primary-header">${primaryValue}</td>
+                ${dataFields.map(field => {
+                  const values = (submissions as any[]).map((s: any) => s.data?.[field.field_name]).filter((v: any) => v);
+                  const count = values.length;
+                  const value = values[0] || '-';
+                  return `<td>${count}</td><td>${value}</td>`;
+                }).join('')}
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        
+        <div class="source">
+          Source: ${selectedForm.form.department?.name || 'Data Management System'}
+        </div>
+        
+        <div class="no-print" style="margin-top: 30px; text-align: center;">
+          <button onclick="window.print()" style="padding: 10px 20px; font-size: 14px;">Print PDF</button>
+          <button onclick="window.close()" style="padding: 10px 20px; font-size: 14px; margin-left: 10px;">Close</button>
+        </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
   };
 
   if (profile?.role !== 'admin') {
@@ -282,6 +430,10 @@ export const Reports = () => {
                 <p className="text-gray-600">Submitted data for {selectedSchedule.name}</p>
               </div>
               <div className="flex space-x-2">
+                <Button variant="outline" onClick={exportToPDF} disabled={!formSubmissions.length}>
+                  <FileX className="h-4 w-4 mr-2" />
+                  Export PDF
+                </Button>
                 <Button variant="outline" onClick={exportToCSV} disabled={!formSubmissions.length}>
                   <Download className="h-4 w-4 mr-2" />
                   Export CSV
@@ -312,7 +464,6 @@ export const Reports = () => {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Submission Date</TableHead>
-                          <TableHead>Submitted By</TableHead>
                           {formFields.map((field) => (
                             <TableHead key={field.id}>{field.field_label}</TableHead>
                           ))}
@@ -323,9 +474,6 @@ export const Reports = () => {
                           <TableRow key={submission.id}>
                             <TableCell>
                               {new Date(submission.submitted_at).toLocaleDateString()}
-                            </TableCell>
-                            <TableCell>
-                              {submission.submitter?.full_name || submission.submitted_by}
                             </TableCell>
                             {formFields.map((field) => (
                               <TableCell key={field.id}>

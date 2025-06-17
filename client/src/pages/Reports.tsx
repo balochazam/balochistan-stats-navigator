@@ -143,50 +143,73 @@ export const Reports = () => {
     return formFields.some((field: any) => field.has_sub_headers && field.sub_headers?.length > 0);
   };
 
-  // Helper function to get all hierarchical columns
-  const getHierarchicalColumns = () => {
-    const columns: any[] = [];
+  // Helper function to get structured hierarchical data for table display
+  const getHierarchicalTableStructure = () => {
+    const structure: any = {};
     
-    // Add primary column first (usually Province)
-    const primaryField = formFields.find((field: any) => field.is_primary_column);
-    if (primaryField) {
-      columns.push({
-        key: primaryField.field_name,
-        label: primaryField.field_label,
-        type: 'primary'
-      });
-    }
-    
-    // Add hierarchical columns
     formFields.forEach((field: any) => {
       if (field.has_sub_headers && field.sub_headers) {
         field.sub_headers.forEach((subHeader: any) => {
+          const categoryName = subHeader.label || subHeader.name;
+          
+          if (!structure[categoryName]) {
+            structure[categoryName] = {
+              name: categoryName,
+              fields: [],
+              subCategories: {}
+            };
+          }
+          
           subHeader.fields.forEach((subField: any) => {
             if (subField.has_sub_headers && subField.sub_headers) {
               // Handle nested sub-headers (e.g., Medical/Dental under Specialists)
               subField.sub_headers.forEach((nestedSubHeader: any) => {
+                const subCategoryName = nestedSubHeader.label || nestedSubHeader.name;
+                
+                if (!structure[categoryName].subCategories[subCategoryName]) {
+                  structure[categoryName].subCategories[subCategoryName] = {
+                    name: subCategoryName,
+                    fields: []
+                  };
+                }
+                
                 nestedSubHeader.fields.forEach((nestedField: any) => {
-                  columns.push({
+                  structure[categoryName].subCategories[subCategoryName].fields.push({
                     key: `${field.field_name}_${subHeader.name}_${subField.field_name}_${nestedSubHeader.name}_${nestedField.field_name}`,
-                    label: `${subHeader.label || subHeader.name} ${nestedSubHeader.label || nestedSubHeader.name} ${nestedField.field_label}`,
-                    type: 'hierarchical',
-                    category: subHeader.label || subHeader.name,
-                    subcategory: nestedSubHeader.label || nestedSubHeader.name
+                    label: nestedField.field_label,
+                    type: 'nested'
                   });
                 });
               });
             } else {
               // Regular sub-header fields
-              columns.push({
+              structure[categoryName].fields.push({
                 key: `${field.field_name}_${subHeader.name}_${subField.field_name}`,
-                label: `${subHeader.label || subHeader.name} ${subField.field_label}`,
-                type: 'hierarchical',
-                category: subHeader.label || subHeader.name
+                label: subField.field_label,
+                type: 'regular'
               });
             }
           });
         });
       }
+    });
+    
+    return structure;
+  };
+
+  // Helper function to get all columns for flat rendering
+  const getAllHierarchicalColumns = () => {
+    const columns: any[] = [];
+    const structure = getHierarchicalTableStructure();
+    
+    Object.values(structure).forEach((category: any) => {
+      // Add regular fields first
+      columns.push(...category.fields);
+      
+      // Add nested subcategory fields
+      Object.values(category.subCategories).forEach((subCategory: any) => {
+        columns.push(...subCategory.fields);
+      });
     });
     
     return columns;
@@ -240,11 +263,11 @@ export const Reports = () => {
     
     if (isHierarchicalForm()) {
       // Use hierarchical column structure for CSV
-      const columns = getHierarchicalColumns();
-      headers = ['Submission Date', ...columns.map(col => col.label)];
+      const columns = getAllHierarchicalColumns();
+      headers = ['Submission Date', ...columns.map((col: any) => col.label)];
       rows = formSubmissions.map(submission => [
         new Date(submission.submitted_at).toLocaleDateString(),
-        ...columns.map(col => submission.data?.[col.key] || '')
+        ...columns.map((col: any) => submission.data?.[col.key] || '')
       ]);
     } else {
       // Use simple structure for non-hierarchical forms
@@ -721,40 +744,111 @@ export const Reports = () => {
                 <CardContent>
                   <div className="overflow-x-auto">
                     {isHierarchicalForm() ? (
-                      // Hierarchical table with proper column structure
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="bg-gray-50">Submission Date</TableHead>
-                            {getHierarchicalColumns().map((column) => (
-                              <TableHead key={column.key} className={
-                                column.type === 'primary' ? 'bg-blue-50 font-semibold' : 
-                                column.category === 'Doctors' ? 'bg-green-50' :
-                                column.category === 'Dentists' ? 'bg-blue-50' :
-                                column.category === 'Specialists' ? 'bg-purple-50' : 'bg-gray-50'
-                              }>
-                                {column.label}
-                              </TableHead>
-                            ))}
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {formSubmissions.map((submission) => (
-                            <TableRow key={submission.id}>
-                              <TableCell className="font-medium">
-                                {new Date(submission.submitted_at).toLocaleDateString()}
-                              </TableCell>
-                              {getHierarchicalColumns().map((column) => (
-                                <TableCell key={column.key} className={
-                                  column.type === 'primary' ? 'font-medium bg-blue-25' : ''
-                                }>
-                                  {submission.data?.[column.key] || '-'}
-                                </TableCell>
-                              ))}
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                      // Hierarchical table with grouped column structure
+                      (() => {
+                        const structure = getHierarchicalTableStructure();
+                        const primaryField = formFields.find((field: any) => field.is_primary_column);
+                        
+                        // Calculate column spans
+                        const getColumnSpan = (category: any) => {
+                          let span = category.fields.length;
+                          Object.values(category.subCategories).forEach((subCat: any) => {
+                            span += subCat.fields.length;
+                          });
+                          return span;
+                        };
+                        
+                        return (
+                          <div className="border rounded-lg overflow-hidden">
+                            <table className="w-full border-collapse">
+                              <thead>
+                                {/* First header row - Main categories */}
+                                <tr className="bg-gray-100">
+                                  <th rowSpan={3} className="border border-gray-300 p-3 text-center font-semibold bg-blue-50">
+                                    {primaryField?.field_label || 'Province'}
+                                  </th>
+                                  {Object.values(structure).map((category: any) => (
+                                    <th key={category.name} colSpan={getColumnSpan(category)} 
+                                        className={`border border-gray-300 p-2 text-center font-semibold ${
+                                          category.name === 'Doctors' ? 'bg-green-100' :
+                                          category.name === 'Dentists' ? 'bg-blue-100' :
+                                          category.name === 'Specialists' ? 'bg-purple-100' : 'bg-gray-100'
+                                        }`}>
+                                      {category.name}
+                                    </th>
+                                  ))}
+                                </tr>
+                                
+                                {/* Second header row - Sub categories (Medical/Dental) */}
+                                <tr className="bg-gray-50">
+                                  {Object.values(structure).map((category: any) => (
+                                    <>
+                                      {category.fields.length > 0 && (
+                                        <th colSpan={category.fields.length} 
+                                            className="border border-gray-300 p-2 text-center font-medium">
+                                          {category.name}
+                                        </th>
+                                      )}
+                                      {Object.values(category.subCategories).map((subCat: any) => (
+                                        <th key={subCat.name} colSpan={subCat.fields.length} 
+                                            className="border border-gray-300 p-2 text-center font-medium">
+                                          {subCat.name}
+                                        </th>
+                                      ))}
+                                    </>
+                                  ))}
+                                </tr>
+                                
+                                {/* Third header row - Field labels (Total, Male, Female) */}
+                                <tr className="bg-white">
+                                  {Object.values(structure).map((category: any) => (
+                                    <>
+                                      {category.fields.map((field: any) => (
+                                        <th key={field.key} className="border border-gray-300 p-2 text-center text-sm">
+                                          {field.label}
+                                        </th>
+                                      ))}
+                                      {Object.values(category.subCategories).map((subCat: any) => 
+                                        subCat.fields.map((field: any) => (
+                                          <th key={field.key} className="border border-gray-300 p-2 text-center text-sm">
+                                            {field.label}
+                                          </th>
+                                        ))
+                                      )}
+                                    </>
+                                  ))}
+                                </tr>
+                              </thead>
+                              
+                              <tbody>
+                                {formSubmissions.map((submission) => (
+                                  <tr key={submission.id} className="hover:bg-gray-50">
+                                    <td className="border border-gray-300 p-3 font-medium bg-blue-25">
+                                      {primaryField?.field_name ? (submission.data as any)?.[primaryField.field_name] || '-' : '-'}
+                                    </td>
+                                    {Object.values(structure).map((category: any) => (
+                                      <>
+                                        {category.fields.map((field: any) => (
+                                          <td key={field.key} className="border border-gray-300 p-2 text-center">
+                                            {submission.data?.[field.key] || '-'}
+                                          </td>
+                                        ))}
+                                        {Object.values(category.subCategories).map((subCat: any) => 
+                                          subCat.fields.map((field: any) => (
+                                            <td key={field.key} className="border border-gray-300 p-2 text-center">
+                                              {submission.data?.[field.key] || '-'}
+                                            </td>
+                                          ))
+                                        )}
+                                      </>
+                                    ))}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        );
+                      })()
                     ) : (
                       // Simple table for non-hierarchical forms
                       <Table>

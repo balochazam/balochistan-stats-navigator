@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { apiClient } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { FormFieldsBuilder } from './FormFieldsBuilder';
-import { FormBuilderWithHierarchy } from './FormBuilderWithHierarchy';
+
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 interface Department {
@@ -225,7 +225,7 @@ export const FormBuilderDialog = ({
               is_secondary_column: field.is_secondary_column,
               reference_data_name: field.reference_data_name || null,
               placeholder_text: field.placeholder_text || null,
-              aggregate_fields: field.aggregate_fields || null,
+
               field_order: index
             };
           });

@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { FileText, Plus, Edit2, Trash2, Users, Shield } from 'lucide-react';
-import { FormBuilderWithHierarchy } from '@/components/forms/FormBuilderWithHierarchy';
+import { FormBuilderDialog } from '@/components/forms/FormBuilderDialog';
 
 interface Form {
   id: string;
@@ -234,18 +234,16 @@ export const FormManagement = () => {
           </Card>
         )}
 
-        <FormBuilderWithHierarchy
-          open={isCreateDialogOpen}
-          onOpenChange={(open) => {
-            if (!open) {
-              console.log('Closing form dialog');
-              setIsCreateDialogOpen(false);
-              setEditingForm(null);
-              // Refresh forms list after closing
-              fetchForms();
-            }
+        <FormBuilderDialog
+          isOpen={isCreateDialogOpen}
+          onClose={() => {
+            console.log('Closing form dialog');
+            setIsCreateDialogOpen(false);
+            setEditingForm(null);
           }}
-          editingForm={editingForm as any}
+          onSave={handleFormSaved}
+          editingForm={editingForm}
+          departments={departments}
         />
       </div>
     </DashboardLayout>

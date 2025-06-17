@@ -891,8 +891,7 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
                                 </Label>
                                 {subField.has_sub_headers && subField.sub_headers ? (
                                   <div className="space-y-4 col-span-full">
-                                    {renderSubHeaderField(subField, field.field_name, subHeader.name)}
-                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                       {subField.sub_headers.map((nestedSubHeader) => (
                                         <div key={nestedSubHeader.name} className="border rounded-lg p-6 bg-white shadow-sm">
                                           <h5 className="font-semibold text-lg mb-4 text-gray-800 border-b pb-3">{nestedSubHeader.label || nestedSubHeader.name}</h5>

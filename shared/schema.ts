@@ -63,10 +63,25 @@ export const forms = pgTable("forms", {
   is_active: boolean("is_active").notNull().default(true),
 });
 
+// Field groups table for hierarchical organization
+export const field_groups = pgTable("field_groups", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  form_id: uuid("form_id").notNull().references(() => forms.id, { onDelete: "cascade" }),
+  group_name: text("group_name").notNull(),
+  group_label: text("group_label").notNull(),
+  parent_group_id: uuid("parent_group_id"),
+  group_type: text("group_type").notNull().default("section"), // 'section', 'category', 'sub_category'
+  display_order: integer("display_order").notNull().default(0),
+  is_repeatable: boolean("is_repeatable").notNull().default(false),
+  created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
 // Form fields table
 export const form_fields = pgTable("form_fields", {
   id: uuid("id").primaryKey().defaultRandom(),
   form_id: uuid("form_id").notNull().references(() => forms.id, { onDelete: "cascade" }),
+  field_group_id: uuid("field_group_id").references(() => field_groups.id, { onDelete: "cascade" }),
   field_name: text("field_name").notNull(),
   field_label: text("field_label").notNull(),
   field_type: text("field_type").notNull(),
@@ -167,15 +182,33 @@ export const formsRelations = relations(forms, ({ one, many }) => ({
     fields: [forms.department_id],
     references: [departments.id],
   }),
+  field_groups: many(field_groups),
   fields: many(form_fields),
   schedule_forms: many(schedule_forms),
   submissions: many(form_submissions),
+}));
+
+export const field_groupsRelations = relations(field_groups, ({ one, many }) => ({
+  form: one(forms, {
+    fields: [field_groups.form_id],
+    references: [forms.id],
+  }),
+  parent_group: one(field_groups, {
+    fields: [field_groups.parent_group_id],
+    references: [field_groups.id],
+  }),
+  child_groups: many(field_groups),
+  fields: many(form_fields),
 }));
 
 export const form_fieldsRelations = relations(form_fields, ({ one }) => ({
   form: one(forms, {
     fields: [form_fields.form_id],
     references: [forms.id],
+  }),
+  field_group: one(field_groups, {
+    fields: [form_fields.field_group_id],
+    references: [field_groups.id],
   }),
 }));
 
@@ -239,6 +272,12 @@ export const insertDataBankEntrySchema = createInsertSchema(data_bank_entries).o
 });
 
 export const insertFormSchema = createInsertSchema(forms).omit({
+  id: true,
+  created_at: true,
+  updated_at: true,
+});
+
+export const insertFieldGroupSchema = createInsertSchema(field_groups).omit({
   id: true,
   created_at: true,
   updated_at: true,

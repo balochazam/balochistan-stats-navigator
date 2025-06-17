@@ -150,8 +150,8 @@ export const HierarchicalFormBuilder: React.FC<HierarchicalFormBuilderProps> = (
           placeholder_text: null,
           aggregate_fields: null,
           field_order: group.fields.length + index,
-          created_at: new Date(),
-          updated_at: new Date()
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         };
         group.fields.push(newField);
       });
@@ -171,8 +171,8 @@ export const HierarchicalFormBuilder: React.FC<HierarchicalFormBuilderProps> = (
         placeholder_text: null,
         aggregate_fields: null,
         field_order: group.fields.length,
-        created_at: new Date(),
-        updated_at: new Date()
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       };
       group.fields.push(newField);
     }

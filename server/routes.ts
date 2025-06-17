@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertProfileSchema, insertDepartmentSchema, insertDataBankSchema, insertDataBankEntrySchema, insertFormSchema, insertFormFieldSchema, insertScheduleSchema, insertScheduleFormSchema, insertFormSubmissionSchema, insertScheduleFormCompletionSchema } from "@shared/schema";
+import { insertProfileSchema, insertDepartmentSchema, insertDataBankSchema, insertDataBankEntrySchema, insertFormSchema, insertFormFieldSchema, insertFieldGroupSchema, insertScheduleSchema, insertScheduleFormSchema, insertFormSubmissionSchema, insertScheduleFormCompletionSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Simple authentication routes for demo purposes
@@ -375,6 +375,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: 'Failed to delete form' });
+    }
+  });
+
+  // Field Group routes
+  app.get('/api/forms/:formId/groups', requireAuth, async (req, res) => {
+    try {
+      const groups = await storage.getFieldGroups(req.params.formId);
+      res.json(groups);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch field groups' });
+    }
+  });
+
+  app.post('/api/field-groups', requireAuth, async (req, res) => {
+    try {
+      if (Array.isArray(req.body)) {
+        const createdGroups = [];
+        for (const groupData of req.body) {
+          const validatedData = insertFieldGroupSchema.parse(groupData);
+          const group = await storage.createFieldGroup(validatedData);
+          createdGroups.push(group);
+        }
+        res.status(201).json(createdGroups);
+      } else {
+        const validatedData = insertFieldGroupSchema.parse(req.body);
+        const group = await storage.createFieldGroup(validatedData);
+        res.status(201).json(group);
+      }
+    } catch (error) {
+      console.error('Error creating field groups:', error);
+      res.status(400).json({ error: 'Invalid field group data' });
+    }
+  });
+
+  app.patch('/api/field-groups/:id', requireAuth, async (req, res) => {
+    try {
+      const group = await storage.updateFieldGroup(req.params.id, req.body);
+      if (!group) {
+        return res.status(404).json({ error: 'Field group not found' });
+      }
+      res.json(group);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to update field group' });
+    }
+  });
+
+  app.delete('/api/field-groups/:id', requireAuth, async (req, res) => {
+    try {
+      const success = await storage.deleteFieldGroup(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: 'Field group not found' });
+      }
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to delete field group' });
     }
   });
 

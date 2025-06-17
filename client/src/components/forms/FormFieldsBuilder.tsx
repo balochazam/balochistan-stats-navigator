@@ -43,6 +43,9 @@ interface SubHeaderField {
   reference_data_name?: string;
   placeholder_text?: string;
   aggregate_fields?: string[];
+  is_secondary_column?: boolean;
+  has_sub_headers?: boolean;
+  sub_headers?: SubHeader[];
 }
 
 interface FormFieldsBuilderProps {
@@ -167,7 +170,10 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
       field_order: currentFields.length,
       placeholder_text: '',
       reference_data_name: undefined,
-      aggregate_fields: []
+      aggregate_fields: [],
+      is_secondary_column: false,
+      has_sub_headers: false,
+      sub_headers: []
     };
     const updatedFields = [...fields];
     if (updatedFields[fieldIndex].sub_headers?.[subIndex]) {
@@ -190,6 +196,42 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
     if (updatedFields[fieldIndex].sub_headers?.[subIndex]?.fields[fieldIndex2]) {
       updatedFields[fieldIndex].sub_headers![subIndex].fields[fieldIndex2] = {
         ...updatedFields[fieldIndex].sub_headers![subIndex].fields[fieldIndex2],
+        ...updates
+      };
+      onChange(updatedFields);
+    }
+  };
+
+  // Nested sub-header management functions
+  const addNestedSubHeader = (fieldIndex: number, subIndex: number, fieldIndex2: number) => {
+    const newNestedSubHeader: SubHeader = {
+      name: '',
+      label: '',
+      fields: []
+    };
+    const updatedFields = [...fields];
+    if (updatedFields[fieldIndex].sub_headers?.[subIndex]?.fields[fieldIndex2]) {
+      const subField = updatedFields[fieldIndex].sub_headers![subIndex].fields[fieldIndex2];
+      subField.sub_headers = [...(subField.sub_headers || []), newNestedSubHeader];
+      onChange(updatedFields);
+    }
+  };
+
+  const removeNestedSubHeader = (fieldIndex: number, subIndex: number, fieldIndex2: number, nestedIndex: number) => {
+    const updatedFields = [...fields];
+    if (updatedFields[fieldIndex].sub_headers?.[subIndex]?.fields[fieldIndex2]) {
+      const subField = updatedFields[fieldIndex].sub_headers![subIndex].fields[fieldIndex2];
+      subField.sub_headers = subField.sub_headers?.filter((_, i) => i !== nestedIndex) || [];
+      onChange(updatedFields);
+    }
+  };
+
+  const updateNestedSubHeader = (fieldIndex: number, subIndex: number, fieldIndex2: number, nestedIndex: number, updates: Partial<SubHeader>) => {
+    const updatedFields = [...fields];
+    if (updatedFields[fieldIndex].sub_headers?.[subIndex]?.fields[fieldIndex2]?.sub_headers?.[nestedIndex]) {
+      const subField = updatedFields[fieldIndex].sub_headers![subIndex].fields[fieldIndex2];
+      subField.sub_headers![nestedIndex] = {
+        ...subField.sub_headers![nestedIndex],
         ...updates
       };
       onChange(updatedFields);
@@ -662,16 +704,107 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
                                 />
                               </div>
 
-                              <div className="flex items-center space-x-2">
-                                <Checkbox
-                                  id={`sub-required-${index}-${subIndex}-${fieldIndex}`}
-                                  checked={subField.is_required}
-                                  onCheckedChange={(checked) => updateSubHeaderField(index, subIndex, fieldIndex, { is_required: !!checked })}
-                                />
-                                <Label htmlFor={`sub-required-${index}-${subIndex}-${fieldIndex}`} className="text-xs">
-                                  Required field
-                                </Label>
+                              <div className="flex flex-wrap gap-4">
+                                <div className="flex items-center space-x-2">
+                                  <Checkbox
+                                    id={`sub-required-${index}-${subIndex}-${fieldIndex}`}
+                                    checked={subField.is_required}
+                                    onCheckedChange={(checked) => updateSubHeaderField(index, subIndex, fieldIndex, { is_required: !!checked })}
+                                  />
+                                  <Label htmlFor={`sub-required-${index}-${subIndex}-${fieldIndex}`} className="text-xs">
+                                    Required field
+                                  </Label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <Checkbox
+                                    id={`sub-secondary-${index}-${subIndex}-${fieldIndex}`}
+                                    checked={subField.is_secondary_column || false}
+                                    onCheckedChange={(checked) => updateSubHeaderField(index, subIndex, fieldIndex, { is_secondary_column: !!checked })}
+                                  />
+                                  <Label htmlFor={`sub-secondary-${index}-${subIndex}-${fieldIndex}`} className="text-xs">
+                                    Secondary column
+                                  </Label>
+                                </div>
                               </div>
+
+                              {/* Nested sub-headers for sub-header fields */}
+                              {subField.is_secondary_column && (
+                                <div className="mt-3 p-3 border rounded-lg bg-blue-50">
+                                  <div className="flex items-center justify-between mb-3">
+                                    <Label className="text-xs font-medium">Nested Sub-headers (Optional)</Label>
+                                    <div className="flex items-center space-x-2">
+                                      <Checkbox
+                                        id={`nested-has-subheaders-${index}-${subIndex}-${fieldIndex}`}
+                                        checked={subField.has_sub_headers || false}
+                                        onCheckedChange={(checked) => updateSubHeaderField(index, subIndex, fieldIndex, { 
+                                          has_sub_headers: !!checked,
+                                          sub_headers: checked ? (subField.sub_headers || []) : []
+                                        })}
+                                      />
+                                      <Label htmlFor={`nested-has-subheaders-${index}-${subIndex}-${fieldIndex}`} className="text-xs">
+                                        Enable nested sub-headers
+                                      </Label>
+                                    </div>
+                                  </div>
+                                  
+                                  {subField.has_sub_headers && (
+                                    <div className="space-y-2">
+                                      <p className="text-xs text-blue-600">
+                                        Add nested categories under "{subField.field_label}"
+                                      </p>
+                                      
+                                      {/* Nested sub-header list */}
+                                      {(subField.sub_headers || []).map((nestedSubHeader, nestedSubIndex) => (
+                                        <div key={nestedSubIndex} className="p-2 border rounded bg-white">
+                                          <div className="flex items-center justify-between mb-2">
+                                            <Label className="text-xs font-medium">Nested Sub-header {nestedSubIndex + 1}</Label>
+                                            <Button
+                                              type="button"
+                                              variant="ghost"
+                                              size="sm"
+                                              onClick={() => removeNestedSubHeader(index, subIndex, fieldIndex, nestedSubIndex)}
+                                            >
+                                              <Trash2 className="h-3 w-3" />
+                                            </Button>
+                                          </div>
+                                          
+                                          <div className="grid grid-cols-2 gap-2">
+                                            <div>
+                                              <Label className="text-xs">Name</Label>
+                                              <Input
+                                                value={nestedSubHeader.name}
+                                                onChange={(e) => updateNestedSubHeader(index, subIndex, fieldIndex, nestedSubIndex, { name: e.target.value })}
+                                                placeholder="medical"
+                                                className="text-xs"
+                                              />
+                                            </div>
+                                            <div>
+                                              <Label className="text-xs">Label</Label>
+                                              <Input
+                                                value={nestedSubHeader.label}
+                                                onChange={(e) => updateNestedSubHeader(index, subIndex, fieldIndex, nestedSubIndex, { label: e.target.value })}
+                                                placeholder="Medical"
+                                                className="text-xs"
+                                              />
+                                            </div>
+                                          </div>
+                                        </div>
+                                      ))}
+                                      
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => addNestedSubHeader(index, subIndex, fieldIndex)}
+                                        className="text-xs"
+                                      >
+                                        <Plus className="h-3 w-3 mr-1" />
+                                        Add Nested Sub-header
+                                      </Button>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           ))}
                           

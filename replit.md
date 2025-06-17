@@ -119,6 +119,7 @@ Changelog:
 - June 17, 2025. Fixed form creation bug where sub-header data wasn't being saved to database
 - June 17, 2025. Enhanced validation logic - fields with sub-headers skip required validation and hide main input field
 - June 17, 2025. Fixed reporting system to properly display hierarchical form data - now works with both simple and nested form structures
+- June 17, 2025. Enhanced PDF export to match hierarchical table structure with proper multi-level headers and organized columns
 ```
 
 ## User Preferences

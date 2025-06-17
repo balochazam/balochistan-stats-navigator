@@ -298,276 +298,174 @@ export const Reports = () => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
-    // Sort fields: primary first, then secondary, then others
-    const sortedFields = [...formFields].sort((a, b) => {
-      if (a.is_primary_column && !b.is_primary_column) return -1;
-      if (!a.is_primary_column && b.is_primary_column) return 1;
-      if (a.is_secondary_column && !b.is_secondary_column) return -1;
-      if (!a.is_secondary_column && b.is_secondary_column) return 1;
-      return a.field_order - b.field_order;
-    });
-
-    // Group data by primary column (e.g., "Under Control")
-    const primaryField = sortedFields.find(f => f.is_primary_column);
-    const secondaryField = sortedFields.find(f => f.is_secondary_column);
-    const dataFields = sortedFields.filter(f => !f.is_primary_column && !f.is_secondary_column);
-
-    // Group submissions by primary field value
-    const primaryGroups = new Map();
-    formSubmissions.forEach(submission => {
-      const primaryValue = primaryField?.field_name ? 
-        submission.data?.[primaryField.field_name] || 'Unknown' : 'Unknown';
-      if (!primaryGroups.has(primaryValue)) {
-        primaryGroups.set(primaryValue, []);
-      }
-      primaryGroups.get(primaryValue)?.push(submission);
-    });
-
-    // Get all unique secondary values for column headers
-    const secondaryValues: string[] = [];
-    const seen = new Set<string>();
-    formSubmissions.forEach((s: any) => {
-      const value = secondaryField?.field_name ? s.data?.[secondaryField.field_name] || 'Unknown' : 'All';
-      if (!seen.has(value)) {
-        seen.add(value);
-        secondaryValues.push(value);
-      }
-    });
-    secondaryValues.sort();
-
-    // Create a simple structure for the cross-tabulation
-    const structuredData = new Map();
+    let tableHTML = '';
     
-    // Initialize the structure for each primary value
-    Array.from(primaryGroups.keys()).forEach(primaryValue => {
-      const rowData = new Map();
-      secondaryValues.forEach(secValue => {
-        rowData.set(secValue, []);
-      });
-      structuredData.set(primaryValue, rowData);
-    });
-    
-    // Populate with submissions based on their actual primary and secondary values
-    formSubmissions.forEach((submission: any) => {
-      const primaryValue = primaryField?.field_name ? 
-        submission.data?.[primaryField.field_name] || 'Unknown' : 'Unknown';
-      const secondaryValue = secondaryField?.field_name ? 
-        submission.data?.[secondaryField.field_name] || 'Unknown' : 'All';
+    if (isHierarchicalForm()) {
+      // Generate hierarchical table structure for PDF
+      const structure = getHierarchicalTableStructure();
+      const primaryField = formFields.find((field: any) => field.is_primary_column);
       
-      // Ensure the primary value exists in our structure
-      if (!structuredData.has(primaryValue)) {
-        const newRowData = new Map();
-        secondaryValues.forEach(secValue => {
-          newRowData.set(secValue, []);
+      // Calculate column spans
+      const getColumnSpan = (category: any) => {
+        let span = category.fields.length;
+        Object.values(category.subCategories).forEach((subCat: any) => {
+          span += subCat.fields.length;
         });
-        structuredData.set(primaryValue, newRowData);
-      }
+        return span;
+      };
       
-      // Ensure the secondary value exists for this primary value
-      const rowData = structuredData.get(primaryValue);
-      if (!rowData?.has(secondaryValue)) {
-        rowData?.set(secondaryValue, []);
-      }
-      
-      // Add the submission to the correct cell
-      rowData?.get(secondaryValue)?.push(submission);
-    });
-
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>${selectedForm.form.name} - ${selectedSchedule?.name}</title>
-        <style>
-          body { 
-            font-family: Arial, sans-serif; 
-            margin: 20px auto; 
-            font-size: 10px;
-            color: black;
-            max-width: 800px;
-          }
-          .header {
-            text-align: center;
-            margin-bottom: 20px;
-          }
-          .title {
-            font-size: 12px;
-            font-weight: bold;
-            text-decoration: underline;
-            margin-bottom: 8px;
-          }
-          .subtitle {
-            font-size: 10px;
-            font-weight: bold;
-            margin-bottom: 15px;
-          }
-          .period {
-            text-align: right;
-            margin-bottom: 15px;
-            font-size: 9px;
-          }
-          table {
-            width: auto;
-            border-collapse: collapse;
-            margin: 0 auto 15px;
-            font-size: 9px;
-          }
-          th, td {
-            border: 1px solid #000;
-            padding: 4px 8px;
-            text-align: center;
-            vertical-align: middle;
-            white-space: nowrap;
-          }
-          .primary-header {
-            font-weight: bold;
-            background-color: #f5f5f5;
-            text-align: left;
-            padding-left: 8px;
-            min-width: 120px;
-          }
-          .secondary-header {
-            font-weight: bold;
-            font-size: 9px;
-            background-color: #f9f9f9;
-            min-width: 60px;
-          }
-          .data-header {
-            font-size: 8px;
-            font-weight: bold;
-            min-width: 35px;
-          }
-          .data-cell {
-            font-size: 9px;
-            min-width: 35px;
-          }
-          .source {
-            text-align: right;
-            font-size: 8px;
-            font-style: italic;
-            margin-top: 15px;
-          }
-          @media print {
-            body { margin: 15px auto; max-width: none; }
-            .no-print { display: none; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <div class="title">${selectedForm.form.name.toUpperCase()}</div>
-          <div class="subtitle">${selectedForm.form.description || selectedSchedule?.description || ''}</div>
-        </div>
-        
-        <div class="period">${selectedSchedule?.name} (${selectedSchedule?.start_date ? new Date(selectedSchedule.start_date).getFullYear() : 'Year'})</div>
-        
-        <table>
+      tableHTML = `
+        <table style="border-collapse: collapse; width: 100%; margin: 20px 0; font-size: 11px;">
           <thead>
-            <tr>
-              <th rowspan="2" class="primary-header">${primaryField?.field_label || 'Category'}</th>
-              ${secondaryValues.map(secValue => `
-                <th colspan="2" class="secondary-header">${secValue}</th>
+            <!-- First header row - Main categories -->
+            <tr style="background-color: #f5f5f5;">
+              <th rowspan="3" style="border: 1px solid #000; padding: 8px; text-align: center; font-weight: bold; background-color: #e3f2fd; min-width: 80px;">
+                ${primaryField?.field_label || 'Province'}
+              </th>
+              ${Object.values(structure).map((category: any) => `
+                <th colspan="${getColumnSpan(category)}" style="border: 1px solid #000; padding: 6px; text-align: center; font-weight: bold; background-color: ${
+                  category.name === 'Doctors' ? '#e8f5e8' :
+                  category.name === 'Dentists' ? '#e3f2fd' :
+                  category.name === 'Specialists' ? '#f3e5f5' : '#f5f5f5'
+                };">
+                  ${category.name}
+                </th>
               `).join('')}
             </tr>
-            <tr>
-              ${secondaryValues.map(secValue => `
-                <th class="data-header">No.</th>
-                <th class="data-header">Beds</th>
+            
+            <!-- Second header row - Sub categories (Medical/Dental) -->
+            <tr style="background-color: #fafafa;">
+              ${Object.values(structure).map((category: any) => `
+                ${category.fields.length > 0 ? `
+                  <th colspan="${category.fields.length}" style="border: 1px solid #000; padding: 4px; text-align: center; font-weight: 500; font-size: 10px;">
+                    ${category.name}
+                  </th>
+                ` : ''}
+                ${Object.values(category.subCategories).map((subCat: any) => `
+                  <th colspan="${subCat.fields.length}" style="border: 1px solid #000; padding: 4px; text-align: center; font-weight: 500; font-size: 10px;">
+                    ${subCat.name}
+                  </th>
+                `).join('')}
+              `).join('')}
+            </tr>
+            
+            <!-- Third header row - Field labels (Total, Male, Female) -->
+            <tr style="background-color: #ffffff;">
+              ${Object.values(structure).map((category: any) => `
+                ${category.fields.map((field: any) => `
+                  <th style="border: 1px solid #000; padding: 4px; text-align: center; font-size: 9px; min-width: 50px;">
+                    ${field.label}
+                  </th>
+                `).join('')}
+                ${Object.values(category.subCategories).map((subCat: any) => 
+                  subCat.fields.map((field: any) => `
+                    <th style="border: 1px solid #000; padding: 4px; text-align: center; font-size: 9px; min-width: 50px;">
+                      ${field.label}
+                    </th>
+                  `).join('')
+                ).join('')}
+              `).join('')}
+            </tr>
+          </thead>
+          
+          <tbody>
+            ${formSubmissions.map((submission) => `
+              <tr style="page-break-inside: avoid;">
+                <td style="border: 1px solid #000; padding: 6px; font-weight: bold; background-color: #f8f9fa; text-align: left;">
+                  ${primaryField?.field_name ? (submission.data as any)?.[primaryField.field_name] || '-' : '-'}
+                </td>
+                ${Object.values(structure).map((category: any) => `
+                  ${category.fields.map((field: any) => `
+                    <td style="border: 1px solid #000; padding: 4px; text-align: center; font-size: 10px;">
+                      ${(submission.data as any)?.[field.key] || '-'}
+                    </td>
+                  `).join('')}
+                  ${Object.values(category.subCategories).map((subCat: any) => 
+                    subCat.fields.map((field: any) => `
+                      <td style="border: 1px solid #000; padding: 4px; text-align: center; font-size: 10px;">
+                        ${(submission.data as any)?.[field.key] || '-'}
+                      </td>
+                    `).join('')
+                  ).join('')}
+                `).join('')}
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    } else {
+      // Generate simple table for non-hierarchical forms
+      tableHTML = `
+        <table style="border-collapse: collapse; width: 100%; margin: 20px 0; font-size: 11px;">
+          <thead>
+            <tr style="background-color: #f5f5f5;">
+              <th style="border: 1px solid #000; padding: 8px; text-align: center;">Submission Date</th>
+              ${formFields.map(field => `
+                <th style="border: 1px solid #000; padding: 8px; text-align: center;">${field.field_label}</th>
               `).join('')}
             </tr>
           </thead>
           <tbody>
-            ${Array.from(structuredData.entries()).map(([primaryValue, rowData]) => `
+            ${formSubmissions.map(submission => `
               <tr>
-                <td class="primary-header">${primaryValue}</td>
-                ${secondaryValues.map(secValue => {
-                  // Filter submissions for this specific primary-secondary combination
-                  const cellSubmissions = formSubmissions.filter((s: any) => {
-                    const sPrimary = primaryField?.field_name ? s.data?.[primaryField.field_name] : '';
-                    const sSecondary = secondaryField?.field_name ? s.data?.[secondaryField.field_name] : '';
-                    return sPrimary === primaryValue && sSecondary === secValue;
-                  });
-                  
-                  if (cellSubmissions.length > 0) {
-                    // Count institutions - this should be the count from the "No." field, not the number of submissions
-                    const noValue = cellSubmissions.reduce((sum: number, s: any) => {
-                      const no = s.data?.['No.'] || s.data?.['No'] || s.data?.['no'] || 0;
-                      const num = parseFloat(no);
-                      return sum + (isNaN(num) ? 0 : num);
-                    }, 0);
-                    
-                    // Sum beds from the actual data
-                    const totalBeds = cellSubmissions.reduce((sum: number, s: any) => {
-                      const bedsValue = s.data?.['Beds'] || s.data?.['beds'] || 0;
-                      const num = parseFloat(bedsValue);
-                      return sum + (isNaN(num) ? 0 : num);
-                    }, 0);
-                    
-                    return `
-                      <td class="data-cell">${noValue}</td>
-                      <td class="data-cell">${totalBeds}</td>
-                    `;
-                  } else {
-                    // No data for this combination - show 0 and -
-                    return `
-                      <td class="data-cell">0</td>
-                      <td class="data-cell">-</td>
-                    `;
-                  }
-                }).join('')}
+                <td style="border: 1px solid #000; padding: 6px; text-align: center;">
+                  ${new Date(submission.submitted_at).toLocaleDateString()}
+                </td>
+                ${formFields.map(field => `
+                  <td style="border: 1px solid #000; padding: 6px; text-align: center;">
+                    ${(submission.data as any)?.[field.field_name] || '-'}
+                  </td>
+                `).join('')}
               </tr>
             `).join('')}
-            
-            <tr style="border-top: 2px solid #000;">
-              <td class="primary-header" style="background-color: #e0e0e0; font-weight: bold;">Aggregate</td>
-              ${secondaryValues.map(secValue => {
-                // Calculate totals for this secondary value across all primary values
-                const totalNo = Array.from(structuredData.entries()).reduce((sum, [primaryVal, rowData]) => {
-                  const cellSubmissions = formSubmissions.filter((s: any) => {
-                    const sPrimary = primaryField?.field_name ? s.data?.[primaryField.field_name] : '';
-                    const sSecondary = secondaryField?.field_name ? s.data?.[secondaryField.field_name] : '';
-                    return sPrimary === primaryVal && sSecondary === secValue;
-                  });
-                  
-                  const noValue = cellSubmissions.reduce((cellSum: number, s: any) => {
-                    const no = s.data?.['No.'] || s.data?.['No'] || s.data?.['no'] || 0;
-                    const num = parseFloat(no);
-                    return cellSum + (isNaN(num) ? 0 : num);
-                  }, 0);
-                  
-                  return sum + noValue;
-                }, 0);
-                
-                const totalBeds = Array.from(structuredData.entries()).reduce((sum, [primaryVal, rowData]) => {
-                  const cellSubmissions = formSubmissions.filter((s: any) => {
-                    const sPrimary = primaryField?.field_name ? s.data?.[primaryField.field_name] : '';
-                    const sSecondary = secondaryField?.field_name ? s.data?.[secondaryField.field_name] : '';
-                    return sPrimary === primaryVal && sSecondary === secValue;
-                  });
-                  
-                  const bedsValue = cellSubmissions.reduce((cellSum: number, s: any) => {
-                    const beds = s.data?.['Beds'] || s.data?.['beds'] || 0;
-                    const num = parseFloat(beds);
-                    return cellSum + (isNaN(num) ? 0 : num);
-                  }, 0);
-                  
-                  return sum + bedsValue;
-                }, 0);
-                
-                return `
-                  <td class="data-cell" style="background-color: #f0f0f0; font-weight: bold;">${totalNo}</td>
-                  <td class="data-cell" style="background-color: #f0f0f0; font-weight: bold;">${totalBeds}</td>
-                `;
-              }).join('')}
-            </tr>
           </tbody>
         </table>
-        
-        <div class="no-print" style="margin-top: 30px; text-align: center;">
-          <button onclick="window.print()" style="padding: 10px 20px; font-size: 14px;">Print PDF</button>
-          <button onclick="window.close()" style="padding: 10px 20px; font-size: 14px; margin-left: 10px;">Close</button>
-        </div>
-      </body>
+      `;
+    }
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${selectedForm.form.name} - ${selectedSchedule?.name} Report</title>
+          <style>
+            body { 
+              font-family: Arial, sans-serif; 
+              margin: 20px; 
+              color: black;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 20px;
+            }
+            .title {
+              font-size: 16px;
+              font-weight: bold;
+              margin-bottom: 8px;
+            }
+            .subtitle {
+              font-size: 12px;
+              margin-bottom: 15px;
+            }
+            @media print {
+              body { margin: 15px; }
+              .no-print { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="title">${selectedForm.form.name.toUpperCase()}</div>
+            <div class="subtitle">Comprehensive data collection for ${selectedForm.form.name.toLowerCase()} across provinces</div>
+          </div>
+          
+          ${tableHTML}
+          
+          <div class="no-print" style="margin-top: 20px; text-align: center;">
+            <button onclick="window.print()" style="padding: 10px 20px; margin-right: 10px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Print PDF</button>
+            <button onclick="window.close()" style="padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">Close</button>
+          </div>
+        </body>
       </html>
     `;
 

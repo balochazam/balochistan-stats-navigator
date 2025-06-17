@@ -183,8 +183,8 @@ export const HierarchicalFormBuilder: React.FC<HierarchicalFormBuilderProps> = (
         placeholder_text: null,
         aggregate_fields: null,
         field_order: group.fields.length,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        created_at: new Date() as any,
+        updated_at: new Date() as any
       };
       group.fields.push(newField);
     }
@@ -319,7 +319,11 @@ export const HierarchicalFormBuilder: React.FC<HierarchicalFormBuilderProps> = (
     const traverse = (nodes: GroupNode[]) => {
       nodes.forEach(node => {
         const { children, fields, expanded, ...group } = node;
-        allGroups.push(group);
+        allGroups.push({
+          ...group,
+          created_at: new Date(group.created_at),
+          updated_at: new Date(group.updated_at)
+        } as FieldGroup);
         allFields.push(...fields);
         traverse(children);
       });

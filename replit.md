@@ -118,6 +118,7 @@ Changelog:
 - June 17, 2025. Implemented hierarchical sub-header system for complex nested forms (Province → Medical Personnel → Doctors/Dentists/Specialists → Gender breakdowns)
 - June 17, 2025. Fixed form creation bug where sub-header data wasn't being saved to database
 - June 17, 2025. Enhanced validation logic - fields with sub-headers skip required validation and hide main input field
+- June 17, 2025. Fixed reporting system to properly display hierarchical form data - now works with both simple and nested form structures
 ```
 
 ## User Preferences

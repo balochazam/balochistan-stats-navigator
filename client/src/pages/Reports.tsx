@@ -42,6 +42,26 @@ interface FormField {
   is_primary_column: boolean;
   is_secondary_column: boolean;
   field_order: number;
+  has_sub_headers?: boolean;
+  sub_headers?: Array<{
+    name: string;
+    label: string;
+    fields: Array<{
+      field_name: string;
+      field_label: string;
+      field_type: string;
+      has_sub_headers?: boolean;
+      sub_headers?: Array<{
+        name: string;
+        label: string;
+        fields: Array<{
+          field_name: string;
+          field_label: string;
+          field_type: string;
+        }>;
+      }>;
+    }>;
+  }>;
 }
 
 interface FormSubmission {
@@ -118,6 +138,46 @@ export const Reports = () => {
     }
   };
 
+  // Helper function to extract hierarchical field data
+  const getFieldValue = (submission: FormSubmission, field: any) => {
+    // First try direct field name match (for simple forms)
+    if (submission.data?.[field.field_name]) {
+      return submission.data[field.field_name];
+    }
+    
+    // For hierarchical forms, look for nested field data
+    if (field.has_sub_headers && field.sub_headers) {
+      const values: string[] = [];
+      
+      field.sub_headers.forEach((subHeader: any) => {
+        subHeader.fields.forEach((subField: any) => {
+          const hierarchicalKey = `${field.field_name}_${subHeader.name}_${subField.field_name}`;
+          const value = submission.data?.[hierarchicalKey];
+          if (value) {
+            values.push(`${subHeader.label || subHeader.name} ${subField.field_label}: ${value}`);
+          }
+          
+          // Check for nested sub-headers (e.g., Medical/Dental under Specialists)
+          if (subField.has_sub_headers && subField.sub_headers) {
+            subField.sub_headers.forEach((nestedSubHeader: any) => {
+              nestedSubHeader.fields.forEach((nestedField: any) => {
+                const nestedKey = `${field.field_name}_${subHeader.name}_${subField.field_name}_${nestedSubHeader.name}_${nestedField.field_name}`;
+                const nestedValue = submission.data?.[nestedKey];
+                if (nestedValue) {
+                  values.push(`${subHeader.label || subHeader.name} ${nestedSubHeader.label || nestedSubHeader.name} ${nestedField.field_label}: ${nestedValue}`);
+                }
+              });
+            });
+          }
+        });
+      });
+      
+      return values.length > 0 ? values.join('; ') : '';
+    }
+    
+    return '';
+  };
+
   const exportToCSV = () => {
     if (!selectedForm || !formFields.length || !formSubmissions.length) return;
     
@@ -125,7 +185,7 @@ export const Reports = () => {
     const rows = formSubmissions.map(submission => [
       new Date(submission.submitted_at).toLocaleDateString(),
       ...formFields.map(field => {
-        const value = submission.data?.[field.field_name];
+        const value = getFieldValue(submission, field);
         return value || '';
       })
     ]);
@@ -612,7 +672,7 @@ export const Reports = () => {
                             </TableCell>
                             {formFields.map((field) => (
                               <TableCell key={field.id}>
-                                {submission.data?.[field.field_name] || '-'}
+                                {getFieldValue(submission, field) || '-'}
                               </TableCell>
                             ))}
                           </TableRow>

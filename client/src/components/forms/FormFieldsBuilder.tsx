@@ -613,16 +613,41 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
                               {subField.field_type === 'aggregate' && (
                                 <div className="mb-2">
                                   <Label className="text-xs">Aggregate Fields</Label>
-                                  <Input
-                                    value={subField.aggregate_fields?.join(', ') || ''}
-                                    onChange={(e) => updateSubHeaderField(index, subIndex, fieldIndex, { 
-                                      aggregate_fields: e.target.value.split(',').map(f => f.trim()).filter(f => f) 
-                                    })}
-                                    placeholder="field1, field2, field3"
-                                    className="text-sm"
-                                  />
+                                  <div className="space-y-2">
+                                    {/* Show available number fields from this sub-header */}
+                                    {subHeader.fields
+                                      .filter((f, fIdx) => f.field_type === 'number' && fIdx !== fieldIndex)
+                                      .map((numberField, availableIdx) => (
+                                        <div key={availableIdx} className="flex items-center space-x-2">
+                                          <Checkbox
+                                            id={`aggregate-${index}-${subIndex}-${fieldIndex}-${availableIdx}`}
+                                            checked={subField.aggregate_fields?.includes(numberField.field_name) || false}
+                                            onCheckedChange={(checked) => {
+                                              const currentAggregates = subField.aggregate_fields || [];
+                                              const newAggregates = checked
+                                                ? [...currentAggregates, numberField.field_name]
+                                                : currentAggregates.filter(f => f !== numberField.field_name);
+                                              updateSubHeaderField(index, subIndex, fieldIndex, { 
+                                                aggregate_fields: newAggregates 
+                                              });
+                                            }}
+                                          />
+                                          <Label 
+                                            htmlFor={`aggregate-${index}-${subIndex}-${fieldIndex}-${availableIdx}`}
+                                            className="text-xs"
+                                          >
+                                            {numberField.field_label || numberField.field_name}
+                                          </Label>
+                                        </div>
+                                      ))}
+                                    {subHeader.fields.filter(f => f.field_type === 'number' && subHeader.fields.indexOf(f) !== fieldIndex).length === 0 && (
+                                      <p className="text-xs text-gray-500 italic">
+                                        No number fields available in this sub-header to aggregate
+                                      </p>
+                                    )}
+                                  </div>
                                   <p className="text-xs text-gray-500 mt-1">
-                                    Comma-separated list of field names to sum
+                                    Select number fields from this sub-header to sum
                                   </p>
                                 </div>
                               )}

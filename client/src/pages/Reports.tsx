@@ -9,8 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText, Download, Eye, Calendar, FileX, Search, Filter, BarChart3, PieChart, TrendingUp } from 'lucide-react';
-import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import { FileText, Download, Eye, Calendar, FileX, Search, Filter } from 'lucide-react';
 
 interface Schedule {
   id: string;
@@ -101,60 +100,13 @@ export const Reports = () => {
   const [submissionDateFilter, setSubmissionDateFilter] = useState('all');
   const [tableSearchFilter, setTableSearchFilter] = useState('');
   
-  // Chart data states
-  const [chartData, setChartData] = useState<any[]>([]);
-  const [submissionStats, setSubmissionStats] = useState<any[]>([]);
+
 
   useEffect(() => {
     fetchPublishedSchedules();
   }, []);
 
-  useEffect(() => {
-    if (publishedSchedules.length > 0) {
-      generateChartData(publishedSchedules);
-    }
-  }, [publishedSchedules]);
 
-  const generateChartData = (schedules: Schedule[]) => {
-    if (!schedules || schedules.length === 0) {
-      setChartData([]);
-      setSubmissionStats([]);
-      return;
-    }
-
-    // Department distribution for authenticated users  
-    const deptCounts = schedules.reduce((acc: any, schedule: any) => {
-      // Simple distribution for now - can be enhanced when department data is available
-      const deptName = 'General';
-      acc[deptName] = (acc[deptName] || 0) + 1;
-      return acc;
-    }, {});
-
-    const deptData = Object.entries(deptCounts).map(([name, value]) => ({
-      name,
-      value: value as number
-    }));
-    setChartData(deptData);
-
-    // Monthly publication trends
-    const monthlyData = schedules.reduce((acc: any, schedule: any) => {
-      const date = new Date(schedule.created_at);
-      const month = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-      acc[month] = (acc[month] || 0) + 1;
-      return acc;
-    }, {});
-
-    const sortedMonths = Object.entries(monthlyData)
-      .map(([month, count]) => ({
-        month,
-        reports: count as number,
-        date: new Date(month)
-      }))
-      .sort((a, b) => a.date.getTime() - b.date.getTime())
-      .slice(-6);
-
-    setSubmissionStats(sortedMonths);
-  };
 
   // Handle URL parameters for direct navigation to schedule/form
   useEffect(() => {
@@ -779,76 +731,7 @@ export const Reports = () => {
               </CardContent>
             </Card>
 
-            {/* Analytics Dashboard */}
-            {publishedSchedules.length > 0 && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                {/* Department Distribution Chart */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <PieChart className="h-5 w-5" />
-                      Reports by Department
-                    </CardTitle>
-                    <CardDescription>
-                      Distribution of published reports across departments
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-64">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <RechartsPieChart>
-                          <Pie
-                            data={chartData}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={false}
-                            label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                            outerRadius={80}
-                            fill="#8884d8"
-                            dataKey="value"
-                          >
-                            {chartData.map((entry, index) => (
-                              <Cell 
-                                key={`cell-${index}`} 
-                                fill={`hsl(${index * 137.5 % 360}, 70%, 50%)`}
-                              />
-                            ))}
-                          </Pie>
-                          <Tooltip />
-                        </RechartsPieChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
 
-                {/* Publication Trends Chart */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <TrendingUp className="h-5 w-5" />
-                      Publication Trends
-                    </CardTitle>
-                    <CardDescription>
-                      Report publication activity over time
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-64">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={submissionStats}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="month" />
-                          <YAxis />
-                          <Tooltip />
-                          <Legend />
-                          <Bar dataKey="reports" fill="#3b82f6" name="Published Reports" />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
 
             {filteredSchedules.length === 0 ? (
               <Card>

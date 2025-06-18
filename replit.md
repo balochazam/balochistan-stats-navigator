@@ -136,6 +136,7 @@ Changelog:
 - June 18, 2025. Removed chart visualization from public reports per user request and implemented comprehensive export functionality - export button now downloads CSV file containing data from all forms in the schedule with organized sections and proper field labels
 - June 18, 2025. Enhanced export functionality with PDF support - added dropdown menu offering both CSV and PDF export options, PDF export maintains hierarchical table structure matching web display with professional formatting and landscape orientation
 - June 18, 2025. Added comprehensive filtering system to public reports matching authenticated reports functionality - includes data search, date range filtering, department filtering, and real-time filter status with submission count indicators
+- June 18, 2025. Removed chart visualizations from Reports page per user request - eliminated pie charts and bar charts to simplify the interface while maintaining all data filtering and export functionality
 ```
 
 ## User Preferences

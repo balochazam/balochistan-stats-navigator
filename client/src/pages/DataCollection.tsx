@@ -203,13 +203,11 @@ export const DataCollection = () => {
   }, [completions]);
 
   const getScheduleStatus = useCallback((schedule: Schedule) => {
-    const today = new Date();
-    const startDate = new Date(schedule.start_date);
-    const endDate = new Date(schedule.end_date);
-
-    if (today < startDate) return 'upcoming';
-    if (today > endDate) return 'expired';
-    return 'active';
+    // Status is determined purely by the schedule's status field, not dates
+    if (schedule.status === 'collection') return 'active';
+    if (schedule.status === 'open') return 'upcoming';
+    if (schedule.status === 'published') return 'completed';
+    return 'active'; // Default to active for collection schedules
   }, []);
 
   const getStatusColor = useCallback((status: string) => {
@@ -218,10 +216,10 @@ export const DataCollection = () => {
         return 'bg-blue-500';
       case 'active':
         return 'bg-green-500';
-      case 'expired':
-        return 'bg-gray-500';
+      case 'completed':
+        return 'bg-purple-500';
       default:
-        return 'bg-gray-500';
+        return 'bg-green-500'; // Default to active green for collection schedules
     }
   }, []);
 
@@ -385,7 +383,7 @@ export const DataCollection = () => {
                             </div>
                           </div>
                           <div>
-                            {schedule.status === 'collection' && scheduleStatus === 'active' && (
+                            {schedule.status === 'collection' && (
                               <Button
                                 onClick={() => handleSelectForm(scheduleForm)}
                                 disabled={isCompleted}
@@ -409,6 +407,11 @@ export const DataCollection = () => {
                             {schedule.status === 'open' && (
                               <span className="text-sm text-gray-500">
                                 Not yet open for data collection
+                              </span>
+                            )}
+                            {schedule.status === 'published' && (
+                              <span className="text-sm text-gray-500">
+                                Data collection completed
                               </span>
                             )}
                           </div>

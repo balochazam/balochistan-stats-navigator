@@ -134,6 +134,7 @@ Changelog:
 - June 18, 2025. Transformed application to public-first architecture - removed sign-up functionality, created beautiful public landing page with charts and analytics for published reports, admin users now create all accounts, main homepage shows transparent data visualization with interactive charts and department filtering
 - June 18, 2025. Enhanced public reports to display only actual data rows (no zero-filled empty rows) and implemented dynamic chart updates that change when switching between form tabs - charts now show data specific to the currently selected form rather than static first-form data
 - June 18, 2025. Removed chart visualization from public reports per user request and implemented comprehensive export functionality - export button now downloads CSV file containing data from all forms in the schedule with organized sections and proper field labels
+- June 18, 2025. Enhanced export functionality with PDF support - added dropdown menu offering both CSV and PDF export options, PDF export maintains hierarchical table structure matching web display with professional formatting and landscape orientation
 ```
 
 ## User Preferences

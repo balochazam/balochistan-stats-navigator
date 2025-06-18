@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 import { 
   ArrowLeft, 
@@ -11,11 +12,14 @@ import {
   Calendar, 
   Users, 
   FileText,
-
   Database,
-  Eye
+  Eye,
+  FileSpreadsheet,
+  File
 } from 'lucide-react';
 import { simpleApiClient } from '@/lib/simpleApi';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface Schedule {
   id: string;
@@ -142,6 +146,198 @@ export const PublicReportView = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const exportAllFormsPDF = () => {
+    if (forms.length === 0 || submissions.length === 0 || !schedule) return;
+
+    const doc = new jsPDF('l', 'mm', 'a4'); // Landscape orientation for better table display
+    let yPosition = 20;
+
+    // Add title
+    doc.setFontSize(16);
+    doc.text(schedule.name, 15, yPosition);
+    yPosition += 10;
+    
+    doc.setFontSize(12);
+    doc.text(`Department: ${schedule.department?.name || 'General'}`, 15, yPosition);
+    yPosition += 5;
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 15, yPosition);
+    yPosition += 15;
+
+    forms.forEach((form: any, formIndex: number) => {
+      const formSubmissions = submissions.filter((sub: any) => sub.form_id === form.id);
+      
+      if (formSubmissions.length === 0) return;
+
+      const formFields = form.form_fields || [];
+      
+      // Check if this is a hierarchical form
+      const hasHierarchy = formFields.some((field: any) => field.has_sub_headers && field.sub_headers && field.sub_headers.length > 0);
+
+      // Add form title
+      if (formIndex > 0) {
+        doc.addPage();
+        yPosition = 20;
+      }
+      
+      doc.setFontSize(14);
+      doc.text(form.name, 15, yPosition);
+      yPosition += 10;
+
+      if (hasHierarchy) {
+        // Generate hierarchical table structure
+        const structure = getHierarchicalTableStructureForPDF(formFields);
+        const primaryField = formFields.find((field: any) => field.is_primary_column);
+        
+        if (primaryField && Object.keys(structure).length > 0) {
+          // Create headers for hierarchical table
+          const headers = [primaryField.field_label];
+          const subHeaders = [''];
+          const fieldHeaders = [''];
+
+          Object.values(structure).forEach((category: any) => {
+            headers.push(category.name);
+            headers.push(''); // For sub-categories if any
+            
+            if (Object.keys(category.subCategories).length > 0) {
+              Object.values(category.subCategories).forEach((subCat: any) => {
+                subHeaders.push(subCat.name);
+                subCat.fields.forEach((field: any) => {
+                  fieldHeaders.push(field.label);
+                });
+              });
+            } else {
+              category.fields.forEach((field: any) => {
+                subHeaders.push('');
+                fieldHeaders.push(field.label);
+              });
+            }
+          });
+
+          // Create data rows
+          const tableData = formSubmissions.map((submission: any) => {
+            const data = submission.data || {};
+            const primaryValue = data[primaryField.field_name] || '';
+            
+            if (!primaryValue) return null;
+
+            const row = [primaryValue];
+            
+            Object.values(structure).forEach((category: any) => {
+              if (Object.keys(category.subCategories).length > 0) {
+                Object.values(category.subCategories).forEach((subCat: any) => {
+                  subCat.fields.forEach((field: any) => {
+                    row.push(data[field.key] || '0');
+                  });
+                });
+              } else {
+                category.fields.forEach((field: any) => {
+                  row.push(data[field.key] || '0');
+                });
+              }
+            });
+            
+            return row;
+          }).filter(row => row !== null);
+
+          // Use autoTable for better table formatting
+          autoTable(doc, {
+            head: [fieldHeaders],
+            body: tableData,
+            startY: yPosition,
+            styles: { fontSize: 8, cellPadding: 2 },
+            headStyles: { fillColor: [66, 139, 202] },
+            columnStyles: {
+              0: { cellWidth: 30, fontStyle: 'bold' }
+            },
+            margin: { left: 15, right: 15 }
+          });
+        }
+      } else {
+        // Simple table for non-hierarchical forms
+        const headers = formFields.map((field: any) => field.field_label);
+        headers.push('Submitted Date');
+
+        const tableData = formSubmissions.map((submission: any) => {
+          const data = submission.data || {};
+          const row = formFields.map((field: any) => data[field.field_name] || '');
+          row.push(new Date(submission.submitted_at).toLocaleDateString());
+          return row;
+        });
+
+        autoTable(doc, {
+          head: [headers],
+          body: tableData,
+          startY: yPosition,
+          styles: { fontSize: 10, cellPadding: 3 },
+          headStyles: { fillColor: [66, 139, 202] },
+          margin: { left: 15, right: 15 }
+        });
+      }
+
+      yPosition = (doc as any).lastAutoTable.finalY + 20;
+    });
+
+    // Save the PDF
+    doc.save(`${schedule.name}_all_forms_data.pdf`);
+  };
+
+  const getHierarchicalTableStructureForPDF = (formFields: any[]) => {
+    const structure: any = {};
+    
+    formFields.forEach((field: any) => {
+      if (field.has_sub_headers && field.sub_headers && field.sub_headers.length > 0) {
+        field.sub_headers.forEach((subHeader: any) => {
+          const categoryName = subHeader.label || subHeader.name;
+          
+          if (!structure[categoryName]) {
+            structure[categoryName] = {
+              name: categoryName,
+              fields: [],
+              subCategories: {}
+            };
+          }
+          
+          if (subHeader.fields && subHeader.fields.length > 0) {
+            subHeader.fields.forEach((subField: any) => {
+              if (subField.has_sub_headers && subField.sub_headers && subField.sub_headers.length > 0) {
+                // Handle nested sub-headers
+                subField.sub_headers.forEach((nestedSubHeader: any) => {
+                  const subCategoryName = nestedSubHeader.label || nestedSubHeader.name;
+                  
+                  if (!structure[categoryName].subCategories[subCategoryName]) {
+                    structure[categoryName].subCategories[subCategoryName] = {
+                      name: subCategoryName,
+                      fields: []
+                    };
+                  }
+                  
+                  if (nestedSubHeader.fields && nestedSubHeader.fields.length > 0) {
+                    nestedSubHeader.fields.forEach((nestedField: any) => {
+                      structure[categoryName].subCategories[subCategoryName].fields.push({
+                        key: `${field.field_name}_${subHeader.name}_${subField.field_name}_${nestedSubHeader.name}_${nestedField.field_name}`,
+                        label: nestedField.field_label,
+                        type: 'nested'
+                      });
+                    });
+                  }
+                });
+              } else {
+                // Regular sub-header fields
+                structure[categoryName].fields.push({
+                  key: `${field.field_name}_${subHeader.name}_${subField.field_name}`,
+                  label: subField.field_label,
+                  type: 'regular'
+                });
+              }
+            });
+          }
+        });
+      }
+    });
+    
+    return structure;
   };
 
   const renderDataTable = () => {
@@ -442,10 +638,24 @@ export const PublicReportView = () => {
             </div>
             <div className="flex items-center space-x-4">
               <Badge variant="secondary">Published</Badge>
-              <Button variant="outline" onClick={exportAllFormsData}>
-                <Download className="h-4 w-4 mr-2" />
-                Export Data
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    <Download className="h-4 w-4 mr-2" />
+                    Export Data
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={exportAllFormsData}>
+                    <FileSpreadsheet className="h-4 w-4 mr-2" />
+                    Export as CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={exportAllFormsPDF}>
+                    <File className="h-4 w-4 mr-2" />
+                    Export as PDF
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>

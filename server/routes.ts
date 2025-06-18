@@ -115,15 +115,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Authentication middleware
-  const requireAuth = (req: any, res: any, next: any) => {
+  const requireAuth = async (req: any, res: any, next: any) => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ error: 'Authentication required' });
     }
     
     const token = authHeader.substring(7);
-    req.userId = token; // In production, verify and decode the token properly
-    next();
+    try {
+      const profile = await storage.getProfile(token);
+      if (!profile) {
+        return res.status(401).json({ error: 'Invalid token' });
+      }
+      req.userId = token;
+      req.userProfile = profile; // Attach user profile for department filtering
+      next();
+    } catch (error) {
+      return res.status(401).json({ error: 'Authentication failed' });
+    }
   };
 
   // Profile routes
@@ -148,7 +157,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/profiles', requireAuth, async (req, res) => {
+  app.patch('/api/profiles/:id', requireAuth, async (req, res) => {
+    try {
+      const profile = await storage.updateProfile(req.params.id, req.body);
+      if (!profile) {
+        return res.status(404).json({ error: 'Profile not found' });
+      }
+      res.json(profile);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to update profile' });
+    }
+  });
+
+  app.post('/api/profiles', requireAuth, async (req: any, res) => {
     try {
       const validatedData = insertProfileSchema.parse(req.body);
       const profile = await storage.createProfile(validatedData);
@@ -236,7 +257,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/data-banks', requireAuth, async (req, res) => {
+  app.post('/api/data-banks', requireAuth, async (req: any, res) => {
     try {
       const validatedData = insertDataBankSchema.parse({
         ...req.body,
@@ -351,10 +372,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Form routes
-  app.get('/api/forms', requireAuth, async (req, res) => {
+  app.get('/api/forms', requireAuth, async (req: any, res) => {
     try {
       const forms = await storage.getForms();
-      res.json(forms);
+      
+      // Filter forms based on user department (non-admin users only see their department's forms)
+      if (req.userProfile.role !== 'admin') {
+        const filteredForms = forms.filter(form => 
+          form.department_id === req.userProfile.department_id
+        );
+        res.json(filteredForms);
+      } else {
+        res.json(forms);
+      }
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch forms' });
     }
@@ -547,10 +577,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Schedule routes
-  app.get('/api/schedules', requireAuth, async (req, res) => {
+  app.get('/api/schedules', requireAuth, async (req: any, res) => {
     try {
       const schedules = await storage.getSchedules();
-      res.json(schedules);
+      
+      // Filter schedules based on user department (non-admin users only see schedules with their department's forms)
+      if (req.userProfile.role !== 'admin') {
+        const userDepartmentId = req.userProfile.department_id;
+        if (!userDepartmentId) {
+          return res.json([]); // Users without departments see no schedules
+        }
+        
+        // Get all forms for user's department
+        const allForms = await storage.getForms();
+        const departmentForms = allForms.filter(form => form.department_id === userDepartmentId);
+        const departmentFormIds = departmentForms.map(form => form.id);
+        
+        // Filter schedules that have forms assigned to user's department
+        const filteredSchedules = [];
+        for (const schedule of schedules) {
+          const scheduleForms = await storage.getScheduleForms(schedule.id);
+          const hasUserDepartmentForms = scheduleForms.some(sf => 
+            departmentFormIds.includes(sf.form_id)
+          );
+          if (hasUserDepartmentForms) {
+            filteredSchedules.push(schedule);
+          }
+        }
+        res.json(filteredSchedules);
+      } else {
+        res.json(schedules);
+      }
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch schedules' });
     }
@@ -719,20 +776,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Form Submission routes
-  app.get('/api/form-submissions', requireAuth, async (req, res) => {
+  app.get('/api/form-submissions', requireAuth, async (req: any, res) => {
     try {
       const { formId, scheduleId } = req.query;
       const submissions = await storage.getFormSubmissions(
         formId as string,
         scheduleId as string
       );
-      res.json(submissions);
+      
+      // Filter submissions based on user department (non-admin users only see their department's data)
+      if (req.userProfile.role !== 'admin') {
+        const userDepartmentId = req.userProfile.department_id;
+        if (!userDepartmentId) {
+          return res.json([]); // Users without departments see no submissions
+        }
+        
+        // Get all forms for user's department
+        const allForms = await storage.getForms();
+        const departmentForms = allForms.filter(form => form.department_id === userDepartmentId);
+        const departmentFormIds = departmentForms.map(form => form.id);
+        
+        // Filter submissions that belong to user's department forms
+        const filteredSubmissions = submissions.filter(submission => 
+          departmentFormIds.includes(submission.form_id)
+        );
+        res.json(filteredSubmissions);
+      } else {
+        res.json(submissions);
+      }
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch form submissions' });
     }
   });
 
-  app.post('/api/form-submissions', requireAuth, async (req, res) => {
+  app.post('/api/form-submissions', requireAuth, async (req: any, res) => {
     try {
       const validatedData = insertFormSubmissionSchema.parse({
         ...req.body,

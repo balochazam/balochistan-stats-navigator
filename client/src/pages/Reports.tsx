@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useSimpleAuth';
 import { apiClient } from '@/lib/api';
+import { useSearchParams } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -81,6 +82,7 @@ interface FormSubmission {
 
 export const Reports = () => {
   const { profile } = useAuth();
+  const [searchParams] = useSearchParams();
   const [publishedSchedules, setPublishedSchedules] = useState<Schedule[]>([]);
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
   const [scheduleForms, setScheduleForms] = useState<ScheduleForm[]>([]);
@@ -100,6 +102,29 @@ export const Reports = () => {
   useEffect(() => {
     fetchPublishedSchedules();
   }, []);
+
+  // Handle URL parameters for direct navigation to schedule/form
+  useEffect(() => {
+    const scheduleId = searchParams.get('scheduleId');
+    const formId = searchParams.get('formId');
+    
+    if (scheduleId && publishedSchedules.length > 0) {
+      const schedule = publishedSchedules.find(s => s.id === scheduleId);
+      if (schedule) {
+        handleViewSchedule(schedule).then(() => {
+          if (formId) {
+            // Wait for schedule forms to be loaded, then select the form
+            setTimeout(() => {
+              const form = scheduleForms.find(f => f.form_id === formId);
+              if (form) {
+                handleViewFormData(form);
+              }
+            }, 100);
+          }
+        });
+      }
+    }
+  }, [searchParams, publishedSchedules, scheduleForms]);
 
   const fetchPublishedSchedules = async () => {
     try {

@@ -60,9 +60,9 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       roles: ['data_entry_user', 'department_user']
     },
     {
-      title: 'Completed Schedules',
+      title: 'Reports',
       icon: BarChart3,
-      path: '/completed-schedules',
+      path: '/reports',
       roles: ['admin', 'department_user', 'data_entry_user']
     },
     {
@@ -93,12 +93,6 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       title: 'Schedule Management',
       icon: Calendar,
       path: '/admin/schedules',
-      roles: ['admin']
-    },
-    {
-      title: 'Reports',
-      icon: BarChart3,
-      path: '/reports',
       roles: ['admin']
     }
   ];

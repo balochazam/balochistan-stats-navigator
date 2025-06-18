@@ -16,7 +16,7 @@ import { DataBankManagement } from "./pages/admin/DataBankManagement";
 import { FormManagement } from "./pages/admin/FormManagement";
 import { ScheduleManagement } from "./pages/admin/ScheduleManagement";
 import { DataCollection } from "./pages/DataCollection";
-import { CompletedSchedules } from "./pages/CompletedSchedules";
+
 import { Reports } from "./pages/Reports";
 
 const queryClient = new QueryClient();
@@ -34,7 +34,7 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/data-collection" element={<DataCollection />} />
-            <Route path="/completed-schedules" element={<CompletedSchedules />} />
+
             <Route path="/admin/users" element={<UserManagement />} />
             <Route path="/admin/departments" element={<DepartmentManagement />} />
             <Route path="/admin/data-banks" element={<DataBankManagement />} />

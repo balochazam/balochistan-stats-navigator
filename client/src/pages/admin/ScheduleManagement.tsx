@@ -10,6 +10,7 @@ import { Calendar, Plus, Edit2, Trash2, FileText, Shield, Play, Pause, CheckCirc
 import { ScheduleDialog } from '@/components/schedules/ScheduleDialog';
 import { ScheduleFormsDialog } from '@/components/schedules/ScheduleFormsDialog';
 import { ScheduleDataCollectionDialog } from '@/components/schedules/ScheduleDataCollectionDialog';
+import { DataFilter } from '@/components/ui/DataFilter';
 
 interface Schedule {
   id: string;
@@ -60,6 +61,11 @@ export const ScheduleManagement = () => {
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
   const [selectedScheduleForForms, setSelectedScheduleForForms] = useState<Schedule | null>(null);
   const [selectedScheduleForDataCollection, setSelectedScheduleForDataCollection] = useState<Schedule | null>(null);
+  
+  // Filter states
+  const [searchFilter, setSearchFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState('all');
 
   useEffect(() => {
     if (profile?.role === 'admin') {
@@ -172,6 +178,44 @@ export const ScheduleManagement = () => {
     fetchSchedules();
   };
 
+  // Filter schedules based on current filters
+  const filteredSchedules = schedules.filter(schedule => {
+    const matchesSearch = searchFilter === '' || 
+      schedule.name.toLowerCase().includes(searchFilter.toLowerCase()) ||
+      schedule.description?.toLowerCase().includes(searchFilter.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'all' || schedule.status === statusFilter;
+    
+    const matchesDate = dateFilter === 'all' || (() => {
+      const scheduleDate = new Date(schedule.start_date);
+      const currentDate = new Date();
+      const currentYear = currentDate.getFullYear();
+      const currentMonth = currentDate.getMonth();
+      
+      switch (dateFilter) {
+        case 'current_year':
+          return scheduleDate.getFullYear() === currentYear;
+        case 'upcoming':
+          return scheduleDate >= currentDate;
+        case 'past':
+          return new Date(schedule.end_date) < currentDate;
+        case 'active':
+          return scheduleDate <= currentDate && new Date(schedule.end_date) >= currentDate;
+        default:
+          return true;
+      }
+    })();
+    
+    return matchesSearch && matchesStatus && matchesDate;
+  });
+
+  // Clear all filters
+  const clearAllFilters = () => {
+    setSearchFilter('');
+    setStatusFilter('all');
+    setDateFilter('all');
+  };
+
   const getNextStatus = (currentStatus: string) => {
     switch (currentStatus) {
       case 'open':
@@ -249,8 +293,62 @@ export const ScheduleManagement = () => {
           </CardHeader>
         </Card>
 
-        <div className="grid gap-4">
-          {schedules.map((schedule) => (
+        {/* Schedules Filter */}
+        <DataFilter
+          title="Filter Schedules"
+          searchValue={searchFilter}
+          onSearchChange={setSearchFilter}
+          searchPlaceholder="Search schedules by name or description..."
+          resultCount={filteredSchedules.length}
+          totalCount={schedules.length}
+          onClearAll={clearAllFilters}
+          filters={[
+            {
+              label: "Status",
+              value: statusFilter,
+              onChange: setStatusFilter,
+              options: [
+                { value: 'all', label: 'All schedules' },
+                { value: 'open', label: 'Open schedules' },
+                { value: 'collection', label: 'Collection phase' },
+                { value: 'published', label: 'Published schedules' }
+              ]
+            },
+            {
+              label: "Date Range",
+              value: dateFilter,
+              onChange: setDateFilter,
+              options: [
+                { value: 'all', label: 'All dates' },
+                { value: 'active', label: 'Currently active' },
+                { value: 'upcoming', label: 'Upcoming schedules' },
+                { value: 'past', label: 'Past schedules' },
+                { value: 'current_year', label: 'Current year' }
+              ]
+            }
+          ]}
+        />
+
+        {filteredSchedules.length === 0 ? (
+          <Card>
+            <CardContent className="text-center py-8">
+              <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600 mb-4">
+                {schedules.length === 0 
+                  ? "No schedules found" 
+                  : "No schedules match your filters"}
+              </p>
+              {schedules.length === 0 && (
+                <Button onClick={handleCreateSchedule}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Your First Schedule
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-4">
+            {filteredSchedules.map((schedule) => (
             <Card key={schedule.id}>
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
@@ -319,19 +417,7 @@ export const ScheduleManagement = () => {
               </CardContent>
             </Card>
           ))}
-        </div>
-
-        {schedules.length === 0 && (
-          <Card>
-            <CardContent className="text-center py-8">
-              <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600 mb-4">No schedules found</p>
-              <Button onClick={handleCreateSchedule}>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Your First Schedule
-              </Button>
-            </CardContent>
-          </Card>
+          </div>
         )}
 
         <ScheduleDialog

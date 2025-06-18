@@ -35,6 +35,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/auth/create-user', async (req, res) => {
+    try {
+      const { email, password, full_name, role, department_id } = req.body;
+      
+      // Check if user already exists
+      const existingProfile = await storage.getProfileByEmail(email);
+      if (existingProfile) {
+        return res.status(400).json({ error: 'User already exists with this email' });
+      }
+
+      // Create user ID
+      const userId = crypto.randomUUID();
+      
+      const profile = await storage.createProfile({
+        id: userId,
+        email,
+        full_name: full_name || '',
+        role: role || 'data_entry_user',
+        department_id: department_id || null
+      });
+
+      res.status(201).json({ 
+        user: { id: profile.id, email: profile.email },
+        profile
+      });
+    } catch (error) {
+      console.error('User creation failed:', error);
+      res.status(500).json({ error: 'User creation failed' });
+    }
+  });
+
   app.post('/api/auth/login', async (req, res) => {
     try {
       const { email, password } = req.body;

@@ -164,14 +164,23 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
       // Extract used primary column values
       const primaryField = formFields.find(field => field.is_primary_column);
       if (primaryField && allSubmissions) {
-        const usedValues = new Set<string>(
-          allSubmissions
-            .map((submission: any) => submission.form_data?.[primaryField.field_name])
-            .filter((value: any) => value !== null && value !== undefined && value !== '')
-            .map(String)
-        );
+        console.log('Primary field:', primaryField.field_name);
+        console.log('All submissions:', allSubmissions.length);
+        
+        const usedValues = new Set<string>();
+        allSubmissions.forEach((submission: any) => {
+          // The data is stored in the 'data' field according to the schema
+          const value = submission.data?.[primaryField.field_name];
+          console.log(`Checking submission ${submission.id}: data.${primaryField.field_name} = "${value}"`);
+          
+          if (value !== null && value !== undefined && value !== '') {
+            usedValues.add(String(value));
+            console.log(`✓ Found used primary value: "${value}" from submission ${submission.id}`);
+          }
+        });
+        
         setUsedPrimaryValues(usedValues);
-        console.log(`Found ${usedValues.size} used primary values for field "${primaryField.field_name}":`, Array.from(usedValues));
+        console.log(`🚫 Total used primary values for field "${primaryField.field_name}":`, Array.from(usedValues));
       }
 
     } catch (error) {

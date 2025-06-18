@@ -122,6 +122,8 @@ Changelog:
 - June 17, 2025. Enhanced PDF export to match hierarchical table structure with proper multi-level headers and organized columns
 - June 18, 2025. Implemented comprehensive filtering system across all modules (Reports, Forms, Schedules, Departments) to efficiently handle large datasets with search, status, date, and category filters
 - June 18, 2025. Added user creation capabilities with department assignment and implemented department-based access control - non-admin users only see data from their assigned department
+- June 18, 2025. Fixed Data Collection page filtering to show schedules with "collection" status regardless of end date, ensuring department users can access their assigned forms
+- June 18, 2025. Enabled shared access to Data Bank Management for all authenticated users while maintaining department isolation for operational data
 ```
 
 ## User Preferences

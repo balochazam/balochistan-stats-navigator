@@ -468,21 +468,23 @@ export const Reports = () => {
               `).join('')}
             </tr>
             
-            <!-- Second header row - Sub categories (Medical/Dental) -->
-            <tr style="background-color: #fafafa;">
-              ${Object.values(structure).map((category: any) => `
-                ${category.fields.length > 0 ? `
-                  <th colspan="${category.fields.length}" style="border: 1px solid #000; padding: 4px; text-align: center; font-weight: 500; font-size: 10px;">
-                    ${category.name}
-                  </th>
-                ` : ''}
-                ${Object.values(category.subCategories).map((subCat: any) => `
-                  <th colspan="${subCat.fields.length}" style="border: 1px solid #000; padding: 4px; text-align: center; font-weight: 500; font-size: 10px;">
-                    ${subCat.name}
-                  </th>
+            <!-- Second header row - Sub categories (Medical/Dental) - only show if there are subcategories -->
+            ${Object.values(structure).some((category: any) => Object.keys(category.subCategories).length > 0) ? `
+              <tr style="background-color: #fafafa;">
+                ${Object.values(structure).map((category: any) => `
+                  ${Object.keys(category.subCategories).length > 0 ? 
+                    Object.values(category.subCategories).map((subCat: any) => `
+                      <th colspan="${subCat.fields.length}" style="border: 1px solid #000; padding: 4px; text-align: center; font-weight: 500; font-size: 10px;">
+                        ${subCat.name}
+                      </th>
+                    `).join('') : 
+                    `<th colspan="${category.fields.length}" style="border: 1px solid #000; padding: 4px; text-align: center; font-weight: 500; font-size: 10px;">
+                      <!-- Empty cell to maintain table structure -->
+                    </th>`
+                  }
                 `).join('')}
-              `).join('')}
-            </tr>
+              </tr>
+            ` : ''}
             
             <!-- Third header row - Field labels (Total, Male, Female) -->
             <tr style="background-color: #ffffff;">
@@ -980,25 +982,29 @@ export const Reports = () => {
                                   ))}
                                 </tr>
                                 
-                                {/* Second header row - Sub categories (Medical/Dental) */}
-                                <tr className="bg-gray-50">
-                                  {Object.values(structure).map((category: any) => (
-                                    <>
-                                      {category.fields.length > 0 && (
-                                        <th colSpan={category.fields.length} 
-                                            className="border border-gray-300 p-2 text-center font-medium">
-                                          {category.name}
-                                        </th>
-                                      )}
-                                      {Object.values(category.subCategories).map((subCat: any) => (
-                                        <th key={subCat.name} colSpan={subCat.fields.length} 
-                                            className="border border-gray-300 p-2 text-center font-medium">
-                                          {subCat.name}
-                                        </th>
-                                      ))}
-                                    </>
-                                  ))}
-                                </tr>
+                                {/* Second header row - Sub categories (Medical/Dental) - only show if there are subcategories */}
+                                {Object.values(structure).some((category: any) => Object.keys(category.subCategories).length > 0) && (
+                                  <tr className="bg-gray-50">
+                                    {Object.values(structure).map((category: any) => (
+                                      <>
+                                        {/* Only show category name if it has subcategories, otherwise span empty */}
+                                        {Object.keys(category.subCategories).length > 0 ? (
+                                          Object.values(category.subCategories).map((subCat: any) => (
+                                            <th key={subCat.name} colSpan={subCat.fields.length} 
+                                                className="border border-gray-300 p-2 text-center font-medium">
+                                              {subCat.name}
+                                            </th>
+                                          ))
+                                        ) : (
+                                          <th colSpan={category.fields.length} 
+                                              className="border border-gray-300 p-2 text-center font-medium">
+                                            {/* Empty cell to maintain table structure */}
+                                          </th>
+                                        )}
+                                      </>
+                                    ))}
+                                  </tr>
+                                )}
                                 
                                 {/* Third header row - Field labels (Total, Male, Female) */}
                                 <tr className="bg-white">

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useSimpleAuth';
-import { apiClient } from '@/lib/api';
+import { simpleApiClient } from '@/lib/simpleApi';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -75,7 +75,7 @@ export const ScheduleManagement = () => {
 
   const fetchSchedules = async () => {
     try {
-      const data = await apiClient.get('/api/schedules');
+      const data = await simpleApiClient.get('/api/schedules');
       setSchedules(data || []);
     } catch (error) {
       console.error('Error in fetchSchedules:', error);
@@ -108,7 +108,7 @@ export const ScheduleManagement = () => {
     // If trying to publish, check completion status first
     if (newStatus === 'published') {
       try {
-        const completionStatus = await apiClient.get(`/api/schedules/${scheduleId}/completion-status`);
+        const completionStatus = await simpleApiClient.get(`/api/schedules/${scheduleId}/completion-status`);
         if (!completionStatus.canPublish) {
           toast({
             title: "Cannot Publish",
@@ -129,7 +129,7 @@ export const ScheduleManagement = () => {
     }
 
     try {
-      await apiClient.put(`/api/schedules/${scheduleId}`, { 
+      await simpleApiClient.put(`/api/schedules/${scheduleId}`, { 
         status: newStatus,
         updated_at: new Date().toISOString()
       });
@@ -155,7 +155,7 @@ export const ScheduleManagement = () => {
     }
 
     try {
-      await apiClient.delete(`/api/schedules/${scheduleId}`);
+      await simpleApiClient.delete(`/api/schedules/${scheduleId}`);
 
       toast({
         title: "Success",

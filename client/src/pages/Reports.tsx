@@ -1063,7 +1063,7 @@ export const Reports = () => {
                               </thead>
                               
                               <tbody>
-                                {formSubmissions.map((submission) => (
+                                {filteredSubmissions.map((submission) => (
                                   <tr key={submission.id} className="hover:bg-gray-50">
                                     <td className="border border-gray-300 p-3 font-medium bg-blue-25">
                                       {primaryField?.field_name ? (submission.data as any)?.[primaryField.field_name] || '-' : '-'}
@@ -1103,7 +1103,7 @@ export const Reports = () => {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {formSubmissions.map((submission) => (
+                          {filteredSubmissions.map((submission) => (
                             <TableRow key={submission.id}>
                               <TableCell>
                                 {new Date(submission.submitted_at).toLocaleDateString()}

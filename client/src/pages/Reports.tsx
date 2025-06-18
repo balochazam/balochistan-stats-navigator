@@ -104,7 +104,28 @@ export const Reports = () => {
   const fetchPublishedSchedules = async () => {
     try {
       const data = await apiClient.get('/api/schedules');
-      const published = data?.filter((schedule: Schedule) => schedule.status === 'published') || [];
+      let published = data?.filter((schedule: Schedule) => schedule.status === 'published') || [];
+      
+      // Filter by department for non-admin users
+      if (profile?.role !== 'admin' && profile?.department_id) {
+        // For department users, only show schedules that have forms from their department
+        const schedulesWithForms = await Promise.all(
+          published.map(async (schedule) => {
+            try {
+              const forms = await apiClient.get(`/api/schedules/${schedule.id}/forms`);
+              const departmentForms = forms?.filter((form: any) => 
+                form.form.department_id === profile.department_id
+              ) || [];
+              return departmentForms.length > 0 ? schedule : null;
+            } catch (error) {
+              console.error(`Error fetching forms for schedule ${schedule.id}:`, error);
+              return null;
+            }
+          })
+        );
+        published = schedulesWithForms.filter(schedule => schedule !== null);
+      }
+      
       setPublishedSchedules(published);
     } catch (error) {
       console.error('Error fetching published schedules:', error);
@@ -191,7 +212,16 @@ export const Reports = () => {
     
     try {
       const forms = await apiClient.get(`/api/schedules/${schedule.id}/forms`);
-      setScheduleForms(forms || []);
+      
+      // Filter forms by department for non-admin users
+      let filteredForms = forms || [];
+      if (profile?.role !== 'admin' && profile?.department_id) {
+        filteredForms = forms?.filter((form: any) => 
+          form.form.department_id === profile.department_id
+        ) || [];
+      }
+      
+      setScheduleForms(filteredForms);
     } catch (error) {
       console.error('Error fetching schedule forms:', error);
     } finally {
@@ -553,15 +583,7 @@ export const Reports = () => {
     printWindow.document.close();
   };
 
-  if (profile?.role !== 'admin') {
-    return (
-      <DashboardLayout>
-        <div className="text-center py-8">
-          <p className="text-gray-600">Access denied. Admin privileges required.</p>
-        </div>
-      </DashboardLayout>
-    );
-  }
+
 
   if (loading) {
     return (
@@ -581,9 +603,16 @@ export const Reports = () => {
             <CardTitle className="flex items-center">
               <FileText className="h-5 w-5 mr-2" />
               Reports
+              {profile?.role === 'admin' && (
+                <Badge variant="secondary" className="ml-2">Admin Access - All Reports</Badge>
+              )}
+              {profile?.role !== 'admin' && (
+                <Badge variant="outline" className="ml-2">Department Access</Badge>
+              )}
             </CardTitle>
             <CardDescription>
               View and export data from published schedules
+              {profile?.role !== 'admin' && ' from your department'}
             </CardDescription>
           </CardHeader>
         </Card>

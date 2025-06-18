@@ -126,6 +126,7 @@ Changelog:
 - June 18, 2025. Enabled shared access to Data Bank Management for all authenticated users while maintaining department isolation for operational data
 - June 18, 2025. Fixed Data Collection infinite loading loop issue and implemented status-only filtering - schedules are now filtered purely by "collection" status, not dates, allowing users to access forms regardless of time ranges
 - June 18, 2025. Enhanced Data Collection page to show both collection schedules (for data entry) and published schedules (for viewing reports) - department users can now access reports for completed schedules from their department
+- June 18, 2025. Consolidated duplicate route functionality - removed separate "Completed Schedules" page and integrated all functionality into single "Reports" page with URL parameter support for direct navigation to specific schedules and forms
 ```
 
 ## User Preferences

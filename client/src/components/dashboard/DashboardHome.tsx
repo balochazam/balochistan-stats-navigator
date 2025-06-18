@@ -1,10 +1,10 @@
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useSimpleAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { apiClient } from '@/lib/api';
+import { simpleApiClient } from '@/lib/simpleApi';
 import { 
   Users, 
   FileText, 
@@ -54,10 +54,10 @@ export const DashboardHome = () => {
   const fetchDashboardData = async () => {
     try {
       // Fetch schedules
-      const schedulesData = await apiClient.get('/api/schedules');
+      const schedulesData = await simpleApiClient.get('/api/schedules');
 
       // Fetch departments
-      const departmentsData = await apiClient.get('/api/departments');
+      const departmentsData = await simpleApiClient.get('/api/departments');
 
       setSchedules(schedulesData || []);
       setDepartments(departmentsData || []);

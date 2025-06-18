@@ -69,6 +69,9 @@ export const ScheduleManagement = () => {
   
   // Track form counts for each schedule
   const [scheduleFormCounts, setScheduleFormCounts] = useState<Record<string, number>>({});
+  
+  // Track completion status for each schedule
+  const [scheduleCompletionStatus, setScheduleCompletionStatus] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (profile?.role === 'admin') {
@@ -81,18 +84,36 @@ export const ScheduleManagement = () => {
       const data = await simpleApiClient.get('/api/schedules');
       setSchedules(data || []);
       
-      // Fetch form counts for each schedule
+      // Fetch form counts and completion status for each schedule
       const formCounts: Record<string, number> = {};
+      const completionStatus: Record<string, boolean> = {};
+      
       for (const schedule of data || []) {
         try {
           const forms = await simpleApiClient.get(`/api/schedules/${schedule.id}/forms`);
           formCounts[schedule.id] = forms?.length || 0;
+          
+          // Check completion status for collection schedules
+          if (schedule.status === 'collection') {
+            try {
+              const completion = await simpleApiClient.get(`/api/schedules/${schedule.id}/completion-status`);
+              completionStatus[schedule.id] = completion.canPublish || false;
+            } catch (error) {
+              console.error(`Error fetching completion status for schedule ${schedule.id}:`, error);
+              completionStatus[schedule.id] = false;
+            }
+          } else {
+            completionStatus[schedule.id] = false;
+          }
         } catch (error) {
           console.error(`Error fetching forms for schedule ${schedule.id}:`, error);
           formCounts[schedule.id] = 0;
+          completionStatus[schedule.id] = false;
         }
       }
+      
       setScheduleFormCounts(formCounts);
+      setScheduleCompletionStatus(completionStatus);
     } catch (error) {
       console.error('Error in fetchSchedules:', error);
     } finally {
@@ -436,8 +457,8 @@ export const ScheduleManagement = () => {
                       </Button>
                     )}
                     
-                    {/* Show Mark Published button when status is 'collection' */}
-                    {schedule.status === 'collection' && (
+                    {/* Show Mark Published button when status is 'collection' and all forms are completed */}
+                    {schedule.status === 'collection' && scheduleCompletionStatus[schedule.id] && (
                       <Button
                         variant="outline"
                         size="sm"

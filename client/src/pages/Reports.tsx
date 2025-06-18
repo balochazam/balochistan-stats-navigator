@@ -876,7 +876,7 @@ export const Reports = () => {
 
             {loadingData ? (
               <div className="text-center py-8">Loading data...</div>
-            ) : formSubmissions.length === 0 ? (
+            ) : filteredSubmissions.length === 0 ? (
               <Card>
                 <CardContent className="text-center py-8">
                   <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -886,7 +886,7 @@ export const Reports = () => {
             ) : (
               <Card>
                 <CardHeader>
-                  <CardTitle>Submitted Data ({formSubmissions.length} entries)</CardTitle>
+                  <CardTitle>Submitted Data ({filteredSubmissions.length} entries)</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">

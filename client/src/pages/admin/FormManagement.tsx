@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { FileText, Plus, Edit2, Trash2, Users, Shield } from 'lucide-react';
 import { FormBuilderDialog } from '@/components/forms/FormBuilderDialog';
+import { DataFilter } from '@/components/ui/DataFilter';
 
 interface Form {
   id: string;
@@ -41,6 +42,12 @@ export const FormManagement = () => {
   const [loading, setLoading] = useState(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingForm, setEditingForm] = useState<Form | null>(null);
+  
+  // Filter states
+  const [searchFilter, setSearchFilter] = useState('');
+  const [departmentFilter, setDepartmentFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [creatorFilter, setCreatorFilter] = useState('all');
 
   useEffect(() => {
     if (profile?.role === 'admin') {
@@ -121,6 +128,38 @@ export const FormManagement = () => {
     fetchForms();
   };
 
+  // Filter forms based on current filters
+  const filteredForms = forms.filter(form => {
+    const matchesSearch = searchFilter === '' || 
+      form.name.toLowerCase().includes(searchFilter.toLowerCase()) ||
+      form.description?.toLowerCase().includes(searchFilter.toLowerCase());
+    
+    const matchesDepartment = departmentFilter === 'all' || 
+      form.department?.name === departmentFilter;
+    
+    const matchesStatus = statusFilter === 'all' || 
+      (statusFilter === 'active' && form.is_active) ||
+      (statusFilter === 'inactive' && !form.is_active);
+    
+    const matchesCreator = creatorFilter === 'all' || 
+      form.creator?.full_name === creatorFilter;
+    
+    return matchesSearch && matchesDepartment && matchesStatus && matchesCreator;
+  });
+
+  // Get unique creators for filter dropdown
+  const uniqueCreators = Array.from(new Set(
+    forms.map(form => form.creator?.full_name).filter((name): name is string => Boolean(name))
+  ));
+
+  // Clear all filters
+  const clearAllFilters = () => {
+    setSearchFilter('');
+    setDepartmentFilter('all');
+    setStatusFilter('all');
+    setCreatorFilter('all');
+  };
+
   if (profile?.role !== 'admin') {
     return (
       <DashboardLayout>
@@ -172,8 +211,49 @@ export const FormManagement = () => {
           </CardHeader>
         </Card>
 
+        {/* Forms Filter */}
+        <DataFilter
+          title="Filter Forms"
+          searchValue={searchFilter}
+          onSearchChange={setSearchFilter}
+          searchPlaceholder="Search forms by name or description..."
+          resultCount={filteredForms.length}
+          totalCount={forms.length}
+          onClearAll={clearAllFilters}
+          filters={[
+            {
+              label: "Department",
+              value: departmentFilter,
+              onChange: setDepartmentFilter,
+              options: [
+                { value: 'all', label: 'All departments' },
+                ...departments.map(dept => ({ value: dept.name, label: dept.name }))
+              ]
+            },
+            {
+              label: "Status",
+              value: statusFilter,
+              onChange: setStatusFilter,
+              options: [
+                { value: 'all', label: 'All forms' },
+                { value: 'active', label: 'Active forms' },
+                { value: 'inactive', label: 'Inactive forms' }
+              ]
+            },
+            {
+              label: "Creator",
+              value: creatorFilter,
+              onChange: setCreatorFilter,
+              options: [
+                { value: 'all', label: 'All creators' },
+                ...uniqueCreators.map(creator => ({ value: creator, label: creator }))
+              ]
+            }
+          ]}
+        />
+
         <div className="grid gap-4">
-          {forms.map((form) => (
+          {filteredForms.map((form) => (
             <Card key={form.id}>
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">

@@ -378,9 +378,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Filter forms based on user department (non-admin users only see their department's forms)
       if (req.userProfile.role !== 'admin') {
+        console.log('User profile:', req.userProfile);
+        console.log('Forms department filtering for user department:', req.userProfile.department_id);
+        console.log('All forms with departments:', forms.map(f => ({ id: f.id, name: f.name, department_id: f.department_id })));
+        
         const filteredForms = forms.filter(form => 
           form.department_id === req.userProfile.department_id
         );
+        console.log('Filtered forms for user:', filteredForms.map(f => ({ id: f.id, name: f.name })));
         res.json(filteredForms);
       } else {
         res.json(forms);
@@ -584,7 +589,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Filter schedules based on user department (non-admin users only see schedules with their department's forms)
       if (req.userProfile.role !== 'admin') {
         const userDepartmentId = req.userProfile.department_id;
+        console.log('User department ID:', userDepartmentId);
+        
         if (!userDepartmentId) {
+          console.log('User has no department, returning empty array');
           return res.json([]); // Users without departments see no schedules
         }
         
@@ -593,17 +601,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const departmentForms = allForms.filter(form => form.department_id === userDepartmentId);
         const departmentFormIds = departmentForms.map(form => form.id);
         
+        console.log('All forms:', allForms.map(f => ({ id: f.id, name: f.name, department_id: f.department_id })));
+        console.log('Department forms:', departmentForms.map(f => ({ id: f.id, name: f.name })));
+        console.log('Department form IDs:', departmentFormIds);
+        
         // Filter schedules that have forms assigned to user's department
         const filteredSchedules = [];
         for (const schedule of schedules) {
           const scheduleForms = await storage.getScheduleForms(schedule.id);
+          console.log(`Schedule ${schedule.name} (${schedule.id}) has forms:`, scheduleForms.map(sf => sf.form_id));
+          
           const hasUserDepartmentForms = scheduleForms.some(sf => 
             departmentFormIds.includes(sf.form_id)
           );
+          console.log(`Schedule ${schedule.name} has user department forms:`, hasUserDepartmentForms);
+          
           if (hasUserDepartmentForms) {
             filteredSchedules.push(schedule);
           }
         }
+        console.log('Filtered schedules for user:', filteredSchedules.map(s => s.name));
         res.json(filteredSchedules);
       } else {
         res.json(schedules);

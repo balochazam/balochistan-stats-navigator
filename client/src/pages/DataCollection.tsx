@@ -67,12 +67,14 @@ export const DataCollection = () => {
       
       // Get active schedules (collection or open status)
       const schedulesData = await apiClient.get('/api/schedules');
+      console.log('All schedules data:', schedulesData.map((s: any) => ({ id: s.id, name: s.name, status: s.status, end_date: s.end_date })));
+      
       const activeSchedules = schedulesData.filter((schedule: any) => 
         ['open', 'collection'].includes(schedule.status) &&
         new Date(schedule.end_date) >= new Date()
       ).sort((a: any, b: any) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
 
-      console.log('Schedules fetched:', activeSchedules);
+      console.log('Filtered active schedules:', activeSchedules);
       setSchedules(activeSchedules || []);
 
       // For admins, get all forms. For others, get forms from their department

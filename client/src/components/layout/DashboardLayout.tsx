@@ -1,12 +1,11 @@
 
 import { ReactNode, useState } from 'react';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useSimpleAuth';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { apiClient } from '@/lib/api';
 import {
   LayoutDashboard,
   Users,
@@ -34,17 +33,16 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const { toast } = useToast();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  const { signOut } = useAuth();
+
   const handleSignOut = async () => {
     try {
-      await apiClient.logout();
-      // Clear the token and reload to reset auth state
-      apiClient.setToken(null);
-      window.location.href = '/';
+      await signOut();
+      navigate('/', { replace: true });
     } catch (error) {
       console.error('Error signing out:', error);
-      // Even if logout fails, clear local state
-      apiClient.setToken(null);
-      window.location.href = '/';
+      // Even if logout fails, navigate to home
+      navigate('/', { replace: true });
     }
   };
 

@@ -25,6 +25,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         role: 'data_entry_user'
       });
 
+      // Store user ID in session
+      (req as any).session.userId = profile.id;
+
       res.status(201).json({ 
         user: { id: profile.id, email: profile.email },
         profile,

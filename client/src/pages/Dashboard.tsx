@@ -1,5 +1,5 @@
 
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useSimpleAuth';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { DashboardHome } from '@/components/dashboard/DashboardHome';
 import { Loader2 } from 'lucide-react';

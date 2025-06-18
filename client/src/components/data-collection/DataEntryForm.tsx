@@ -135,8 +135,8 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
     if (!profile?.id || !scheduleForm.form_id || !schedule.id) return;
 
     try {
-      // Get submission count for this user
-      const submissions = await simpleApiClient.get(`/api/form-submissions?formId=${scheduleForm.form_id}&userId=${profile.id}`);
+      // Get submission count for this user in this specific schedule
+      const submissions = await simpleApiClient.get(`/api/form-submissions?formId=${scheduleForm.form_id}&scheduleId=${schedule.id}&userId=${profile.id}`);
       
       setSubmissionCount(submissions?.length || 0);
 

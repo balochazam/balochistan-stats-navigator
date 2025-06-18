@@ -57,29 +57,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     
     const initializeAuth = async () => {
       try {
-        const token = localStorage.getItem('auth_token');
-        if (token) {
-          apiClient.setToken(token);
-          const userData = await apiClient.getCurrentUser();
-          
-          console.log('Auth state changed:', 'INITIAL_SESSION', !!userData);
-          console.log('Got initial session:', !!userData);
-          
-          setSession(userData.session);
+        // Try to get current user session from server (session-based auth)
+        const userData = await apiClient.getCurrentUser();
+        
+        console.log('Auth state changed:', 'INITIAL_SESSION', !!userData);
+        console.log('Got initial session:', !!userData);
+        
+        if (userData && userData.user) {
           setUser(userData.user);
           setProfile(userData.profile);
+          setSession(userData.session);
         } else {
-          console.log('No stored token found');
+          console.log('No active session found');
         }
         
         console.log('Initial auth setup complete, setting loading to false');
         setLoading(false);
       } catch (err) {
-        console.error('Auth initialization error:', err);
-        // Clear invalid token
-        localStorage.removeItem('auth_token');
-        apiClient.setToken(null);
-        setError(err instanceof Error ? err.message : 'Authentication error');
+        console.log('No stored token found');
+        console.log('Initial auth setup complete, setting loading to false');
         setLoading(false);
       }
     };

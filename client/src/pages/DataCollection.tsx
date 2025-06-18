@@ -98,6 +98,7 @@ export const DataCollection = () => {
       }
     } catch (error) {
       console.error('Error fetching schedules:', error);
+      console.error('Error details:', error instanceof Error ? error.message : error);
       setError('Failed to fetch active schedules');
       toast({
         title: "Error",

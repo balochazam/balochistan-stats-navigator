@@ -2,21 +2,6 @@
 const API_BASE = '';
 
 class ApiClient {
-  private token: string | null = null;
-
-  constructor() {
-    this.token = localStorage.getItem('auth_token');
-  }
-
-  setToken(token: string | null) {
-    this.token = token;
-    if (token) {
-      localStorage.setItem('auth_token', token);
-    } else {
-      localStorage.removeItem('auth_token');
-    }
-  }
-
   private async request(endpoint: string, options: RequestInit = {}) {
     const url = `${API_BASE}${endpoint}`;
     const headers: Record<string, string> = {
@@ -24,13 +9,10 @@ class ApiClient {
       ...(options.headers as Record<string, string>),
     };
 
-    if (this.token) {
-      headers.Authorization = `Bearer ${this.token}`;
-    }
-
     const response = await fetch(url, {
       ...options,
       headers,
+      credentials: 'include', // Include cookies for session-based auth
     });
 
     if (!response.ok) {

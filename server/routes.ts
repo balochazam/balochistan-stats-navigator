@@ -75,7 +75,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
-      // In production, verify password properly
+      // Store user ID in session
+      (req as any).session.userId = profile.id;
+
       res.json({
         user: { id: profile.id, email: profile.email },
         profile,
@@ -87,27 +89,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post('/api/auth/logout', (req, res) => {
-    res.json({ message: 'Logged out successfully' });
+    (req as any).session.destroy(() => {
+      res.json({ message: 'Logged out successfully' });
+    });
   });
 
   app.get('/api/auth/user', async (req, res) => {
     try {
-      const authHeader = req.headers.authorization;
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ error: 'No token provided' });
+      const userId = (req as any).session?.userId;
+      if (!userId) {
+        return res.status(401).json({ error: 'Not authenticated' });
       }
-
-      const token = authHeader.substring(7);
-      const profile = await storage.getProfile(token);
       
+      const profile = await storage.getProfile(userId);
       if (!profile) {
-        return res.status(401).json({ error: 'Invalid token' });
+        return res.status(401).json({ error: 'User not found' });
       }
 
       res.json({
         user: { id: profile.id, email: profile.email },
         profile,
-        session: { access_token: token, user: { id: profile.id, email: profile.email } }
+        session: { access_token: userId, user: { id: profile.id, email: profile.email } }
       });
     } catch (error) {
       res.status(500).json({ error: 'Failed to get user' });
@@ -116,18 +118,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Authentication middleware
   const requireAuth = async (req: any, res: any, next: any) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const userId = (req as any).session?.userId;
+    if (!userId) {
       return res.status(401).json({ error: 'Authentication required' });
     }
     
-    const token = authHeader.substring(7);
     try {
-      const profile = await storage.getProfile(token);
+      const profile = await storage.getProfile(userId);
       if (!profile) {
-        return res.status(401).json({ error: 'Invalid token' });
+        return res.status(401).json({ error: 'User not found' });
       }
-      req.userId = token;
+      req.userId = userId;
       req.userProfile = profile; // Attach user profile for department filtering
       next();
     } catch (error) {

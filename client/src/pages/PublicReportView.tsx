@@ -151,14 +151,16 @@ export const PublicReportView = () => {
     );
   };
 
-  const renderDataTable = (formSubmissions: FormSubmission[]) => {
-    if (formSubmissions.length === 0) return null;
+  const renderDataTable = () => {
+    const formSubmissions = getActiveFormSubmissions();
+    if (!formSubmissions || formSubmissions.length === 0) return null;
 
     const activeFormData = forms.find(f => f.id === activeForm);
     if (!activeFormData) return null;
 
-    // Check if this is a hierarchical form
-    const hasHierarchy = activeFormData.field_groups && activeFormData.field_groups.length > 0;
+    // Check if this is a hierarchical form by looking at form fields with sub_headers
+    const formFields = activeFormData.form_fields || [];
+    const hasHierarchy = formFields.some((field: any) => field.has_sub_headers && field.sub_headers && field.sub_headers.length > 0);
 
     if (hasHierarchy) {
       return renderHierarchicalTable(formSubmissions, activeFormData);
@@ -181,7 +183,7 @@ export const PublicReportView = () => {
       const structure: any = {};
       
       formFields.forEach((field: any) => {
-        if (field.has_sub_headers && field.sub_headers) {
+        if (field.has_sub_headers && field.sub_headers && field.sub_headers.length > 0) {
           field.sub_headers.forEach((subHeader: any) => {
             const categoryName = subHeader.label || subHeader.name;
             
@@ -193,9 +195,9 @@ export const PublicReportView = () => {
               };
             }
             
-            if (subHeader.fields) {
+            if (subHeader.fields && subHeader.fields.length > 0) {
               subHeader.fields.forEach((subField: any) => {
-                if (subField.has_sub_headers && subField.sub_headers) {
+                if (subField.has_sub_headers && subField.sub_headers && subField.sub_headers.length > 0) {
                   // Handle nested sub-headers (e.g., Medical/Dental under Specialists)
                   subField.sub_headers.forEach((nestedSubHeader: any) => {
                     const subCategoryName = nestedSubHeader.label || nestedSubHeader.name;
@@ -207,7 +209,7 @@ export const PublicReportView = () => {
                       };
                     }
                     
-                    if (nestedSubHeader.fields) {
+                    if (nestedSubHeader.fields && nestedSubHeader.fields.length > 0) {
                       nestedSubHeader.fields.forEach((nestedField: any) => {
                         structure[categoryName].subCategories[subCategoryName].fields.push({
                           key: `${field.field_name}_${subHeader.name}_${subField.field_name}_${nestedSubHeader.name}_${nestedField.field_name}`,
@@ -488,33 +490,9 @@ export const PublicReportView = () => {
           </Card>
         </div>
 
-        {/* Charts Section */}
-        {chartData.length > 0 && (
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <BarChart3 className="h-5 w-5 mr-2 text-blue-600" />
-                Submission Distribution
-              </CardTitle>
-              <CardDescription>Number of submissions by department</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="submissions" fill="#2563eb" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Forms Data */}
         {forms.length > 0 && (
-          <Card>
+          <Card className="mb-8">
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Database className="h-5 w-5 mr-2 text-green-600" />
@@ -543,7 +521,7 @@ export const PublicReportView = () => {
                       </div>
                       
                       {getActiveFormSubmissions().length > 0 ? (
-                        renderDataTable(getActiveFormSubmissions())
+                        renderDataTable()
                       ) : (
                         <div className="text-center py-8 text-gray-500">
                           No submissions found for this form.
@@ -553,6 +531,30 @@ export const PublicReportView = () => {
                   </TabsContent>
                 ))}
               </Tabs>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Charts Section - Moved below table */}
+        {chartData.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <BarChart3 className="h-5 w-5 mr-2 text-blue-600" />
+                Submission Distribution
+              </CardTitle>
+              <CardDescription>Distribution by location/category</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="submissions" fill="#2563eb" />
+                </BarChart>
+              </ResponsiveContainer>
             </CardContent>
           </Card>
         )}

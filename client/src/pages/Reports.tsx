@@ -6,7 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { FileText, Download, Eye, Calendar, FileX } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FileText, Download, Eye, Calendar, FileX, Search, Filter } from 'lucide-react';
 
 interface Schedule {
   id: string;
@@ -87,6 +89,13 @@ export const Reports = () => {
   const [formSubmissions, setFormSubmissions] = useState<FormSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingData, setLoadingData] = useState(false);
+  
+  // Filter states
+  const [scheduleFilter, setScheduleFilter] = useState('');
+  const [dateFilter, setDateFilter] = useState('all');
+  const [formFilter, setFormFilter] = useState('');
+  const [departmentFilter, setDepartmentFilter] = useState('all');
+  const [submissionDateFilter, setSubmissionDateFilter] = useState('all');
 
   useEffect(() => {
     fetchPublishedSchedules();
@@ -103,6 +112,77 @@ export const Reports = () => {
       setLoading(false);
     }
   };
+
+  // Filter published schedules based on current filters
+  const filteredSchedules = publishedSchedules.filter(schedule => {
+    const matchesSearch = scheduleFilter === '' || 
+      schedule.name.toLowerCase().includes(scheduleFilter.toLowerCase()) ||
+      schedule.description?.toLowerCase().includes(scheduleFilter.toLowerCase());
+    
+    const matchesDate = dateFilter === 'all' || (() => {
+      const scheduleDate = new Date(schedule.start_date);
+      const currentDate = new Date();
+      const currentYear = currentDate.getFullYear();
+      const currentMonth = currentDate.getMonth();
+      
+      switch (dateFilter) {
+        case 'current_year':
+          return scheduleDate.getFullYear() === currentYear;
+        case 'current_month':
+          return scheduleDate.getFullYear() === currentYear && scheduleDate.getMonth() === currentMonth;
+        case 'last_6_months':
+          const sixMonthsAgo = new Date();
+          sixMonthsAgo.setMonth(currentMonth - 6);
+          return scheduleDate >= sixMonthsAgo;
+        default:
+          return true;
+      }
+    })();
+    
+    return matchesSearch && matchesDate;
+  });
+
+  // Filter schedule forms based on current filters
+  const filteredForms = scheduleForms.filter(form => {
+    const matchesSearch = formFilter === '' || 
+      form.form.name.toLowerCase().includes(formFilter.toLowerCase()) ||
+      form.form.description?.toLowerCase().includes(formFilter.toLowerCase());
+    
+    const matchesDepartment = departmentFilter === 'all' || 
+      form.form.department?.name === departmentFilter;
+    
+    return matchesSearch && matchesDepartment;
+  });
+
+  // Filter form submissions based on current filters
+  const filteredSubmissions = formSubmissions.filter(submission => {
+    const matchesDate = submissionDateFilter === 'all' || (() => {
+      const submissionDate = new Date(submission.submitted_at);
+      const currentDate = new Date();
+      const currentYear = currentDate.getFullYear();
+      const currentMonth = currentDate.getMonth();
+      
+      switch (submissionDateFilter) {
+        case 'today':
+          return submissionDate.toDateString() === currentDate.toDateString();
+        case 'this_week':
+          const weekAgo = new Date();
+          weekAgo.setDate(currentDate.getDate() - 7);
+          return submissionDate >= weekAgo;
+        case 'this_month':
+          return submissionDate.getFullYear() === currentYear && submissionDate.getMonth() === currentMonth;
+        default:
+          return true;
+      }
+    })();
+    
+    return matchesDate;
+  });
+
+  // Get unique departments for filter dropdown
+  const uniqueDepartments = Array.from(new Set(
+    scheduleForms.map(form => form.form.department?.name).filter(Boolean)
+  ));
 
   const handleViewSchedule = async (schedule: Schedule) => {
     setSelectedSchedule(schedule);
@@ -510,17 +590,81 @@ export const Reports = () => {
 
         {!selectedSchedule ? (
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Published Schedules</h3>
-            {publishedSchedules.length === 0 ? (
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Published Schedules</h3>
+              <Badge variant="secondary">
+                {filteredSchedules.length} of {publishedSchedules.length} schedules
+              </Badge>
+            </div>
+
+            {/* Schedule Filters */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Filter className="h-4 w-4" />
+                  Filter Schedules
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Search schedules</label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                      <Input
+                        placeholder="Search by name or description..."
+                        value={scheduleFilter}
+                        onChange={(e) => setScheduleFilter(e.target.value)}
+                        className="pl-9"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Filter by date</label>
+                    <Select value={dateFilter} onValueChange={setDateFilter}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select date range" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All schedules</SelectItem>
+                        <SelectItem value="current_year">Current year</SelectItem>
+                        <SelectItem value="current_month">Current month</SelectItem>
+                        <SelectItem value="last_6_months">Last 6 months</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                {(scheduleFilter || dateFilter !== 'all') && (
+                  <div className="flex items-center gap-2 mt-4 pt-4 border-t">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => {
+                        setScheduleFilter('');
+                        setDateFilter('all');
+                      }}
+                    >
+                      Clear filters
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {filteredSchedules.length === 0 ? (
               <Card>
                 <CardContent className="text-center py-8">
                   <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600">No published schedules available</p>
+                  <p className="text-gray-600">
+                    {publishedSchedules.length === 0 
+                      ? "No published schedules available" 
+                      : "No schedules match your filters"}
+                  </p>
                 </CardContent>
               </Card>
             ) : (
               <div className="grid gap-4">
-                {publishedSchedules.map((schedule) => (
+                {filteredSchedules.map((schedule) => (
                   <Card key={schedule.id} className="hover:shadow-md transition-shadow">
                     <CardContent className="pt-6">
                       <div className="flex items-center justify-between">
@@ -555,23 +699,86 @@ export const Reports = () => {
                 <h3 className="text-lg font-semibold">{selectedSchedule.name} - Forms</h3>
                 <p className="text-gray-600">Select a form to view its submitted data</p>
               </div>
-              <Button variant="outline" onClick={() => setSelectedSchedule(null)}>
-                Back to Schedules
-              </Button>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">
+                  {filteredForms.length} of {scheduleForms.length} forms
+                </Badge>
+                <Button variant="outline" onClick={() => setSelectedSchedule(null)}>
+                  Back to Schedules
+                </Button>
+              </div>
             </div>
+
+            {/* Forms Filters */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Filter className="h-4 w-4" />
+                  Filter Forms
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Search forms</label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                      <Input
+                        placeholder="Search by form name or description..."
+                        value={formFilter}
+                        onChange={(e) => setFormFilter(e.target.value)}
+                        className="pl-9"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Filter by department</label>
+                    <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select department" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All departments</SelectItem>
+                        {uniqueDepartments.map((dept) => (
+                          <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                {(formFilter || departmentFilter !== 'all') && (
+                  <div className="flex items-center gap-2 mt-4 pt-4 border-t">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => {
+                        setFormFilter('');
+                        setDepartmentFilter('all');
+                      }}
+                    >
+                      Clear filters
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
             {loadingData ? (
               <div className="text-center py-8">Loading forms...</div>
-            ) : scheduleForms.length === 0 ? (
+            ) : filteredForms.length === 0 ? (
               <Card>
                 <CardContent className="text-center py-8">
                   <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600">No forms in this schedule</p>
+                  <p className="text-gray-600">
+                    {scheduleForms.length === 0 
+                      ? "No forms in this schedule" 
+                      : "No forms match your filters"}
+                  </p>
                 </CardContent>
               </Card>
             ) : (
               <div className="grid gap-4">
-                {scheduleForms.map((scheduleForm) => (
+                {filteredForms.map((scheduleForm) => (
                   <Card key={scheduleForm.id} className="hover:shadow-md transition-shadow">
                     <CardContent className="pt-6">
                       <div className="flex items-center justify-between">

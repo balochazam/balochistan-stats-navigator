@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Calendar, FileText, Clock, CheckCircle, AlertCircle, Plus } from 'lucide-react';
 import { DataEntryForm } from '@/components/data-collection/DataEntryForm';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { useNavigate } from 'react-router-dom';
 
 interface Schedule {
   id: string;
@@ -49,6 +50,7 @@ interface FormCompletion {
 export const DataCollection = () => {
   const { profile, loading: authLoading } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [scheduleForms, setScheduleForms] = useState<ScheduleForm[]>([]);
   const [submissions, setSubmissions] = useState<FormSubmission[]>([]);
@@ -67,16 +69,16 @@ export const DataCollection = () => {
     try {
       console.log('Loading data for Data Collection...');
       
-      // Get active schedules (collection status only)
+      // Get schedules for data collection and viewing published reports
       const schedulesData = await simpleApiClient.get('/api/schedules');
-      const activeSchedules = schedulesData.filter((schedule: any) => 
-        schedule.status === 'collection'
+      const relevantSchedules = schedulesData.filter((schedule: any) => 
+        schedule.status === 'collection' || schedule.status === 'published'
       ).sort((a: any, b: any) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
 
-      if (activeSchedules && activeSchedules.length > 0) {
-        const scheduleIds = activeSchedules.map((s: any) => s.id);
+      if (relevantSchedules && relevantSchedules.length > 0) {
+        const scheduleIds = relevantSchedules.map((s: any) => s.id);
         
-        // Get schedule forms for active schedules
+        // Get schedule forms for relevant schedules
         const allScheduleForms = await simpleApiClient.get('/api/schedule-forms');
         const relevantScheduleForms = allScheduleForms.filter((sf: any) => 
           scheduleIds.includes(sf.schedule_id)
@@ -84,7 +86,7 @@ export const DataCollection = () => {
 
         // Get forms and filter by department for non-admin users
         let filteredScheduleForms = relevantScheduleForms;
-        let filteredSchedules = activeSchedules;
+        let filteredSchedules = relevantSchedules;
 
         if (profile?.role !== 'admin' && profile?.department_id) {
           const allForms = await simpleApiClient.get('/api/forms');
@@ -95,7 +97,7 @@ export const DataCollection = () => {
           });
 
           const scheduleIdsWithDeptForms = new Set(filteredScheduleForms.map((sf: any) => sf.schedule_id));
-          filteredSchedules = activeSchedules.filter((schedule: any) => 
+          filteredSchedules = relevantSchedules.filter((schedule: any) => 
             scheduleIdsWithDeptForms.has(schedule.id)
           );
         }
@@ -302,7 +304,7 @@ export const DataCollection = () => {
               )}
             </CardTitle>
             <CardDescription>
-              Complete forms for active data collection schedules
+              Complete forms for active schedules and view reports for published schedules
             </CardDescription>
           </CardHeader>
         </Card>
@@ -410,9 +412,15 @@ export const DataCollection = () => {
                               </span>
                             )}
                             {schedule.status === 'published' && (
-                              <span className="text-sm text-gray-500">
-                                Data collection completed
-                              </span>
+                              <Button
+                                onClick={() => navigate(`/reports?scheduleId=${schedule.id}`)}
+                                variant="outline"
+                                size="sm"
+                                className="flex items-center space-x-1"
+                              >
+                                <FileText className="h-4 w-4" />
+                                <span>View Reports</span>
+                              </Button>
                             )}
                           </div>
                         </div>

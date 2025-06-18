@@ -46,12 +46,12 @@ export const DepartmentManagement = () => {
   const fetchDepartments = async () => {
     try {
       // Fetch departments with user count
-      const deptData = await apiClient.get('/api/departments');
+      const deptData = await simpleApiClient.get('/api/departments');
 
       // Fetch user counts for each department
       const departmentsWithCounts = await Promise.all(
         (deptData || []).map(async (dept: any) => {
-          const profiles = await apiClient.get(`/api/profiles?department_id=${dept.id}`);
+          const profiles = await simpleApiClient.get(`/api/profiles?department_id=${dept.id}`);
           
           return {
             ...dept,
@@ -74,7 +74,7 @@ export const DepartmentManagement = () => {
     try {
       if (editingDepartment) {
         // Update existing department
-        await apiClient.put(`/api/departments/${editingDepartment.id}`, {
+        await simpleApiClient.put(`/api/departments/${editingDepartment.id}`, {
           name: formData.name,
           description: formData.description || null,
           updated_at: new Date().toISOString()
@@ -86,7 +86,7 @@ export const DepartmentManagement = () => {
         });
       } else {
         // Create new department
-        await apiClient.post('/api/departments', {
+        await simpleApiClient.post('/api/departments', {
           name: formData.name,
           description: formData.description || null
         });
@@ -127,7 +127,7 @@ export const DepartmentManagement = () => {
     }
 
     try {
-      await apiClient.delete(`/api/departments/${departmentId}`);
+      await simpleApiClient.delete(`/api/departments/${departmentId}`);
 
       toast({
         title: "Success",

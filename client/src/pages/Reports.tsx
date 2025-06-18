@@ -98,6 +98,7 @@ export const Reports = () => {
   const [formFilter, setFormFilter] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState('all');
   const [submissionDateFilter, setSubmissionDateFilter] = useState('all');
+  const [tableSearchFilter, setTableSearchFilter] = useState('');
 
   useEffect(() => {
     fetchPublishedSchedules();
@@ -222,7 +223,26 @@ export const Reports = () => {
       }
     })();
     
-    return matchesDate;
+    // Search filter - search through all data values
+    const matchesSearch = tableSearchFilter === '' || (() => {
+      if (!submission.data) return false;
+      
+      // Convert all submission data values to searchable text
+      const searchableText = Object.values(submission.data)
+        .filter(value => value !== null && value !== undefined)
+        .join(' ')
+        .toLowerCase();
+      
+      // Also include submitter information if available
+      const submitterInfo = submission.submitter ? 
+        `${submission.submitter.full_name} ${submission.submitter.email}`.toLowerCase() : '';
+      
+      const combinedText = `${searchableText} ${submitterInfo}`;
+      
+      return combinedText.includes(tableSearchFilter.toLowerCase());
+    })();
+    
+    return matchesDate && matchesSearch;
   });
 
   // Get unique departments for filter dropdown
@@ -900,7 +920,19 @@ export const Reports = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Search table data</label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                      <Input
+                        placeholder="Search in submitted data..."
+                        value={tableSearchFilter}
+                        onChange={(e) => setTableSearchFilter(e.target.value)}
+                        className="pl-9"
+                      />
+                    </div>
+                  </div>
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Filter by submission date</label>
                     <Select value={submissionDateFilter} onValueChange={setSubmissionDateFilter}>
@@ -916,13 +948,16 @@ export const Reports = () => {
                     </Select>
                   </div>
                   <div className="flex items-end">
-                    {submissionDateFilter !== 'all' && (
+                    {(submissionDateFilter !== 'all' || tableSearchFilter) && (
                       <Button 
                         variant="ghost" 
                         size="sm" 
-                        onClick={() => setSubmissionDateFilter('all')}
+                        onClick={() => {
+                          setSubmissionDateFilter('all');
+                          setTableSearchFilter('');
+                        }}
                       >
-                        Clear filter
+                        Clear filters
                       </Button>
                     )}
                   </div>

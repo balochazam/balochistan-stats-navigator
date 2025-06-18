@@ -186,72 +186,163 @@ export const PublicReportView = () => {
       yPosition += 10;
 
       if (hasHierarchy) {
-        // Generate hierarchical table structure
+        // Use the same hierarchical structure as the web table
         const structure = getHierarchicalTableStructureForPDF(formFields);
         const primaryField = formFields.find((field: any) => field.is_primary_column);
         
         if (primaryField && Object.keys(structure).length > 0) {
-          // Create headers for hierarchical table
-          const headers = [primaryField.field_label];
-          const subHeaders = [''];
-          const fieldHeaders = [''];
+          // Helper function to get column span matching web logic
+          const getColumnSpan = (category: any) => {
+            return category.fields.length + Object.values(category.subCategories).reduce((sum: number, subCat: any) => sum + subCat.fields.length, 0);
+          };
 
+          // Create the exact 3-level header structure from the web table
+          const headerRow1: any[] = [];
+          const headerRow2: any[] = [];
+          const headerRow3: any[] = [];
+          
+          // Primary column spans all 3 rows
+          headerRow1.push({ 
+            content: primaryField.field_label.toUpperCase(), 
+            rowSpan: 3, 
+            styles: { 
+              halign: 'center', 
+              valign: 'middle', 
+              fillColor: [219, 234, 254], // bg-blue-50
+              fontStyle: 'bold'
+            } 
+          });
+
+          // First header row - Main categories (DOCTORS, DENTISTS, SPECIALISTS)
           Object.values(structure).forEach((category: any) => {
-            headers.push(category.name);
-            headers.push(''); // For sub-categories if any
+            const colSpan = getColumnSpan(category);
+            let bgColor = [243, 244, 246]; // default gray
             
+            if (category.name === 'Doctors') bgColor = [220, 252, 231]; // bg-green-100
+            else if (category.name === 'Dentists') bgColor = [219, 234, 254]; // bg-blue-100  
+            else if (category.name === 'Specialists') bgColor = [237, 233, 254]; // bg-purple-100
+            
+            headerRow1.push({ 
+              content: category.name.toUpperCase(), 
+              colSpan: colSpan,
+              styles: { 
+                halign: 'center', 
+                fillColor: bgColor,
+                fontStyle: 'bold'
+              } 
+            });
+          });
+
+          // Second header row - Subcategories (Medical/Dental for Specialists, empty for others)
+          Object.values(structure).forEach((category: any) => {
             if (Object.keys(category.subCategories).length > 0) {
+              // Has subcategories like Specialists -> Medical/Dental
               Object.values(category.subCategories).forEach((subCat: any) => {
-                subHeaders.push(subCat.name);
-                subCat.fields.forEach((field: any) => {
-                  fieldHeaders.push(field.label);
+                headerRow2.push({ 
+                  content: subCat.name, 
+                  colSpan: subCat.fields.length,
+                  styles: { 
+                    halign: 'center',
+                    fillColor: [249, 250, 251] // bg-gray-50
+                  } 
                 });
               });
             } else {
-              category.fields.forEach((field: any) => {
-                subHeaders.push('');
-                fieldHeaders.push(field.label);
+              // No subcategories, span across all fields
+              headerRow2.push({ 
+                content: '', 
+                colSpan: category.fields.length,
+                styles: { 
+                  halign: 'center',
+                  fillColor: [249, 250, 251] // bg-gray-50
+                } 
               });
             }
           });
 
-          // Create data rows
+          // Third header row - Field labels (Total, Male, Female)
+          Object.values(structure).forEach((category: any) => {
+            // Add direct category fields first
+            category.fields.forEach((field: any) => {
+              headerRow3.push({ 
+                content: field.label, 
+                styles: { 
+                  halign: 'center',
+                  fillColor: [255, 255, 255] // bg-white
+                } 
+              });
+            });
+            
+            // Then add subcategory fields
+            Object.values(category.subCategories).forEach((subCat: any) => {
+              subCat.fields.forEach((field: any) => {
+                headerRow3.push({ 
+                  content: field.label, 
+                  styles: { 
+                    halign: 'center',
+                    fillColor: [255, 255, 255] // bg-white
+                  } 
+                });
+              });
+            });
+          });
+
+          // Create data rows exactly matching the web table logic
           const tableData = formSubmissions.map((submission: any) => {
             const data = submission.data || {};
             const primaryValue = data[primaryField.field_name] || '';
             
-            if (!primaryValue) return null;
+            // Only show rows that have actual data (matching web table logic)
+            if (!primaryValue || primaryValue === '') return null;
 
             const row = [primaryValue];
             
+            // Add data in the same order as headers
             Object.values(structure).forEach((category: any) => {
-              if (Object.keys(category.subCategories).length > 0) {
-                Object.values(category.subCategories).forEach((subCat: any) => {
-                  subCat.fields.forEach((field: any) => {
-                    row.push(data[field.key] || '0');
-                  });
-                });
-              } else {
-                category.fields.forEach((field: any) => {
+              // Add direct category fields first
+              category.fields.forEach((field: any) => {
+                row.push(data[field.key] || '0');
+              });
+              
+              // Then add subcategory fields
+              Object.values(category.subCategories).forEach((subCat: any) => {
+                subCat.fields.forEach((field: any) => {
                   row.push(data[field.key] || '0');
                 });
-              }
+              });
             });
             
             return row;
           }).filter(row => row !== null);
 
-          // Use autoTable for better table formatting
+          // Generate PDF table with exact hierarchical structure
           autoTable(doc, {
-            head: [fieldHeaders],
+            head: [headerRow1, headerRow2, headerRow3],
             body: tableData,
             startY: yPosition,
-            styles: { fontSize: 8, cellPadding: 2 },
-            headStyles: { fillColor: [66, 139, 202] },
-            columnStyles: {
-              0: { cellWidth: 30, fontStyle: 'bold' }
+            styles: { 
+              fontSize: 8, 
+              cellPadding: 2,
+              halign: 'center',
+              lineColor: [128, 128, 128],
+              lineWidth: 0.5
             },
-            margin: { left: 15, right: 15 }
+            headStyles: { 
+              textColor: [0, 0, 0],
+              fontStyle: 'bold',
+              fontSize: 7
+            },
+            columnStyles: {
+              0: { 
+                cellWidth: 30, 
+                fontStyle: 'bold', 
+                halign: 'left',
+                fillColor: [255, 255, 255]
+              }
+            },
+            margin: { left: 10, right: 10 },
+            tableWidth: 'auto',
+            theme: 'grid'
           });
         }
       } else {

@@ -932,6 +932,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public API endpoints (no authentication required)
+  app.get('/api/public/published-schedules', async (req, res) => {
+    try {
+      const schedules = await storage.getSchedules();
+      const publishedSchedules = schedules.filter(schedule => schedule.status === 'published');
+      res.json(publishedSchedules);
+    } catch (error) {
+      console.error('Error fetching published schedules:', error);
+      res.status(500).json({ error: 'Failed to fetch published schedules' });
+    }
+  });
+
+  app.get('/api/public/departments', async (req, res) => {
+    try {
+      const departments = await storage.getDepartments();
+      res.json(departments);
+    } catch (error) {
+      console.error('Error fetching departments:', error);
+      res.status(500).json({ error: 'Failed to fetch departments' });
+    }
+  });
+
+  app.get('/api/public/schedules/:scheduleId', async (req, res) => {
+    try {
+      const schedule = await storage.getSchedule(req.params.scheduleId);
+      if (!schedule || schedule.status !== 'published') {
+        return res.status(404).json({ error: 'Published schedule not found' });
+      }
+      res.json(schedule);
+    } catch (error) {
+      console.error('Error fetching schedule:', error);
+      res.status(500).json({ error: 'Failed to fetch schedule' });
+    }
+  });
+
+  app.get('/api/public/schedules/:scheduleId/forms', async (req, res) => {
+    try {
+      const schedule = await storage.getSchedule(req.params.scheduleId);
+      if (!schedule || schedule.status !== 'published') {
+        return res.status(404).json({ error: 'Published schedule not found' });
+      }
+
+      const scheduleForms = await storage.getScheduleForms(req.params.scheduleId);
+      const formsWithDetails = await Promise.all(
+        scheduleForms.map(async (scheduleForm: any) => {
+          const form = await storage.getForm(scheduleForm.form_id);
+          if (!form) return null;
+          
+          const fieldGroups = await storage.getFieldGroups(form.id);
+          const formFields = await storage.getFormFields(form.id);
+          
+          return {
+            ...form,
+            field_groups: fieldGroups,
+            form_fields: formFields
+          };
+        })
+      );
+
+      const validForms = formsWithDetails.filter(form => form !== null);
+      res.json(validForms);
+    } catch (error) {
+      console.error('Error fetching schedule forms:', error);
+      res.status(500).json({ error: 'Failed to fetch schedule forms' });
+    }
+  });
+
+  app.get('/api/public/schedules/:scheduleId/submissions', async (req, res) => {
+    try {
+      const schedule = await storage.getSchedule(req.params.scheduleId);
+      if (!schedule || schedule.status !== 'published') {
+        return res.status(404).json({ error: 'Published schedule not found' });
+      }
+
+      const submissions = await storage.getFormSubmissions(undefined, req.params.scheduleId);
+      res.json(submissions);
+    } catch (error) {
+      console.error('Error fetching submissions:', error);
+      res.status(500).json({ error: 'Failed to fetch submissions' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

@@ -1,41 +1,31 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useSimpleAuth';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ArrowLeft, Shield, Database } from 'lucide-react';
 
 export const AuthPage = () => {
-  const { signIn, signUp, user, loading: authLoading } = useAuth();
-  const navigate = useNavigate();
+  const { signIn, user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
 
   const [signInData, setSignInData] = useState({
     email: '',
     password: ''
   });
 
-  const [signUpData, setSignUpData] = useState({
-    email: '',
-    password: '',
-    fullName: '',
-    confirmPassword: ''
-  });
-
   // Redirect authenticated users to dashboard
   useEffect(() => {
     if (!authLoading && user) {
       console.log('User authenticated on auth page, redirecting to dashboard');
-      navigate('/dashboard', { replace: true });
+      window.location.href = '/dashboard';
     }
-  }, [user, authLoading, navigate]);
+  }, [user, authLoading]);
 
   // Show loading while checking auth state
   if (authLoading) {

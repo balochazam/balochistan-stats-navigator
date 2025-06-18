@@ -7,8 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { apiClient } from '@/lib/api';
-import { useAuth } from '@/hooks/useAuth';
+import { simpleApiClient } from '@/lib/simpleApi';
+import { useAuth } from '@/hooks/useSimpleAuth';
 import { FormFieldsBuilder } from './FormFieldsBuilder';
 
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
@@ -86,7 +86,7 @@ export const FormBuilderDialog = ({
     try {
       setFieldsLoading(true);
       console.log('Fetching form fields for form:', formId);
-      const data = await apiClient.get(`/api/form-fields/${formId}`);
+      const data = await simpleApiClient.get(`/api/form-fields/${formId}`);
       console.log('Form fields fetched:', data);
       setFields(data || []);
     } catch (error) {
@@ -189,7 +189,7 @@ export const FormBuilderDialog = ({
       if (editingForm) {
         console.log('Updating existing form:', editingForm.id);
         // Update existing form
-        await apiClient.put(`/api/forms/${editingForm.id}`, {
+        await simpleApiClient.put(`/api/forms/${editingForm.id}`, {
           name: formData.name,
           description: formData.description || null,
           department_id: formData.department_id,
@@ -199,7 +199,7 @@ export const FormBuilderDialog = ({
       } else {
         console.log('Creating new form');
         // Create new form
-        const data = await apiClient.post('/api/forms', {
+        const data = await simpleApiClient.post('/api/forms', {
           name: formData.name,
           description: formData.description || null,
           department_id: formData.department_id,
@@ -215,7 +215,7 @@ export const FormBuilderDialog = ({
         // Delete existing fields if editing
         if (editingForm) {
           console.log('Deleting existing fields...');
-          await apiClient.delete(`/api/form-fields/${formId}`);
+          await simpleApiClient.delete(`/api/form-fields/${formId}`);
         }
 
         // Insert new fields with proper field names
@@ -244,7 +244,7 @@ export const FormBuilderDialog = ({
 
           console.log('Fields to insert:', fieldsToInsert);
 
-          await apiClient.post('/api/form-fields', fieldsToInsert);
+          await simpleApiClient.post('/api/form-fields', fieldsToInsert);
           console.log('Form fields inserted successfully');
         }
       }

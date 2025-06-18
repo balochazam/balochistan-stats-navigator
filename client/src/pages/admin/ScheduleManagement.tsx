@@ -66,6 +66,9 @@ export const ScheduleManagement = () => {
   const [searchFilter, setSearchFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
+  
+  // Track form counts for each schedule
+  const [scheduleFormCounts, setScheduleFormCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (profile?.role === 'admin') {
@@ -77,6 +80,19 @@ export const ScheduleManagement = () => {
     try {
       const data = await simpleApiClient.get('/api/schedules');
       setSchedules(data || []);
+      
+      // Fetch form counts for each schedule
+      const formCounts: Record<string, number> = {};
+      for (const schedule of data || []) {
+        try {
+          const forms = await simpleApiClient.get(`/api/schedules/${schedule.id}/forms`);
+          formCounts[schedule.id] = forms?.length || 0;
+        } catch (error) {
+          console.error(`Error fetching forms for schedule ${schedule.id}:`, error);
+          formCounts[schedule.id] = 0;
+        }
+      }
+      setScheduleFormCounts(formCounts);
     } catch (error) {
       console.error('Error in fetchSchedules:', error);
     } finally {
@@ -105,6 +121,19 @@ export const ScheduleManagement = () => {
   };
 
   const handleStatusChange = async (scheduleId: string, newStatus: string) => {
+    // Validate status transitions based on business rules
+    if (newStatus === 'collection') {
+      const formCount = scheduleFormCounts[scheduleId] || 0;
+      if (formCount === 0) {
+        toast({
+          title: "Cannot Start Collection",
+          description: "Please add at least one form to this schedule before starting collection",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     // If trying to publish, check completion status first
     if (newStatus === 'published') {
       try {
@@ -371,30 +400,66 @@ export const ScheduleManagement = () => {
                   </div>
 
                   <div className="flex items-center space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDataCollection(schedule)}
-                    >
-                      <FileText className="h-4 w-4 mr-1" />
-                      View Data Collection
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleStatusChange(schedule.id, getNextStatus(schedule.status))}
-                    >
-                      {getStatusAction(schedule.status)}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleManageForms(schedule)}
-                      disabled={schedule.status === 'published'}
-                    >
-                      <FileText className="h-4 w-4 mr-1" />
-                      Manage Forms
-                    </Button>
+                    {/* Show Manage Forms button only when status is 'open' */}
+                    {schedule.status === 'open' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleManageForms(schedule)}
+                      >
+                        <FileText className="h-4 w-4 mr-1" />
+                        Manage Forms
+                      </Button>
+                    )}
+                    
+                    {/* Show Start Collection only when status is 'open' and has forms */}
+                    {schedule.status === 'open' && (scheduleFormCounts[schedule.id] || 0) > 0 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleStatusChange(schedule.id, 'collection')}
+                      >
+                        <Play className="h-4 w-4 mr-1" />
+                        Start Collection
+                      </Button>
+                    )}
+                    
+                    {/* Show View Data Collection for collection and published status */}
+                    {(schedule.status === 'collection' || schedule.status === 'published') && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDataCollection(schedule)}
+                      >
+                        <FileText className="h-4 w-4 mr-1" />
+                        View Data Collection
+                      </Button>
+                    )}
+                    
+                    {/* Show Mark Published button when status is 'collection' */}
+                    {schedule.status === 'collection' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleStatusChange(schedule.id, 'published')}
+                      >
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                        Mark Published
+                      </Button>
+                    )}
+                    
+                    {/* Show Reopen button when status is 'published' */}
+                    {schedule.status === 'published' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleStatusChange(schedule.id, 'open')}
+                      >
+                        <Play className="h-4 w-4 mr-1" />
+                        Reopen
+                      </Button>
+                    )}
+                    
                     <Button
                       variant="outline"
                       size="sm"

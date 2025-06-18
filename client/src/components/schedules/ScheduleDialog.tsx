@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { apiClient } from '@/lib/api';
+import { simpleApiClient } from '@/lib/simpleApi';
 import { useAuth } from '@/hooks/useSimpleAuth';
 
 interface Schedule {
@@ -88,7 +88,7 @@ export const ScheduleDialog = ({
     setLoading(true);
     try {
       if (editingSchedule) {
-        await apiClient.put(`/api/schedules/${editingSchedule.id}`, {
+        await simpleApiClient.put(`/api/schedules/${editingSchedule.id}`, {
           name: formData.name,
           description: formData.description || null,
           start_date: formData.start_date,
@@ -97,7 +97,7 @@ export const ScheduleDialog = ({
           updated_at: new Date().toISOString()
         });
       } else {
-        await apiClient.post('/api/schedules', {
+        await simpleApiClient.post('/api/schedules', {
           name: formData.name,
           description: formData.description || null,
           start_date: formData.start_date,

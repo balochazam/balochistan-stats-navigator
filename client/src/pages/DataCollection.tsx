@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useSimpleAuth';
 import { simpleApiClient } from '@/lib/simpleApi';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -83,7 +83,7 @@ export const DataCollection = () => {
         );
 
         // Get forms and filter by department if not admin
-        const allForms = await apiClient.get('/api/forms');
+        const allForms = await simpleApiClient.get('/api/forms');
         let filteredScheduleForms = relevantScheduleForms;
 
         if (profile?.role !== 'admin' && profile?.department_id) {
@@ -127,7 +127,7 @@ export const DataCollection = () => {
 
     try {
       console.log('Fetching user completions...');
-      const data = await apiClient.get(`/api/schedule-form-completions?userId=${profile.id}`);
+      const data = await simpleApiClient.get(`/api/schedule-form-completions?userId=${profile.id}`);
 
       console.log('Completions fetched:', data);
       setCompletions(data || []);

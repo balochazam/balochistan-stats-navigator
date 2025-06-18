@@ -6,11 +6,6 @@ interface User {
   email: string;
 }
 
-interface Session {
-  access_token: string;
-  user: User;
-}
-
 interface Profile {
   id: string;
   email: string;
@@ -24,7 +19,6 @@ interface Profile {
 interface AuthContextType {
   user: User | null;
   profile: Profile | null;
-  session: Session | null;
   loading: boolean;
   error: string | null;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
@@ -46,7 +40,6 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -66,7 +59,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (userData && userData.user) {
           setUser(userData.user);
           setProfile(userData.profile);
-          setSession(userData.session);
         } else {
           console.log('No active session found');
         }
@@ -100,9 +92,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       const data = await simpleApiClient.register(email, password, fullName);
       
-      // Set token and update state
-      apiClient.setToken(data.session.access_token);
-      setSession(data.session);
+      // Update state with session data
       setUser(data.user);
       setProfile(data.profile);
 
@@ -121,17 +111,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setError(null);
       setLoading(true);
       
-      const data = await apiClient.login(email, password);
+      const data = await simpleApiClient.login(email, password);
       
-      // Set token and update state
-      apiClient.setToken(data.session.access_token);
-      setSession(data.session);
+      // Update state with session data
       setUser(data.user);
       setProfile(data.profile);
 
       return { error: null };
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Signin failed';
+      const errorMessage = err instanceof Error ? err.message : 'Login failed';
       setError(errorMessage);
       return { error: { message: errorMessage } };
     } finally {
@@ -141,25 +129,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     try {
-      setError(null);
-      await apiClient.logout();
-      
-      // Clear state and token
-      apiClient.setToken(null);
-      setSession(null);
-      setUser(null);
-      setProfile(null);
+      await simpleApiClient.logout();
     } catch (err) {
-      console.error('Signout error:', err);
-      setError(err instanceof Error ? err.message : 'Signout failed');
-      
-      // Clear state anyway
-      apiClient.setToken(null);
-      setSession(null);
+      console.error('Logout error:', err);
+    } finally {
+      // Clear client state regardless of API call success
       setUser(null);
       setProfile(null);
-      
-      throw err;
+      setError(null);
     }
   };
 
@@ -167,17 +144,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       setError(null);
       
-      if (!user) {
-        const error = { message: 'No user logged in' };
-        setError(error.message);
-        return { error };
-      }
+      const updatedProfile = await simpleApiClient.patch('/api/profiles', updates);
+      setProfile(updatedProfile);
 
-      const data = await apiClient.patch(`/api/profiles/${user.id}`, updates);
-      setProfile(data);
       return { error: null };
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Profile update failed';
+      const errorMessage = err instanceof Error ? err.message : 'Update failed';
       setError(errorMessage);
       return { error: { message: errorMessage } };
     }
@@ -186,7 +158,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const value = {
     user,
     profile,
-    session,
     loading,
     error,
     signUp,
@@ -195,5 +166,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     updateProfile,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 };

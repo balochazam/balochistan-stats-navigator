@@ -6,7 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { apiClient } from '@/lib/api';
+import { simpleApiClient } from '@/lib/simpleApi';
 
 interface Schedule {
   id: string;
@@ -45,10 +45,10 @@ export const ScheduleFormSelect = ({
   const fetchAvailableForms = async () => {
     try {
       // Get forms that are not already in this schedule
-      const forms = await apiClient.get('/api/forms');
+      const forms = await simpleApiClient.get('/api/forms');
 
       // Get existing schedule forms to exclude
-      const scheduleFormsResponse = await apiClient.get(`/api/schedules/${schedule.id}/forms`);
+      const scheduleFormsResponse = await simpleApiClient.get(`/api/schedules/${schedule.id}/forms`);
       const excludeIds = scheduleFormsResponse?.map((sf: any) => sf.form_id) || [];
 
       // Filter out forms that are already in this schedule
@@ -76,7 +76,7 @@ export const ScheduleFormSelect = ({
 
     setLoading(true);
     try {
-      await apiClient.post('/api/schedule-forms', {
+      await simpleApiClient.post('/api/schedule-forms', {
         schedule_id: schedule.id,
         form_id: selectedFormId,
         is_required: isRequired,

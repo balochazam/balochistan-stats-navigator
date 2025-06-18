@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Trash2, GripVertical, AlertCircle } from 'lucide-react';
-import { apiClient } from '@/lib/api';
+import { simpleApiClient } from '@/lib/simpleApi';
 import { useToast } from '@/hooks/use-toast';
 
 interface FormField {
@@ -93,7 +93,7 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
       
       console.log('Fetching reference data sets...');
       
-      const data = await apiClient.get('/api/data-banks');
+      const data = await simpleApiClient.get('/api/data-banks');
 
       console.log('Reference data sets fetched:', data);
       setReferenceDataSets(data || []);

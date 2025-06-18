@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { apiClient } from '@/lib/api';
+import { simpleApiClient } from '@/lib/simpleApi';
 import { useAuth } from '@/hooks/useSimpleAuth';
 import { FileText, Calendar, Clock, CheckCircle, Plus } from 'lucide-react';
 import { DataEntryForm } from '@/components/data-collection/DataEntryForm';
@@ -80,7 +80,7 @@ export const ScheduleDataCollectionDialog = ({
 
     try {
       setLoading(true);
-      const data = await apiClient.get(`/api/schedules/${schedule.id}/forms`);
+      const data = await simpleApiClient.get(`/api/schedules/${schedule.id}/forms`);
       setScheduleForms(data || []);
     } catch (error) {
       console.error('Error in fetchScheduleForms:', error);
@@ -93,7 +93,7 @@ export const ScheduleDataCollectionDialog = ({
     if (!schedule) return;
 
     try {
-      const data = await apiClient.get(`/api/form-submissions?scheduleId=${schedule.id}`);
+      const data = await simpleApiClient.get(`/api/form-submissions?scheduleId=${schedule.id}`);
       setSubmissions(data || []);
     } catch (error) {
       console.error('Error in fetchSubmissions:', error);
@@ -107,7 +107,7 @@ export const ScheduleDataCollectionDialog = ({
       // Fetch completion status for all forms in this schedule
       const allCompletions = [];
       for (const form of scheduleForms) {
-        const completionData = await apiClient.get(`/api/schedule-form-completions?scheduleFormId=${form.id}&userId=${profile.id}`);
+        const completionData = await simpleApiClient.get(`/api/schedule-form-completions?scheduleFormId=${form.id}&userId=${profile.id}`);
         if (completionData && completionData.length > 0) {
           allCompletions.push(...completionData);
         }

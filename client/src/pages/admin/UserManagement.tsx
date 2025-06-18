@@ -67,7 +67,7 @@ export const UserManagement = () => {
 
   const fetchUsers = async () => {
     try {
-      const data = await apiClient.get('/api/profiles');
+      const data = await simpleApiClient.get('/api/profiles');
       setUsers(data || []);
     } catch (error) {
       console.error('Error in fetchUsers:', error);
@@ -78,7 +78,7 @@ export const UserManagement = () => {
 
   const fetchDepartments = async () => {
     try {
-      const data = await apiClient.get('/api/departments');
+      const data = await simpleApiClient.get('/api/departments');
       setDepartments(data || []);
     } catch (error) {
       console.error('Error in fetchDepartments:', error);
@@ -92,7 +92,7 @@ export const UserManagement = () => {
         department_id: data.department_id === 'none' ? null : data.department_id || null,
       };
       
-      await apiClient.post('/api/auth/create-user', userData);
+      await simpleApiClient.post('/api/auth/create-user', userData);
       
       toast({
         title: "User created successfully",
@@ -113,7 +113,7 @@ export const UserManagement = () => {
 
   const updateUserRole = async (userId: string, newRole: string) => {
     try {
-      await apiClient.patch(`/api/profiles/${userId}`, { role: newRole });
+      await simpleApiClient.patch(`/api/profiles/${userId}`, { role: newRole });
       toast({
         title: "User role updated",
         description: "User role has been successfully updated",
@@ -131,7 +131,7 @@ export const UserManagement = () => {
   const updateUserDepartment = async (userId: string, departmentId: string | null) => {
     try {
       const actualDepartmentId = departmentId === 'none' ? null : departmentId;
-      await apiClient.patch(`/api/profiles/${userId}`, { department_id: actualDepartmentId });
+      await simpleApiClient.patch(`/api/profiles/${userId}`, { department_id: actualDepartmentId });
       toast({
         title: "User department updated",
         description: "User department has been successfully updated",

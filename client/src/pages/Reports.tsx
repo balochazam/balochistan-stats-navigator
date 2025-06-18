@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useSimpleAuth';
-import { apiClient } from '@/lib/api';
+import { simpleApiClient } from '@/lib/simpleApi';
 import { useSearchParams } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -128,7 +128,7 @@ export const Reports = () => {
 
   const fetchPublishedSchedules = async () => {
     try {
-      const data = await apiClient.get('/api/schedules');
+      const data = await simpleApiClient.get('/api/schedules');
       let published = data?.filter((schedule: Schedule) => schedule.status === 'published') || [];
       
       // Filter by department for non-admin users
@@ -137,7 +137,7 @@ export const Reports = () => {
         const schedulesWithForms = await Promise.all(
           published.map(async (schedule) => {
             try {
-              const forms = await apiClient.get(`/api/schedules/${schedule.id}/forms`);
+              const forms = await simpleApiClient.get(`/api/schedules/${schedule.id}/forms`);
               const departmentForms = forms?.filter((form: any) => 
                 form.form.department_id === profile.department_id
               ) || [];
@@ -236,7 +236,7 @@ export const Reports = () => {
     setLoadingData(true);
     
     try {
-      const forms = await apiClient.get(`/api/schedules/${schedule.id}/forms`);
+      const forms = await simpleApiClient.get(`/api/schedules/${schedule.id}/forms`);
       
       // Filter forms by department for non-admin users
       let filteredForms = forms || [];
@@ -260,11 +260,11 @@ export const Reports = () => {
     
     try {
       // Fetch form fields
-      const fields = await apiClient.get(`/api/forms/${scheduleForm.form_id}/fields`);
+      const fields = await simpleApiClient.get(`/api/forms/${scheduleForm.form_id}/fields`);
       setFormFields(fields?.sort((a: FormField, b: FormField) => a.field_order - b.field_order) || []);
       
       // Fetch form submissions for this schedule and form
-      const submissions = await apiClient.get(`/api/form-submissions?formId=${scheduleForm.form_id}&scheduleId=${selectedSchedule?.id}`);
+      const submissions = await simpleApiClient.get(`/api/form-submissions?formId=${scheduleForm.form_id}&scheduleId=${selectedSchedule?.id}`);
       setFormSubmissions(submissions || []);
     } catch (error) {
       console.error('Error fetching form data:', error);

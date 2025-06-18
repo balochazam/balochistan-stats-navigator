@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useSimpleAuth';
-import { apiClient } from '@/lib/api';
+import { simpleApiClient } from '@/lib/simpleApi';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -59,7 +59,7 @@ export const FormManagement = () => {
   const fetchForms = async () => {
     try {
       console.log('Fetching forms...');
-      const data = await apiClient.get('/api/forms');
+      const data = await simpleApiClient.get('/api/forms');
       console.log('Forms fetched successfully:', data);
       const formsWithCreator = (data || []).map((form: any) => ({
         ...form,
@@ -76,7 +76,7 @@ export const FormManagement = () => {
   const fetchDepartments = async () => {
     try {
       console.log('Fetching departments...');
-      const data = await apiClient.get('/api/departments');
+      const data = await simpleApiClient.get('/api/departments');
       console.log('Departments fetched successfully:', data);
       setDepartments(data || []);
     } catch (error) {
@@ -103,7 +103,7 @@ export const FormManagement = () => {
 
     try {
       console.log('Deleting form:', formId);
-      await apiClient.delete(`/api/forms/${formId}`);
+      await simpleApiClient.delete(`/api/forms/${formId}`);
 
       console.log('Form deleted successfully');
       toast({

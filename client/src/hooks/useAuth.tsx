@@ -101,7 +101,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const data = await simpleApiClient.register(email, password, fullName);
       
       // Set token and update state
-      apiClient.setToken(data.session.access_token);
+      simpleApiClient.setToken(data.session.access_token);
       setSession(data.session);
       setUser(data.user);
       setProfile(data.profile);
@@ -121,10 +121,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setError(null);
       setLoading(true);
       
-      const data = await apiClient.login(email, password);
+      const data = await simpleApiClient.login(email, password);
       
       // Set token and update state
-      apiClient.setToken(data.session.access_token);
+      simpleApiClient.setToken(data.session.access_token);
       setSession(data.session);
       setUser(data.user);
       setProfile(data.profile);
@@ -142,10 +142,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signOut = async () => {
     try {
       setError(null);
-      await apiClient.logout();
+      await simpleApiClient.logout();
       
       // Clear state and token
-      apiClient.setToken(null);
+      simpleApiClient.setToken(null);
       setSession(null);
       setUser(null);
       setProfile(null);
@@ -154,7 +154,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setError(err instanceof Error ? err.message : 'Signout failed');
       
       // Clear state anyway
-      apiClient.setToken(null);
+      simpleApiClient.setToken(null);
       setSession(null);
       setUser(null);
       setProfile(null);
@@ -173,7 +173,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return { error };
       }
 
-      const data = await apiClient.patch(`/api/profiles/${user.id}`, updates);
+      const data = await simpleApiClient.patch(`/api/profiles/${user.id}`, updates);
       setProfile(data);
       return { error: null };
     } catch (err) {

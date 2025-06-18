@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { apiClient } from '@/lib/api';
+import { useAuth } from '@/hooks/useSimpleAuth';
+import { simpleApiClient } from '@/lib/simpleApi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -48,7 +48,7 @@ export const ReferenceDataEntries = ({ referenceData }: ReferenceDataEntriesProp
 
   const fetchEntries = async () => {
     try {
-      const data = await apiClient.get(`/api/data-banks/${referenceData.id}/entries`);
+      const data = await simpleApiClient.get(`/api/data-banks/${referenceData.id}/entries`);
       setEntries(data || []);
     } catch (error) {
       console.error('Error in fetchEntries:', error);
@@ -96,7 +96,7 @@ export const ReferenceDataEntries = ({ referenceData }: ReferenceDataEntriesProp
           key: generateKey(value),
           value: value
         };
-        await apiClient.post(`/api/data-banks/${referenceData.id}/entries`, entryData);
+        await simpleApiClient.post(`/api/data-banks/${referenceData.id}/entries`, entryData);
       }
 
       toast({
@@ -138,7 +138,7 @@ export const ReferenceDataEntries = ({ referenceData }: ReferenceDataEntriesProp
 
     try {
       const newKey = generateKey(editValue.trim());
-      await apiClient.put(`/api/data-banks/${referenceData.id}/entries/${entryId}`, {
+      await simpleApiClient.put(`/api/data-banks/${referenceData.id}/entries/${entryId}`, {
         key: newKey,
         value: editValue.trim()
       });
@@ -171,7 +171,7 @@ export const ReferenceDataEntries = ({ referenceData }: ReferenceDataEntriesProp
     }
 
     try {
-      await apiClient.delete(`/api/data-banks/${referenceData.id}/entries/${entryId}`);
+      await simpleApiClient.delete(`/api/data-banks/${referenceData.id}/entries/${entryId}`);
 
       toast({
         title: "Success",

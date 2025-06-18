@@ -8,7 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { apiClient } from '@/lib/api';
+import { simpleApiClient } from '@/lib/simpleApi';
 import { Plus, Trash2, FileText } from 'lucide-react';
 import { ScheduleFormSelect } from './ScheduleFormSelect';
 
@@ -57,7 +57,7 @@ export const ScheduleFormsDialog = ({
     if (!schedule) return;
 
     try {
-      const data = await apiClient.get(`/api/schedules/${schedule.id}/forms`);
+      const data = await simpleApiClient.get(`/api/schedules/${schedule.id}/forms`);
       setScheduleForms(data || []);
     } catch (error) {
       console.error('Error in fetchScheduleForms:', error);
@@ -75,7 +75,7 @@ export const ScheduleFormsDialog = ({
     }
 
     try {
-      await apiClient.delete(`/api/schedule-forms/${scheduleFormId}`);
+      await simpleApiClient.delete(`/api/schedule-forms/${scheduleFormId}`);
 
       toast({
         title: "Success",
@@ -94,7 +94,7 @@ export const ScheduleFormsDialog = ({
 
   const handleUpdateScheduleForm = async (scheduleFormId: string, updates: Partial<ScheduleForm>) => {
     try {
-      await apiClient.put(`/api/schedule-forms/${scheduleFormId}`, updates);
+      await simpleApiClient.put(`/api/schedule-forms/${scheduleFormId}`, updates);
 
       toast({
         title: "Success",

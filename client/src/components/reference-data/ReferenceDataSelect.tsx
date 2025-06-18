@@ -10,6 +10,7 @@ interface ReferenceDataSelectProps {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  excludeValues?: string[];
 }
 
 export const ReferenceDataSelect = ({
@@ -18,7 +19,8 @@ export const ReferenceDataSelect = ({
   onValueChange,
   placeholder = "Select an option",
   disabled = false,
-  className
+  className,
+  excludeValues = []
 }: ReferenceDataSelectProps) => {
   const { options, loading, error } = useReferenceData(referenceDataName);
 
@@ -39,10 +41,15 @@ export const ReferenceDataSelect = ({
     );
   }
 
-  if (options.length === 0) {
+  // Filter out excluded values (for duplicate prevention in primary columns)
+  const filteredOptions = options.filter(option => !excludeValues.includes(option.key));
+
+  if (filteredOptions.length === 0) {
     return (
-      <div className="flex items-center justify-center h-10 border rounded-md bg-gray-50">
-        <span className="text-sm text-gray-500">No options available</span>
+      <div className="flex items-center justify-center h-10 border rounded-md bg-yellow-50 border-yellow-200">
+        <span className="text-sm text-yellow-700">
+          {excludeValues.length > 0 ? "All options have been used" : "No options available"}
+        </span>
       </div>
     );
   }
@@ -53,7 +60,7 @@ export const ReferenceDataSelect = ({
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>
-        {options.map((option) => (
+        {filteredOptions.map((option) => (
           <SelectItem key={option.key} value={option.key}>
             {option.value}
           </SelectItem>

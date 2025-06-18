@@ -339,6 +339,9 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
       // Update submission count
       setSubmissionCount(prev => prev + 1);
       
+      // Refresh used primary values to update duplicate prevention
+      await fetchExistingSubmissions();
+      
       onSubmitted();
     } catch (error) {
       console.error('Error submitting form:', error);
@@ -732,6 +735,7 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
                 handleFieldChange(field.field_name, value);
               }}
               placeholder={field.placeholder_text || "Select an option"}
+              excludeValues={field.is_primary_column ? Array.from(usedPrimaryValues) : undefined}
             />
           );
         }

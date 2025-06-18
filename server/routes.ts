@@ -700,13 +700,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const formStatuses = [];
 
       for (const scheduleForm of scheduleForms) {
+        // Get all users who submitted data for this form
+        const submissions = await storage.getFormSubmissions(scheduleForm.form_id, scheduleId);
+        const uniqueSubmitters = [...new Set(submissions.map(sub => sub.submitted_by))];
+        
+        // Get all completions for this form
         const completions = await storage.getScheduleFormCompletions(scheduleForm.id);
-        const isCompleted = completions.length > 0;
+        const completedByUsers = new Set(completions.map(comp => comp.user_id));
+        
+        // Check if all users who submitted data have marked the form as complete
+        const isCompleted = uniqueSubmitters.length > 0 && uniqueSubmitters.every(userId => completedByUsers.has(userId));
         
         formStatuses.push({
           formId: scheduleForm.form_id,
           formName: scheduleForm.form?.name || 'Unknown Form',
-          isCompleted
+          isCompleted,
+          submitters: uniqueSubmitters.length,
+          completedBy: completions.length
         });
 
         if (!isCompleted) {
@@ -717,9 +727,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ 
         canPublish: allFormsCompleted, 
         formStatuses,
-        reason: allFormsCompleted ? 'All forms completed' : 'Some forms not completed'
+        reason: allFormsCompleted ? 'All forms completed by all users' : 'Some forms not completed by all users'
       });
     } catch (error) {
+      console.error('Error checking completion status:', error);
       res.status(500).json({ error: 'Failed to check completion status' });
     }
   });

@@ -37,14 +37,14 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const handleSignOut = async () => {
     try {
       await apiClient.logout();
-      navigate('/');
+      // Clear the token and reload to reset auth state
+      apiClient.setToken(null);
+      window.location.href = '/';
     } catch (error) {
       console.error('Error signing out:', error);
-      toast({
-        title: "Error",
-        description: "Failed to sign out",
-        variant: "destructive",
-      });
+      // Even if logout fails, clear local state
+      apiClient.setToken(null);
+      window.location.href = '/';
     }
   };
 

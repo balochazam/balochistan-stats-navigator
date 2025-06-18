@@ -105,12 +105,75 @@ export const PublicReportView = () => {
     }
   };
 
+  const fetchDepartments = async () => {
+    try {
+      const data = await simpleApiClient.get('/api/public/departments');
+      setDepartments(data || []);
+    } catch (error) {
+      console.error('Error fetching departments:', error);
+    }
+  };
+
 
 
   const getActiveFormSubmissions = () => {
     return submissions.filter(sub => 
       forms.find(form => form.id === activeForm)?.id === activeForm
     );
+  };
+
+  // Filter form submissions based on current filters
+  const getFilteredSubmissions = () => {
+    const activeFormSubmissions = getActiveFormSubmissions();
+    
+    return activeFormSubmissions.filter(submission => {
+      const matchesDate = submissionDateFilter === 'all' || (() => {
+        const submissionDate = new Date(submission.submitted_at);
+        const currentDate = new Date();
+        const currentYear = currentDate.getFullYear();
+        const currentMonth = currentDate.getMonth();
+        
+        switch (submissionDateFilter) {
+          case 'today':
+            return submissionDate.toDateString() === currentDate.toDateString();
+          case 'this_week':
+            const weekAgo = new Date();
+            weekAgo.setDate(currentDate.getDate() - 7);
+            return submissionDate >= weekAgo;
+          case 'this_month':
+            return submissionDate.getFullYear() === currentYear && submissionDate.getMonth() === currentMonth;
+          default:
+            return true;
+        }
+      })();
+      
+      // Search filter - search through all data values
+      const matchesSearch = tableSearchFilter === '' || (() => {
+        if (!submission.data) return false;
+        
+        // Convert all submission data values to searchable text
+        const searchableText = Object.values(submission.data)
+          .filter(value => value !== null && value !== undefined)
+          .join(' ')
+          .toLowerCase();
+        
+        // Also include submitter information if available
+        const submitterInfo = submission.profile ? 
+          `${submission.profile.full_name}`.toLowerCase() : '';
+        
+        const combinedText = `${searchableText} ${submitterInfo}`;
+        
+        return combinedText.includes(tableSearchFilter.toLowerCase());
+      })();
+
+      // Department filter
+      const matchesDepartment = departmentFilter === 'all' || (() => {
+        const activeFormData = forms.find(form => form.id === activeForm);
+        return activeFormData?.department?.name === departmentFilter;
+      })();
+      
+      return matchesDate && matchesSearch && matchesDepartment;
+    });
   };
 
   const exportAllFormsData = () => {
@@ -443,7 +506,7 @@ export const PublicReportView = () => {
   };
 
   const renderDataTable = () => {
-    const formSubmissions = getActiveFormSubmissions();
+    const formSubmissions = getFilteredSubmissions();
     if (!formSubmissions || formSubmissions.length === 0) return null;
 
     const activeFormData = forms.find(f => f.id === activeForm);
@@ -805,6 +868,82 @@ export const PublicReportView = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Data Filters */}
+        {forms.length > 0 && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Filter className="h-4 w-4" />
+                Filter Data
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Search in data</label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Search data values..."
+                      value={tableSearchFilter}
+                      onChange={(e) => setTableSearchFilter(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Submission date</label>
+                  <Select value={submissionDateFilter} onValueChange={setSubmissionDateFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select date range" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All submissions</SelectItem>
+                      <SelectItem value="today">Today</SelectItem>
+                      <SelectItem value="this_week">This week</SelectItem>
+                      <SelectItem value="this_month">This month</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Department</label>
+                  <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All departments" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All departments</SelectItem>
+                      {departments.map((dept) => (
+                        <SelectItem key={dept.id} value={dept.name}>
+                          {dept.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              {(tableSearchFilter || submissionDateFilter !== 'all' || departmentFilter !== 'all') && (
+                <div className="flex items-center gap-2 mt-4 pt-4 border-t">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => {
+                      setTableSearchFilter('');
+                      setSubmissionDateFilter('all');
+                      setDepartmentFilter('all');
+                    }}
+                  >
+                    Clear filters
+                  </Button>
+                  <Badge variant="secondary">
+                    {getFilteredSubmissions().length} of {getActiveFormSubmissions().length} submissions
+                  </Badge>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Forms Data */}
         {forms.length > 0 && (

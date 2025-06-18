@@ -77,7 +77,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       title: 'Data Bank Management',
       icon: Database,
       path: '/admin/data-banks',
-      roles: ['admin']
+      roles: ['admin', 'department_user', 'data_entry_user']
     },
     {
       title: 'Form Management',

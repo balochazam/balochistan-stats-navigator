@@ -45,7 +45,7 @@ export const DataBankManagement = () => {
   const [selectedReferenceData, setSelectedReferenceData] = useState<ReferenceData | null>(null);
 
   useEffect(() => {
-    if (profile?.role === 'admin') {
+    if (profile) {
       fetchReferenceData();
       fetchDepartments();
     }
@@ -133,23 +133,7 @@ export const DataBankManagement = () => {
     fetchReferenceData();
   };
 
-  if (profile?.role !== 'admin') {
-    return (
-      <DashboardLayout>
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Shield className="h-5 w-5 mr-2" />
-              Access Denied
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p>You need admin privileges to access this page.</p>
-          </CardContent>
-        </Card>
-      </DashboardLayout>
-    );
-  }
+  // Reference data is shared across departments - all authenticated users can access
 
   if (loading) {
     return (

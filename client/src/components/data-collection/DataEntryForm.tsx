@@ -6,8 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { apiClient } from '@/lib/api';
-import { useAuth } from '@/hooks/useAuth';
+import { simpleApiClient } from '@/lib/simpleApi';
+import { useAuth } from '@/hooks/useSimpleAuth';
 import { ReferenceDataSelect } from '@/components/reference-data/ReferenceDataSelect';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { CheckCircle, Plus } from 'lucide-react';
@@ -101,7 +101,7 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
       setError(null);
       console.log('Fetching form fields for form:', scheduleForm.form_id);
       
-      const data = await apiClient.get(`/api/form-fields/${scheduleForm.form_id}`);
+      const data = await simpleApiClient.get(`/api/form-fields/${scheduleForm.form_id}`);
       
       console.log('Form fields fetched successfully:', data);
       // Debug aggregate fields
@@ -136,12 +136,12 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
 
     try {
       // Get submission count for this user
-      const submissions = await apiClient.get(`/api/form-submissions?formId=${scheduleForm.form_id}&userId=${profile.id}`);
+      const submissions = await simpleApiClient.get(`/api/form-submissions?formId=${scheduleForm.form_id}&userId=${profile.id}`);
       
       setSubmissionCount(submissions?.length || 0);
 
       // Check if user has marked this form as complete
-      const completions = await apiClient.get(`/api/schedule-form-completions?scheduleFormId=${scheduleForm.id}&userId=${profile.id}`);
+      const completions = await simpleApiClient.get(`/api/schedule-form-completions?scheduleFormId=${scheduleForm.id}&userId=${profile.id}`);
 
       setIsCompleted(completions && completions.length > 0);
 
@@ -281,7 +281,7 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
     try {
       console.log('Submitting form with data:', formData);
       
-      await apiClient.post('/api/form-submissions', {
+      await simpleApiClient.post('/api/form-submissions', {
         schedule_id: schedule.id,
         form_id: scheduleForm.form_id,
         submitted_by: profile?.id,
@@ -324,7 +324,7 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
 
     setIsMarkingComplete(true);
     try {
-      await apiClient.post('/api/schedule-form-completions', {
+      await simpleApiClient.post('/api/schedule-form-completions', {
         schedule_form_id: scheduleForm.id,
         user_id: profile?.id
       });

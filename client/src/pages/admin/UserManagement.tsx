@@ -89,7 +89,7 @@ export const UserManagement = () => {
     try {
       const userData = {
         ...data,
-        department_id: data.department_id || null,
+        department_id: data.department_id === 'none' ? null : data.department_id || null,
       };
       
       await apiClient.post('/api/auth/create-user', userData);
@@ -130,7 +130,8 @@ export const UserManagement = () => {
 
   const updateUserDepartment = async (userId: string, departmentId: string | null) => {
     try {
-      await apiClient.patch(`/api/profiles/${userId}`, { department_id: departmentId });
+      const actualDepartmentId = departmentId === 'none' ? null : departmentId;
+      await apiClient.patch(`/api/profiles/${userId}`, { department_id: actualDepartmentId });
       toast({
         title: "User department updated",
         description: "User department has been successfully updated",
@@ -299,7 +300,7 @@ export const UserManagement = () => {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="">No Department</SelectItem>
+                                <SelectItem value="none">No Department</SelectItem>
                                 {departments.map((dept) => (
                                   <SelectItem key={dept.id} value={dept.id}>
                                     {dept.name}
@@ -376,14 +377,14 @@ export const UserManagement = () => {
                       </Select>
                       
                       <Select
-                        value={user.department_id || ""}
-                        onValueChange={(value) => updateUserDepartment(user.id, value || null)}
+                        value={user.department_id || "none"}
+                        onValueChange={(value) => updateUserDepartment(user.id, value)}
                       >
                         <SelectTrigger className="w-[180px]">
                           <SelectValue placeholder="Select department" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">No Department</SelectItem>
+                          <SelectItem value="none">No Department</SelectItem>
                           {departments.map((dept) => (
                             <SelectItem key={dept.id} value={dept.id}>
                               {dept.name}

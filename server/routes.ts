@@ -725,6 +725,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Schedule Form routes
+  app.get('/api/schedule-forms', requireAuth, async (req: any, res) => {
+    try {
+      // Get all schedule forms with form details for department filtering
+      const allSchedules = await storage.getSchedules();
+      let allScheduleForms = [];
+      
+      for (const schedule of allSchedules) {
+        const scheduleForms = await storage.getScheduleForms(schedule.id);
+        allScheduleForms.push(...scheduleForms);
+      }
+
+      // Filter by department for non-admin users
+      if (req.userProfile?.role !== 'admin' && req.userProfile?.department_id) {
+        const userDepartmentId = req.userProfile.department_id;
+        const allForms = await storage.getForms();
+        const departmentFormIds = allForms
+          .filter(form => form.department_id === userDepartmentId)
+          .map(form => form.id);
+        
+        allScheduleForms = allScheduleForms.filter(sf => 
+          departmentFormIds.includes(sf.form_id)
+        );
+      }
+
+      res.json(allScheduleForms);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch schedule forms' });
+    }
+  });
+
   app.get('/api/schedules/:scheduleId/forms', requireAuth, async (req, res) => {
     try {
       const scheduleForms = await storage.getScheduleForms(req.params.scheduleId);

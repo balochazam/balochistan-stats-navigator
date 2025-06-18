@@ -65,14 +65,12 @@ export const DataCollection = () => {
       console.log('Fetching active schedules...');
       setError(null);
       
-      // Get active schedules (collection or open status)
+      // Get active schedules (collection status)
       const schedulesData = await simpleApiClient.get('/api/schedules');
       const activeSchedules = schedulesData.filter((schedule: any) => 
-        ['open', 'collection'].includes(schedule.status)
+        schedule.status === 'collection'
       ).sort((a: any, b: any) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
-      setSchedules(activeSchedules || []);
 
-      // For admins, get all forms. For others, get forms from their department
       if (activeSchedules && activeSchedules.length > 0) {
         const scheduleIds = activeSchedules.map((s: any) => s.id);
         
@@ -82,19 +80,35 @@ export const DataCollection = () => {
           scheduleIds.includes(sf.schedule_id)
         );
 
-        // Get forms and filter by department if not admin
-        const allForms = await simpleApiClient.get('/api/forms');
+        // Get forms and filter by department for non-admin users
         let filteredScheduleForms = relevantScheduleForms;
+        let filteredSchedules = activeSchedules;
 
         if (profile?.role !== 'admin' && profile?.department_id) {
+          // Get all forms to check department associations
+          const allForms = await simpleApiClient.get('/api/forms');
+          
+          // Filter schedule forms based on department
           filteredScheduleForms = relevantScheduleForms.filter((sf: any) => {
             const form = allForms.find((f: any) => f.id === sf.form_id);
             return form && form.department_id === profile.department_id;
           });
+
+          // Only show schedules that have forms for this department
+          const scheduleIdsWithDeptForms = new Set(filteredScheduleForms.map((sf: any) => sf.schedule_id));
+          filteredSchedules = activeSchedules.filter((schedule: any) => 
+            scheduleIdsWithDeptForms.has(schedule.id)
+          );
         }
 
-        console.log('Schedule forms fetched:', filteredScheduleForms);
+        console.log('Filtered schedules for department:', filteredSchedules);
+        console.log('Filtered schedule forms:', filteredScheduleForms);
+        
+        setSchedules(filteredSchedules || []);
         setScheduleForms(filteredScheduleForms || []);
+      } else {
+        setSchedules([]);
+        setScheduleForms([]);
       }
     } catch (error) {
       console.error('Error fetching schedules:', error);
@@ -123,26 +137,46 @@ export const DataCollection = () => {
   }, [profile?.id]);
 
   const fetchUserCompletions = useCallback(async () => {
-    if (!profile?.id) return;
+    if (!profile?.id || !scheduleForms.length) return;
 
     try {
       console.log('Fetching user completions...');
-      const data = await simpleApiClient.get(`/api/schedule-form-completions?userId=${profile.id}`);
+      // Fetch completions for each schedule form that belongs to this user's department
+      const completionPromises = scheduleForms.map(async (sf: any) => {
+        try {
+          const data = await simpleApiClient.get(`/api/schedule-form-completions/${sf.id}`);
+          return data.filter((completion: any) => completion.user_id === profile.id);
+        } catch (error) {
+          // If no completions found, return empty array
+          return [];
+        }
+      });
 
-      console.log('Completions fetched:', data);
-      setCompletions(data || []);
+      const allCompletions = await Promise.all(completionPromises);
+      const flatCompletions = allCompletions.flat();
+
+      console.log('Completions fetched:', flatCompletions);
+      setCompletions(flatCompletions || []);
     } catch (error) {
       console.error('Error fetching completions:', error);
+      setCompletions([]);
     }
-  }, [profile?.id]);
+  }, [profile?.id, scheduleForms]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    await Promise.all([
-      fetchActiveSchedules(),
-      fetchUserSubmissions(),
-      fetchUserCompletions()
-    ]);
+    try {
+      // Fetch schedules and schedule forms first
+      await fetchActiveSchedules();
+      // Then fetch submissions
+      await fetchUserSubmissions();
+      // Finally fetch completions after schedule forms are loaded
+      setTimeout(() => {
+        fetchUserCompletions();
+      }, 100);
+    } catch (error) {
+      console.error('Error loading data:', error);
+    }
     setLoading(false);
   }, [fetchActiveSchedules, fetchUserSubmissions, fetchUserCompletions]);
 

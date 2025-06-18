@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Building, Plus, Edit2, Trash2, Users } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { DataFilter } from '@/components/ui/DataFilter';
 
 interface Department {
   id: string;
@@ -31,6 +32,10 @@ export const DepartmentManagement = () => {
     name: '',
     description: ''
   });
+  
+  // Filter states
+  const [searchFilter, setSearchFilter] = useState('');
+  const [userCountFilter, setUserCountFilter] = useState('all');
 
   useEffect(() => {
     if (profile?.role === 'admin') {
@@ -144,6 +149,37 @@ export const DepartmentManagement = () => {
     setEditingDepartment(null);
   };
 
+  // Filter departments based on current filters
+  const filteredDepartments = departments.filter(department => {
+    const matchesSearch = searchFilter === '' || 
+      department.name.toLowerCase().includes(searchFilter.toLowerCase()) ||
+      department.description?.toLowerCase().includes(searchFilter.toLowerCase());
+    
+    const matchesUserCount = userCountFilter === 'all' || (() => {
+      const userCount = department.user_count || 0;
+      switch (userCountFilter) {
+        case 'empty':
+          return userCount === 0;
+        case 'small':
+          return userCount > 0 && userCount <= 5;
+        case 'medium':
+          return userCount > 5 && userCount <= 20;
+        case 'large':
+          return userCount > 20;
+        default:
+          return true;
+      }
+    })();
+    
+    return matchesSearch && matchesUserCount;
+  });
+
+  // Clear all filters
+  const clearAllFilters = () => {
+    setSearchFilter('');
+    setUserCountFilter('all');
+  };
+
   if (profile?.role !== 'admin') {
     return (
       <DashboardLayout>
@@ -247,8 +283,51 @@ export const DepartmentManagement = () => {
           </CardHeader>
         </Card>
 
-        <div className="grid gap-4">
-          {departments.map((department) => (
+        {/* Departments Filter */}
+        <DataFilter
+          title="Filter Departments"
+          searchValue={searchFilter}
+          onSearchChange={setSearchFilter}
+          searchPlaceholder="Search departments by name or description..."
+          resultCount={filteredDepartments.length}
+          totalCount={departments.length}
+          onClearAll={clearAllFilters}
+          filters={[
+            {
+              label: "User Count",
+              value: userCountFilter,
+              onChange: setUserCountFilter,
+              options: [
+                { value: 'all', label: 'All departments' },
+                { value: 'empty', label: 'Empty (0 users)' },
+                { value: 'small', label: 'Small (1-5 users)' },
+                { value: 'medium', label: 'Medium (6-20 users)' },
+                { value: 'large', label: 'Large (20+ users)' }
+              ]
+            }
+          ]}
+        />
+
+        {filteredDepartments.length === 0 ? (
+          <Card>
+            <CardContent className="text-center py-8">
+              <Building className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-600 mb-4">
+                {departments.length === 0 
+                  ? "No departments found" 
+                  : "No departments match your filters"}
+              </p>
+              {departments.length === 0 && (
+                <Button onClick={() => setIsCreateDialogOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Your First Department
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-4">
+            {filteredDepartments.map((department) => (
             <Card key={department.id}>
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
@@ -292,19 +371,7 @@ export const DepartmentManagement = () => {
               </CardContent>
             </Card>
           ))}
-        </div>
-
-        {departments.length === 0 && (
-          <Card>
-            <CardContent className="text-center py-8">
-              <Building className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600 mb-4">No departments found</p>
-              <Button onClick={() => setIsCreateDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Your First Department
-              </Button>
-            </CardContent>
-          </Card>
+          </div>
         )}
       </div>
     </DashboardLayout>

@@ -97,12 +97,13 @@ export const ScheduleDialog = ({
           updated_at: new Date().toISOString()
         });
       } else {
+        // New schedules must always start with 'open' status
         await simpleApiClient.post('/api/schedules', {
           name: formData.name,
           description: formData.description || null,
           start_date: formData.start_date,
           end_date: formData.end_date,
-          status: formData.status,
+          status: 'open', // Force 'open' status for new schedules
           created_by: profile.id
         });
       }
@@ -175,6 +176,7 @@ export const ScheduleDialog = ({
                 value={formData.status}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}
                 required
+                disabled={!editingSchedule} // Disable for new schedules
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select status" />
@@ -185,6 +187,9 @@ export const ScheduleDialog = ({
                   <SelectItem value="published">Published</SelectItem>
                 </SelectContent>
               </Select>
+              {!editingSchedule && (
+                <p className="text-sm text-gray-500">New schedules automatically start with "Open" status</p>
+              )}
             </div>
           </div>
 

@@ -127,6 +127,7 @@ Changelog:
 - June 18, 2025. Fixed Data Collection infinite loading loop issue and implemented status-only filtering - schedules are now filtered purely by "collection" status, not dates, allowing users to access forms regardless of time ranges
 - June 18, 2025. Enhanced Data Collection page to show both collection schedules (for data entry) and published schedules (for viewing reports) - department users can now access reports for completed schedules from their department
 - June 18, 2025. Consolidated duplicate route functionality - removed separate "Completed Schedules" page and integrated all functionality into single "Reports" page with URL parameter support for direct navigation to specific schedules and forms
+- June 18, 2025. Implemented comprehensive schedule business validation rules - new schedules automatically start with "open" status (field disabled during creation), "Manage Forms" button only visible for open status, "Start Collection" button only appears after forms are added, once collection starts forms cannot be added and manage forms is disabled
 ```
 
 ## User Preferences

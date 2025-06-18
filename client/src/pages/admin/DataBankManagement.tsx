@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { apiClient } from '@/lib/api';
+import { useAuth } from '@/hooks/useSimpleAuth';
+import { simpleApiClient } from '@/lib/simpleApi';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -53,7 +53,7 @@ export const DataBankManagement = () => {
 
   const fetchReferenceData = async () => {
     try {
-      const data = await apiClient.get('/api/data-banks');
+      const data = await simpleApiClient.get('/api/data-banks');
 
       if (!data) {
         console.error('Error fetching reference data');
@@ -74,7 +74,7 @@ export const DataBankManagement = () => {
 
   const fetchDepartments = async () => {
     try {
-      const data = await apiClient.get('/api/departments');
+      const data = await simpleApiClient.get('/api/departments');
       setDepartments(data || []);
     } catch (error) {
       console.error('Error in fetchDepartments:', error);
@@ -97,20 +97,7 @@ export const DataBankManagement = () => {
     }
 
     try {
-      if (editingReferenceData) {
-        await apiClient.put(`/api/data-banks/${editingReferenceData.id}`, {
-          name: editingReferenceData.name,
-          description: editingReferenceData.description || null,
-          updated_at: new Date().toISOString()
-        });
-      } else {
-        await apiClient.post('/api/data-banks', {
-          name: 'New Data Bank',
-          description: null,
-          department_id: null,
-          created_by: profile!.id
-        });
-      }
+      await simpleApiClient.delete(`/api/data-banks/${referenceDataId}`);
 
       toast({
         title: "Success",

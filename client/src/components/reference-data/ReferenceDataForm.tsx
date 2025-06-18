@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { apiClient } from '@/lib/api';
+import { useAuth } from '@/hooks/useSimpleAuth';
+import { simpleApiClient } from '@/lib/simpleApi';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -74,7 +74,7 @@ export const ReferenceDataForm = ({
     try {
       if (editingReferenceData) {
         // Update existing reference data
-        await apiClient.put(`/api/data-banks/${editingReferenceData.id}`, {
+        await simpleApiClient.put(`/api/data-banks/${editingReferenceData.id}`, {
           name: formData.name,
           description: formData.description || null,
           department_id: formData.department_id || null,
@@ -87,7 +87,7 @@ export const ReferenceDataForm = ({
         });
       } else {
         // Create new reference data
-        await apiClient.post('/api/data-banks', {
+        await simpleApiClient.post('/api/data-banks', {
           name: formData.name,
           description: formData.description || null,
           department_id: formData.department_id || null,

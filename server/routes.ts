@@ -304,7 +304,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/data-banks/:dataBankId/entries', requireAuth, async (req, res) => {
+  app.post('/api/data-banks/:dataBankId/entries', requireAuth, async (req: any, res) => {
     try {
       const validatedData = insertDataBankEntrySchema.parse({
         ...req.body,
@@ -402,7 +402,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/forms', requireAuth, async (req, res) => {
+  app.post('/api/forms', requireAuth, async (req: any, res) => {
     try {
       const validatedData = insertFormSchema.parse({
         ...req.body,
@@ -625,7 +625,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/schedules', requireAuth, async (req, res) => {
+  app.post('/api/schedules', requireAuth, async (req: any, res) => {
     try {
       const validatedData = insertScheduleSchema.parse({
         ...req.body,
@@ -847,7 +847,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/schedule-forms/:scheduleFormId/completions', requireAuth, async (req, res) => {
+  app.post('/api/schedule-forms/:scheduleFormId/completions', requireAuth, async (req: any, res) => {
     try {
       const validatedData = insertScheduleFormCompletionSchema.parse({
         schedule_form_id: req.params.scheduleFormId,

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { apiClient } from '@/lib/api';
+import { useAuth } from '@/hooks/useSimpleAuth';
+import { simpleApiClient } from '@/lib/simpleApi';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';

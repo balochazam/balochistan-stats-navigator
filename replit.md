@@ -124,6 +124,7 @@ Changelog:
 - June 18, 2025. Added user creation capabilities with department assignment and implemented department-based access control - non-admin users only see data from their assigned department
 - June 18, 2025. Fixed Data Collection page filtering to show schedules with "collection" status regardless of end date, ensuring department users can access their assigned forms
 - June 18, 2025. Enabled shared access to Data Bank Management for all authenticated users while maintaining department isolation for operational data
+- June 18, 2025. Fixed Data Collection infinite loading loop issue and implemented status-only filtering - schedules are now filtered purely by "collection" status, not dates, allowing users to access forms regardless of time ranges
 ```
 
 ## User Preferences

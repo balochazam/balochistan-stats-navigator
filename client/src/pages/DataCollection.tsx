@@ -58,14 +58,16 @@ export const DataCollection = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchActiveSchedules = useCallback(async () => {
+
+
+  const loadData = useCallback(async () => {
     if (!profile?.id) return;
     
+    setLoading(true);
     try {
-      console.log('Fetching active schedules...');
-      setError(null);
+      console.log('Loading data for Data Collection...');
       
-      // Get active schedules (collection status)
+      // Get active schedules (collection status only)
       const schedulesData = await simpleApiClient.get('/api/schedules');
       const activeSchedules = schedulesData.filter((schedule: any) => 
         schedule.status === 'collection'
@@ -85,124 +87,104 @@ export const DataCollection = () => {
         let filteredSchedules = activeSchedules;
 
         if (profile?.role !== 'admin' && profile?.department_id) {
-          // Get all forms to check department associations
           const allForms = await simpleApiClient.get('/api/forms');
           
-          // Filter schedule forms based on department
           filteredScheduleForms = relevantScheduleForms.filter((sf: any) => {
             const form = allForms.find((f: any) => f.id === sf.form_id);
             return form && form.department_id === profile.department_id;
           });
 
-          // Only show schedules that have forms for this department
           const scheduleIdsWithDeptForms = new Set(filteredScheduleForms.map((sf: any) => sf.schedule_id));
           filteredSchedules = activeSchedules.filter((schedule: any) => 
             scheduleIdsWithDeptForms.has(schedule.id)
           );
         }
 
-        console.log('Filtered schedules for department:', filteredSchedules);
-        console.log('Filtered schedule forms:', filteredScheduleForms);
-        
         setSchedules(filteredSchedules || []);
         setScheduleForms(filteredScheduleForms || []);
+
+        // Get user submissions
+        const submissionsData = await simpleApiClient.get('/api/form-submissions');
+        setSubmissions(submissionsData || []);
+
+        // Get user completions
+        if (filteredScheduleForms.length > 0) {
+          const completionPromises = filteredScheduleForms.map(async (sf: any) => {
+            try {
+              const data = await simpleApiClient.get(`/api/schedule-form-completions/${sf.id}`);
+              return data.filter((completion: any) => completion.user_id === profile.id);
+            } catch (error) {
+              return [];
+            }
+          });
+
+          const allCompletions = await Promise.all(completionPromises);
+          const flatCompletions = allCompletions.flat();
+          setCompletions(flatCompletions || []);
+        }
       } else {
         setSchedules([]);
         setScheduleForms([]);
+        setSubmissions([]);
+        setCompletions([]);
       }
     } catch (error) {
-      console.error('Error fetching schedules:', error);
-      console.error('Error details:', error instanceof Error ? error.message : error);
-      setError('Failed to fetch active schedules');
-      toast({
-        title: "Error",
-        description: "Failed to fetch active schedules",
-        variant: "destructive",
-      });
-    }
-  }, [profile?.id, profile?.role, profile?.department_id, toast]);
-
-  const fetchUserSubmissions = useCallback(async () => {
-    if (!profile?.id) return;
-
-    try {
-      console.log('Fetching user submissions...');
-      const data = await simpleApiClient.get(`/api/form-submissions?userId=${profile.id}`);
-
-      console.log('Submissions fetched:', data);
-      setSubmissions(data || []);
-    } catch (error) {
-      console.error('Error fetching submissions:', error);
-    }
-  }, [profile?.id]);
-
-  const fetchUserCompletions = useCallback(async () => {
-    if (!profile?.id || !scheduleForms.length) return;
-
-    try {
-      console.log('Fetching user completions...');
-      // Fetch completions for each schedule form that belongs to this user's department
-      const completionPromises = scheduleForms.map(async (sf: any) => {
-        try {
-          const data = await simpleApiClient.get(`/api/schedule-form-completions/${sf.id}`);
-          return data.filter((completion: any) => completion.user_id === profile.id);
-        } catch (error) {
-          // If no completions found, return empty array
-          return [];
-        }
-      });
-
-      const allCompletions = await Promise.all(completionPromises);
-      const flatCompletions = allCompletions.flat();
-
-      console.log('Completions fetched:', flatCompletions);
-      setCompletions(flatCompletions || []);
-    } catch (error) {
-      console.error('Error fetching completions:', error);
-      setCompletions([]);
-    }
-  }, [profile?.id, scheduleForms]);
-
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      // Fetch schedules and schedule forms first
-      await fetchActiveSchedules();
-      // Then fetch submissions
-      await fetchUserSubmissions();
-      // Finally fetch completions after schedule forms are loaded
-      setTimeout(() => {
-        fetchUserCompletions();
-      }, 100);
-    } catch (error) {
       console.error('Error loading data:', error);
+      setError('Failed to load data');
     }
     setLoading(false);
-  }, [fetchActiveSchedules, fetchUserSubmissions, fetchUserCompletions]);
+  }, [profile?.id, profile?.role, profile?.department_id]);
 
   useEffect(() => {
     if (profile?.id && !authLoading) {
       loadData();
     }
-  }, [profile?.id, authLoading, loadData]);
+  }, [profile?.id, authLoading]);
 
-  const handleFormSubmitted = useCallback(() => {
-    fetchUserSubmissions();
+  const handleFormSubmitted = useCallback(async () => {
+    // Refresh submissions data
+    try {
+      const submissionsData = await simpleApiClient.get('/api/form-submissions');
+      setSubmissions(submissionsData || []);
+    } catch (error) {
+      console.error('Error refreshing submissions:', error);
+    }
+    
     toast({
       title: "Success",
       description: "Entry added successfully",
     });
-  }, [fetchUserSubmissions, toast]);
+  }, [toast]);
 
-  const handleFormCompleted = useCallback(() => {
+  const handleFormCompleted = useCallback(async () => {
     setSelectedScheduleForm(null);
     setSelectedSchedule(null);
-    fetchUserCompletions();
+    
+    // Refresh completions data
+    if (scheduleForms.length > 0 && profile?.id) {
+      try {
+        const completionPromises = scheduleForms.map(async (sf: any) => {
+          try {
+            const data = await simpleApiClient.get(`/api/schedule-form-completions/${sf.id}`);
+            return data.filter((completion: any) => completion.user_id === profile.id);
+          } catch (error) {
+            return [];
+          }
+        });
+
+        const allCompletions = await Promise.all(completionPromises);
+        const flatCompletions = allCompletions.flat();
+        setCompletions(flatCompletions || []);
+      } catch (error) {
+        console.error('Error refreshing completions:', error);
+      }
+    }
+    
     toast({
       title: "Success",
       description: "Form marked as complete",
     });
-  }, [fetchUserCompletions, toast]);
+  }, [scheduleForms, profile?.id, toast]);
 
   const handleSelectForm = useCallback((scheduleForm: ScheduleForm) => {
     const schedule = schedules.find(s => s.id === scheduleForm.schedule_id);

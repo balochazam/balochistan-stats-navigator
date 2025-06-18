@@ -181,7 +181,7 @@ export const Reports = () => {
 
   // Get unique departments for filter dropdown
   const uniqueDepartments = Array.from(new Set(
-    scheduleForms.map(form => form.form.department?.name).filter(Boolean)
+    scheduleForms.map(form => form.form.department?.name).filter((name): name is string => Boolean(name))
   ));
 
   const handleViewSchedule = async (schedule: Schedule) => {
@@ -336,7 +336,7 @@ export const Reports = () => {
   };
 
   const exportToCSV = () => {
-    if (!selectedForm || !formFields.length || !formSubmissions.length) return;
+    if (!selectedForm || !formFields.length || !filteredSubmissions.length) return;
     
     let headers: string[];
     let rows: string[][];
@@ -352,7 +352,7 @@ export const Reports = () => {
     } else {
       // Use simple structure for non-hierarchical forms
       headers = ['Submission Date', ...formFields.map(field => field.field_label)];
-      rows = formSubmissions.map(submission => [
+      rows = filteredSubmissions.map(submission => [
         new Date(submission.submitted_at).toLocaleDateString(),
         ...formFields.map(field => submission.data?.[field.field_name] || '')
       ]);
@@ -372,7 +372,7 @@ export const Reports = () => {
   };
 
   const exportToPDF = () => {
-    if (!selectedForm || !formFields.length || !formSubmissions.length) return;
+    if (!selectedForm || !formFields.length || !filteredSubmissions.length) return;
     
     // Create a new window for PDF generation
     const printWindow = window.open('', '_blank');
@@ -449,7 +449,7 @@ export const Reports = () => {
           </thead>
           
           <tbody>
-            ${formSubmissions.map((submission) => `
+            ${filteredSubmissions.map((submission) => `
               <tr style="page-break-inside: avoid;">
                 <td style="border: 1px solid #000; padding: 6px; font-weight: bold; background-color: #f8f9fa; text-align: left;">
                   ${primaryField?.field_name ? (submission.data as any)?.[primaryField.field_name] || '-' : '-'}
@@ -486,7 +486,7 @@ export const Reports = () => {
             </tr>
           </thead>
           <tbody>
-            ${formSubmissions.map(submission => `
+            ${filteredSubmissions.map(submission => `
               <tr>
                 <td style="border: 1px solid #000; padding: 6px; text-align: center;">
                   ${new Date(submission.submitted_at).toLocaleDateString()}
@@ -817,12 +817,15 @@ export const Reports = () => {
                 <h3 className="text-lg font-semibold">{selectedForm.form.name} - Data Report</h3>
                 <p className="text-gray-600">Submitted data for {selectedSchedule.name}</p>
               </div>
-              <div className="flex space-x-2">
-                <Button variant="outline" onClick={exportToPDF} disabled={!formSubmissions.length}>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">
+                  {filteredSubmissions.length} of {formSubmissions.length} submissions
+                </Badge>
+                <Button variant="outline" onClick={exportToPDF} disabled={!filteredSubmissions.length}>
                   <FileX className="h-4 w-4 mr-2" />
                   Export PDF
                 </Button>
-                <Button variant="outline" onClick={exportToCSV} disabled={!formSubmissions.length}>
+                <Button variant="outline" onClick={exportToCSV} disabled={!filteredSubmissions.length}>
                   <Download className="h-4 w-4 mr-2" />
                   Export CSV
                 </Button>
@@ -831,6 +834,45 @@ export const Reports = () => {
                 </Button>
               </div>
             </div>
+
+            {/* Submissions Filter */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Filter className="h-4 w-4" />
+                  Filter Submissions
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Filter by submission date</label>
+                    <Select value={submissionDateFilter} onValueChange={setSubmissionDateFilter}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select date range" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All submissions</SelectItem>
+                        <SelectItem value="today">Today</SelectItem>
+                        <SelectItem value="this_week">This week</SelectItem>
+                        <SelectItem value="this_month">This month</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-end">
+                    {submissionDateFilter !== 'all' && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => setSubmissionDateFilter('all')}
+                      >
+                        Clear filter
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             {loadingData ? (
               <div className="text-center py-8">Loading data...</div>

@@ -91,9 +91,15 @@ export const PublicLanding = () => {
   };
 
   const generateChartData = (schedules: Schedule[]) => {
+    if (!schedules || schedules.length === 0) {
+      setChartData([]);
+      setSubmissionStats([]);
+      return;
+    }
+
     // Department distribution
     const deptCounts = schedules.reduce((acc: any, schedule) => {
-      const deptName = schedule.department?.name || 'Unknown';
+      const deptName = schedule.department?.name || 'General';
       acc[deptName] = (acc[deptName] || 0) + 1;
       return acc;
     }, {});
@@ -104,18 +110,25 @@ export const PublicLanding = () => {
     }));
     setChartData(deptData);
 
-    // Monthly submission trends
+    // Monthly publication trends
     const monthlyData = schedules.reduce((acc: any, schedule) => {
-      const month = new Date(schedule.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      const date = new Date(schedule.created_at);
+      const month = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
       acc[month] = (acc[month] || 0) + 1;
       return acc;
     }, {});
 
-    const trendData = Object.entries(monthlyData).map(([month, count]) => ({
-      month,
-      reports: count as number
-    }));
-    setSubmissionStats(trendData);
+    // Sort by date and limit to last 6 months
+    const sortedMonths = Object.entries(monthlyData)
+      .map(([month, count]) => ({
+        month,
+        reports: count as number,
+        date: new Date(month)
+      }))
+      .sort((a, b) => a.date.getTime() - b.date.getTime())
+      .slice(-6);
+
+    setSubmissionStats(sortedMonths);
   };
 
   const filteredSchedules = publishedSchedules.filter(schedule => {

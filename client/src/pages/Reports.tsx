@@ -9,7 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText, Download, Eye, Calendar, FileX, Search, Filter } from 'lucide-react';
+import { FileText, Download, Eye, Calendar, FileX, Search, Filter, BarChart3, PieChart, TrendingUp } from 'lucide-react';
+import { PieChart as RechartsPieChart, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 
 interface Schedule {
   id: string;
@@ -99,10 +100,64 @@ export const Reports = () => {
   const [departmentFilter, setDepartmentFilter] = useState('all');
   const [submissionDateFilter, setSubmissionDateFilter] = useState('all');
   const [tableSearchFilter, setTableSearchFilter] = useState('');
+  
+  // Chart data states
+  const [chartData, setChartData] = useState<any[]>([]);
+  const [submissionStats, setSubmissionStats] = useState<any[]>([]);
 
   useEffect(() => {
     fetchPublishedSchedules();
   }, []);
+
+  useEffect(() => {
+    if (publishedSchedules.length > 0) {
+      generateChartData(publishedSchedules);
+    }
+  }, [publishedSchedules]);
+
+  const generateChartData = (schedules: Schedule[]) => {
+    if (!schedules || schedules.length === 0) {
+      setChartData([]);
+      setSubmissionStats([]);
+      return;
+    }
+
+    // Department distribution for authenticated users
+    const deptCounts = schedules.reduce((acc: any, schedule) => {
+      // Get department from schedule forms
+      const scheduleForms = allScheduleForms.filter(sf => sf.schedule_id === schedule.id);
+      if (scheduleForms.length > 0) {
+        const deptName = scheduleForms[0].form.department?.name || 'General';
+        acc[deptName] = (acc[deptName] || 0) + 1;
+      }
+      return acc;
+    }, {});
+
+    const deptData = Object.entries(deptCounts).map(([name, value]) => ({
+      name,
+      value: value as number
+    }));
+    setChartData(deptData);
+
+    // Monthly publication trends
+    const monthlyData = schedules.reduce((acc: any, schedule) => {
+      const date = new Date(schedule.created_at);
+      const month = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      acc[month] = (acc[month] || 0) + 1;
+      return acc;
+    }, {});
+
+    const sortedMonths = Object.entries(monthlyData)
+      .map(([month, count]) => ({
+        month,
+        reports: count as number,
+        date: new Date(month)
+      }))
+      .sort((a, b) => a.date.getTime() - b.date.getTime())
+      .slice(-6);
+
+    setSubmissionStats(sortedMonths);
+  };
 
   // Handle URL parameters for direct navigation to schedule/form
   useEffect(() => {

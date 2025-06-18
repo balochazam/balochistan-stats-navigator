@@ -103,14 +103,42 @@ export const PublicReportView = () => {
   };
 
   const generateChartData = (submissionData: FormSubmission[]) => {
-    // Generate visualization data based on submissions
-    const departmentCounts = submissionData.reduce((acc: any, submission) => {
-      const deptName = submission.profile?.department?.name || 'Unknown';
-      acc[deptName] = (acc[deptName] || 0) + 1;
+    if (!submissionData || submissionData.length === 0) {
+      setChartData([]);
+      return;
+    }
+
+    // Generate visualization data based on the primary column values in submission data
+    const primaryColumnCounts = submissionData.reduce((acc: any, submission) => {
+      if (!submission.data) return acc;
+      
+      // Find the primary column value from the submission data
+      const data = submission.data;
+      const keys = Object.keys(data);
+      
+      // Look for common primary column patterns (province, district, etc.)
+      let primaryValue = 'Unknown';
+      for (const key of keys) {
+        if (key.toLowerCase().includes('province') || 
+            key.toLowerCase().includes('district') || 
+            key.toLowerCase().includes('location') ||
+            key.toLowerCase().includes('institution') ||
+            key.toLowerCase().includes('name')) {
+          primaryValue = data[key] || 'Unknown';
+          break;
+        }
+      }
+      
+      // If no primary column found, use the first non-empty value
+      if (primaryValue === 'Unknown' && keys.length > 0) {
+        primaryValue = data[keys[0]] || 'Unknown';
+      }
+      
+      acc[primaryValue] = (acc[primaryValue] || 0) + 1;
       return acc;
     }, {});
 
-    const chartData = Object.entries(departmentCounts).map(([name, value]) => ({
+    const chartData = Object.entries(primaryColumnCounts).map(([name, value]) => ({
       name,
       submissions: value as number
     }));
@@ -148,40 +176,140 @@ export const PublicReportView = () => {
     
     if (!primaryField) return renderSimpleTable(formSubmissions, formData);
 
+    // Helper function to get structured hierarchical data for table display
+    const getHierarchicalTableStructure = () => {
+      const structure: any = {};
+      
+      formFields.forEach((field: any) => {
+        if (field.has_sub_headers && field.sub_headers) {
+          field.sub_headers.forEach((subHeader: any) => {
+            const categoryName = subHeader.label || subHeader.name;
+            
+            if (!structure[categoryName]) {
+              structure[categoryName] = {
+                name: categoryName,
+                fields: [],
+                subCategories: {}
+              };
+            }
+            
+            if (subHeader.fields) {
+              subHeader.fields.forEach((subField: any) => {
+                if (subField.has_sub_headers && subField.sub_headers) {
+                  // Handle nested sub-headers (e.g., Medical/Dental under Specialists)
+                  subField.sub_headers.forEach((nestedSubHeader: any) => {
+                    const subCategoryName = nestedSubHeader.label || nestedSubHeader.name;
+                    
+                    if (!structure[categoryName].subCategories[subCategoryName]) {
+                      structure[categoryName].subCategories[subCategoryName] = {
+                        name: subCategoryName,
+                        fields: []
+                      };
+                    }
+                    
+                    if (nestedSubHeader.fields) {
+                      nestedSubHeader.fields.forEach((nestedField: any) => {
+                        structure[categoryName].subCategories[subCategoryName].fields.push({
+                          key: `${field.field_name}_${subHeader.name}_${subField.field_name}_${nestedSubHeader.name}_${nestedField.field_name}`,
+                          label: nestedField.field_label,
+                          type: 'nested'
+                        });
+                      });
+                    }
+                  });
+                } else {
+                  // Regular sub-header fields
+                  structure[categoryName].fields.push({
+                    key: `${field.field_name}_${subHeader.name}_${subField.field_name}`,
+                    label: subField.field_label,
+                    type: 'regular'
+                  });
+                }
+              });
+            }
+          });
+        }
+      });
+      
+      return structure;
+    };
+
+    const structure = getHierarchicalTableStructure();
+    
+    // Calculate column spans
+    const getColumnSpan = (category: any) => {
+      let span = category.fields.length;
+      Object.values(category.subCategories).forEach((subCat: any) => {
+        span += subCat.fields.length;
+      });
+      return span;
+    };
+
     return (
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
+            {/* First header row - Main categories */}
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th rowSpan={3} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300 bg-blue-50">
                 {primaryField.field_label}
               </th>
-              {fieldGroups.map((group: any) => {
-                const groupFields = formFields.filter((field: any) => field.field_group_id === group.id);
-                if (groupFields.length === 0) return null;
-
-                // Check if group has sub-headers
-                const hasSubHeaders = groupFields.some((field: any) => field.sub_headers && field.sub_headers.length > 0);
-
-                if (hasSubHeaders) {
-                  return groupFields.map((field: any) => 
-                    field.sub_headers?.map((subHeader: string) => (
-                      <th key={`${field.id}-${subHeader}`} className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        <div className="text-center">
-                          <div className="font-semibold">{group.group_name}</div>
-                          <div className="text-xs">{subHeader}</div>
-                        </div>
+              {Object.values(structure).map((category: any, index) => (
+                <th 
+                  key={category.name} 
+                  colSpan={getColumnSpan(category)} 
+                  className={`px-3 py-2 text-center text-xs font-bold text-gray-700 uppercase tracking-wider border border-gray-300 ${
+                    category.name === 'Doctors' ? 'bg-green-100' :
+                    category.name === 'Dentists' ? 'bg-blue-100' :
+                    category.name === 'Specialists' ? 'bg-purple-100' : 'bg-gray-100'
+                  }`}
+                >
+                  {category.name}
+                </th>
+              ))}
+            </tr>
+            
+            {/* Second header row - Sub categories (Medical/Dental) */}
+            {Object.values(structure).some((category: any) => Object.keys(category.subCategories).length > 0) && (
+              <tr>
+                {Object.values(structure).map((category: any) => (
+                  Object.keys(category.subCategories).length > 0 ? 
+                    Object.values(category.subCategories).map((subCat: any) => (
+                      <th 
+                        key={subCat.name} 
+                        colSpan={subCat.fields.length} 
+                        className="px-2 py-2 text-center text-xs font-medium text-gray-600 border border-gray-300 bg-gray-50"
+                      >
+                        {subCat.name}
                       </th>
-                    ))
-                  );
-                } else {
-                  return (
-                    <th key={group.id} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider text-center">
-                      {group.group_name}
+                    )) : 
+                    <th 
+                      key={category.name} 
+                      colSpan={category.fields.length} 
+                      className="px-2 py-2 text-center text-xs font-medium text-gray-600 border border-gray-300 bg-gray-50"
+                    >
+                      {/* Empty for categories without subcategories */}
                     </th>
-                  );
-                }
-              })}
+                ))}
+              </tr>
+            )}
+            
+            {/* Third header row - Gender (Male/Female) */}
+            <tr>
+              {Object.values(structure).map((category: any) => [
+                ...category.fields.map((field: any) => (
+                  <th key={field.key} className="px-2 py-2 text-center text-xs font-medium text-gray-600 border border-gray-300 bg-white">
+                    {field.label}
+                  </th>
+                )),
+                ...Object.values(category.subCategories).map((subCat: any) => 
+                  subCat.fields.map((field: any) => (
+                    <th key={field.key} className="px-2 py-2 text-center text-xs font-medium text-gray-600 border border-gray-300 bg-white">
+                      {field.label}
+                    </th>
+                  ))
+                )
+              ])}
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -191,33 +319,23 @@ export const PublicReportView = () => {
 
               return (
                 <tr key={submission.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 border border-gray-300">
                     {primaryValue}
                   </td>
-                  {fieldGroups.map((group: any) => {
-                    const groupFields = formFields.filter((field: any) => field.field_group_id === group.id);
-                    
-                    return groupFields.map((field: any) => {
-                      if (field.sub_headers && field.sub_headers.length > 0) {
-                        return field.sub_headers.map((subHeader: string) => {
-                          const fieldKey = `${field.field_name}_${subHeader.toLowerCase().replace(/\s+/g, '_')}`;
-                          const value = data[fieldKey] || '0';
-                          return (
-                            <td key={`${field.id}-${subHeader}`} className="px-3 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
-                              {value}
-                            </td>
-                          );
-                        });
-                      } else {
-                        const value = data[field.field_name] || '0';
-                        return (
-                          <td key={field.id} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
-                            {value}
-                          </td>
-                        );
-                      }
-                    });
-                  })}
+                  {Object.values(structure).map((category: any) => [
+                    ...category.fields.map((field: any) => (
+                      <td key={field.key} className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 text-center border border-gray-300">
+                        {data[field.key] || '0'}
+                      </td>
+                    )),
+                    ...Object.values(category.subCategories).map((subCat: any) => 
+                      subCat.fields.map((field: any) => (
+                        <td key={field.key} className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 text-center border border-gray-300">
+                          {data[field.key] || '0'}
+                        </td>
+                      ))
+                    )
+                  ])}
                 </tr>
               );
             })}

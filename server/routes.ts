@@ -937,7 +937,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const schedules = await storage.getSchedules();
       const publishedSchedules = schedules.filter(schedule => schedule.status === 'published');
-      res.json(publishedSchedules);
+      
+      // Add department information to each schedule
+      const schedulesWithDepartments = await Promise.all(
+        publishedSchedules.map(async (schedule) => {
+          // Get a form from this schedule to determine the department
+          const scheduleForms = await storage.getScheduleForms(schedule.id);
+          if (scheduleForms.length > 0) {
+            const form = await storage.getForm(scheduleForms[0].form_id);
+            if (form && form.department_id) {
+              const departments = await storage.getDepartments();
+              const department = departments.find(d => d.id === form.department_id);
+              return {
+                ...schedule,
+                department: department ? { name: department.name } : null
+              };
+            }
+          }
+          return { ...schedule, department: null };
+        })
+      );
+      
+      res.json(schedulesWithDepartments);
     } catch (error) {
       console.error('Error fetching published schedules:', error);
       res.status(500).json({ error: 'Failed to fetch published schedules' });

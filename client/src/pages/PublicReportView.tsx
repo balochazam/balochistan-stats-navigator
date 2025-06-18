@@ -93,8 +93,10 @@ export const PublicReportView = () => {
       const submissionsData = await simpleApiClient.get(`/api/public/schedules/${scheduleId}/submissions`);
       setSubmissions(submissionsData || []);
 
-      // Generate chart data
-      generateChartData(submissionsData || []);
+      // Generate chart data for the first form by default
+      if (formsData && formsData.length > 0) {
+        setActiveForm(formsData[0].id);
+      }
     } catch (error) {
       console.error('Error fetching report data:', error);
     } finally {
@@ -144,6 +146,14 @@ export const PublicReportView = () => {
     }));
     setChartData(chartData);
   };
+
+  // Update chart data when active form changes
+  useEffect(() => {
+    if (activeForm && submissions.length > 0) {
+      const activeFormSubmissions = getActiveFormSubmissions();
+      generateChartData(activeFormSubmissions);
+    }
+  }, [activeForm, submissions]);
 
   const getActiveFormSubmissions = () => {
     return submissions.filter(sub => 
@@ -319,6 +329,9 @@ export const PublicReportView = () => {
               const data = submission.data || {};
               const primaryValue = data[primaryField.field_name] || '';
 
+              // Only show rows that have actual data (not empty primary value)
+              if (!primaryValue || primaryValue === '') return null;
+
               return (
                 <tr key={submission.id}>
                   <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 border border-gray-300">
@@ -370,6 +383,14 @@ export const PublicReportView = () => {
           <tbody className="bg-white divide-y divide-gray-200">
             {formSubmissions.map((submission) => {
               const data = submission.data || {};
+              
+              // Only show rows that have actual data (check if any field has a value)
+              const hasData = formFields.some((field: any) => 
+                data[field.field_name] && data[field.field_name] !== ''
+              );
+              
+              if (!hasData) return null;
+
               return (
                 <tr key={submission.id}>
                   {formFields.map((field: any) => (

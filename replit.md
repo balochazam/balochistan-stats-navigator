@@ -132,6 +132,7 @@ Changelog:
 - June 18, 2025. Implemented comprehensive schedule business validation rules - new schedules automatically start with "open" status (field disabled during creation), "Manage Forms" button only visible for open status, "Start Collection" button only appears after forms are added, once collection starts forms cannot be added and manage forms is disabled
 - June 18, 2025. Enhanced form creation interface with comprehensive guidance and teaching elements - added step-by-step instructions, best practices, field type explanations, and real-world examples to help users understand hierarchical vs simple form creation
 - June 18, 2025. Transformed application to public-first architecture - removed sign-up functionality, created beautiful public landing page with charts and analytics for published reports, admin users now create all accounts, main homepage shows transparent data visualization with interactive charts and department filtering
+- June 18, 2025. Enhanced public reports to display only actual data rows (no zero-filled empty rows) and implemented dynamic chart updates that change when switching between form tabs - charts now show data specific to the currently selected form rather than static first-form data
 ```
 
 ## User Preferences

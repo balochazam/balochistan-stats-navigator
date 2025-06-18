@@ -4,28 +4,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  BarChart, 
-  Bar, 
-  LineChart, 
-  Line, 
-  PieChart, 
-  Pie, 
-  Cell, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend, 
-  ResponsiveContainer 
-} from 'recharts';
+
 import { 
   ArrowLeft, 
   Download, 
   Calendar, 
   Users, 
   FileText,
-  BarChart3,
+
   Database,
   Eye
 } from 'lucide-react';
@@ -67,7 +53,7 @@ export const PublicReportView = () => {
   const [forms, setForms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeForm, setActiveForm] = useState<string>('');
-  const [chartData, setChartData] = useState<any[]>([]);
+
 
   useEffect(() => {
     if (scheduleId) {
@@ -104,61 +90,57 @@ export const PublicReportView = () => {
     }
   };
 
-  const generateChartData = (submissionData: FormSubmission[]) => {
-    if (!submissionData || submissionData.length === 0) {
-      setChartData([]);
-      return;
-    }
 
-    // Generate visualization data based on the primary column values in submission data
-    const primaryColumnCounts = submissionData.reduce((acc: any, submission) => {
-      if (!submission.data) return acc;
-      
-      // Find the primary column value from the submission data
-      const data = submission.data;
-      const keys = Object.keys(data);
-      
-      // Look for common primary column patterns (province, district, etc.)
-      let primaryValue = 'Unknown';
-      for (const key of keys) {
-        if (key.toLowerCase().includes('province') || 
-            key.toLowerCase().includes('district') || 
-            key.toLowerCase().includes('location') ||
-            key.toLowerCase().includes('institution') ||
-            key.toLowerCase().includes('name')) {
-          primaryValue = data[key] || 'Unknown';
-          break;
-        }
-      }
-      
-      // If no primary column found, use the first non-empty value
-      if (primaryValue === 'Unknown' && keys.length > 0) {
-        primaryValue = data[keys[0]] || 'Unknown';
-      }
-      
-      acc[primaryValue] = (acc[primaryValue] || 0) + 1;
-      return acc;
-    }, {});
-
-    const chartData = Object.entries(primaryColumnCounts).map(([name, value]) => ({
-      name,
-      submissions: value as number
-    }));
-    setChartData(chartData);
-  };
-
-  // Update chart data when active form changes
-  useEffect(() => {
-    if (activeForm && submissions.length > 0) {
-      const activeFormSubmissions = getActiveFormSubmissions();
-      generateChartData(activeFormSubmissions);
-    }
-  }, [activeForm, submissions]);
 
   const getActiveFormSubmissions = () => {
     return submissions.filter(sub => 
       forms.find(form => form.id === activeForm)?.id === activeForm
     );
+  };
+
+  const exportAllFormsData = () => {
+    if (forms.length === 0 || submissions.length === 0) return;
+
+    const csvContent = forms.map(form => {
+      const formSubmissions = submissions.filter(sub => sub.form_id === form.id);
+      if (formSubmissions.length === 0) return '';
+
+      const formFields = form.form_fields || [];
+      const rows = [];
+
+      // Add form header
+      rows.push(`\n=== ${form.name} ===`);
+      
+      // Add CSV headers
+      const headers = formFields.map(field => field.field_label);
+      headers.push('Submitted Date');
+      rows.push(headers.join(','));
+
+      // Add data rows
+      formSubmissions.forEach(submission => {
+        const data = submission.data || {};
+        const row = formFields.map(field => {
+          const value = data[field.field_name] || '';
+          // Escape commas and quotes in CSV
+          return `"${String(value).replace(/"/g, '""')}"`;
+        });
+        row.push(`"${new Date(submission.submitted_at).toLocaleDateString()}"`);
+        rows.push(row.join(','));
+      });
+
+      return rows.join('\n');
+    }).filter(content => content).join('\n\n');
+
+    // Create and download CSV file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${schedule.name}_all_forms_data.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const renderDataTable = () => {
@@ -556,29 +538,8 @@ export const PublicReportView = () => {
           </Card>
         )}
 
-        {/* Charts Section - Moved below table */}
-        {chartData.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <BarChart3 className="h-5 w-5 mr-2 text-blue-600" />
-                Submission Distribution
-              </CardTitle>
-              <CardDescription>Distribution by location/category</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="submissions" fill="#2563eb" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        )}
+
+
 
         {forms.length === 0 && (
           <Card>

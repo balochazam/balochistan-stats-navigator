@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is a full-stack data collection management system built with React, Node.js, Express, and Supabase. The application enables organizations to create structured forms, manage data collection schedules, and collect data from users across different departments. It features role-based access control with admin, department user, and data entry user roles.
+This is a full-stack data collection management system with a public-first approach, built with React, Node.js, Express, and PostgreSQL. The application features a beautiful public landing page showcasing published reports with interactive charts and visualizations, while providing secure admin access for data collection management. Organizations can create structured forms, manage data collection schedules, and publish transparent reports for public access. It features role-based access control with admin-only user creation and department-based data isolation.
 
 ## System Architecture
 
@@ -131,6 +131,7 @@ Changelog:
 - June 18, 2025. Consolidated duplicate route functionality - removed separate "Completed Schedules" page and integrated all functionality into single "Reports" page with URL parameter support for direct navigation to specific schedules and forms
 - June 18, 2025. Implemented comprehensive schedule business validation rules - new schedules automatically start with "open" status (field disabled during creation), "Manage Forms" button only visible for open status, "Start Collection" button only appears after forms are added, once collection starts forms cannot be added and manage forms is disabled
 - June 18, 2025. Enhanced form creation interface with comprehensive guidance and teaching elements - added step-by-step instructions, best practices, field type explanations, and real-world examples to help users understand hierarchical vs simple form creation
+- June 18, 2025. Transformed application to public-first architecture - removed sign-up functionality, created beautiful public landing page with charts and analytics for published reports, admin users now create all accounts, main homepage shows transparent data visualization with interactive charts and department filtering
 ```
 
 ## User Preferences

@@ -5,10 +5,11 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useSimpleAuth";
-import Index from "./pages/Index";
+import { PublicLanding } from "./pages/PublicLanding";
+import { PublicReportView } from "./pages/PublicReportView";
 import { Dashboard } from "./pages/Dashboard";
 import { Profile } from "./pages/Profile";
-import { AuthPage } from "./pages/AuthPage";
+import { AdminLoginPage } from "./components/auth/AdminLoginPage";
 import NotFound from "./pages/NotFound";
 import { UserManagement } from "./pages/admin/UserManagement";
 import { DepartmentManagement } from "./pages/admin/DepartmentManagement";
@@ -16,7 +17,6 @@ import { DataBankManagement } from "./pages/admin/DataBankManagement";
 import { FormManagement } from "./pages/admin/FormManagement";
 import { ScheduleManagement } from "./pages/admin/ScheduleManagement";
 import { DataCollection } from "./pages/DataCollection";
-
 import { Reports } from "./pages/Reports";
 
 const queryClient = new QueryClient();
@@ -29,18 +29,24 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<AuthPage />} />
+            {/* Public Routes */}
+            <Route path="/" element={<PublicLanding />} />
+            <Route path="/public/reports/:scheduleId" element={<PublicReportView />} />
+            
+            {/* Admin Authentication */}
+            <Route path="/auth" element={<AdminLoginPage />} />
+            
+            {/* Protected Admin Routes */}
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/data-collection" element={<DataCollection />} />
-
             <Route path="/admin/users" element={<UserManagement />} />
             <Route path="/admin/departments" element={<DepartmentManagement />} />
             <Route path="/admin/data-banks" element={<DataBankManagement />} />
             <Route path="/admin/forms" element={<FormManagement />} />
             <Route path="/admin/schedules" element={<ScheduleManagement />} />
             <Route path="/reports" element={<Reports />} />
+            
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

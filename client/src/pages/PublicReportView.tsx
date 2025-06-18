@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 import { 
   ArrowLeft, 
@@ -15,7 +17,9 @@ import {
   Database,
   Eye,
   FileSpreadsheet,
-  File
+  File,
+  Search,
+  Filter
 } from 'lucide-react';
 import { simpleApiClient } from '@/lib/simpleApi';
 import jsPDF from 'jspdf';
@@ -58,10 +62,17 @@ export const PublicReportView = () => {
   const [loading, setLoading] = useState(true);
   const [activeForm, setActiveForm] = useState<string>('');
 
+  // Filter states
+  const [submissionDateFilter, setSubmissionDateFilter] = useState('all');
+  const [tableSearchFilter, setTableSearchFilter] = useState('');
+  const [departmentFilter, setDepartmentFilter] = useState('all');
+  const [departments, setDepartments] = useState<any[]>([]);
+
 
   useEffect(() => {
     if (scheduleId) {
       fetchReportData();
+      fetchDepartments();
     }
   }, [scheduleId]);
 

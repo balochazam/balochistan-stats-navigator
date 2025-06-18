@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { apiClient } from '@/lib/api';
+import { simpleApiClient } from '@/lib/simpleApi';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -66,7 +66,7 @@ export const DataCollection = () => {
       setError(null);
       
       // Get active schedules (collection or open status)
-      const schedulesData = await apiClient.get('/api/schedules');
+      const schedulesData = await simpleApiClient.get('/api/schedules');
       const activeSchedules = schedulesData.filter((schedule: any) => 
         ['open', 'collection'].includes(schedule.status)
       ).sort((a: any, b: any) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
@@ -77,7 +77,7 @@ export const DataCollection = () => {
         const scheduleIds = activeSchedules.map((s: any) => s.id);
         
         // Get schedule forms for active schedules
-        const allScheduleForms = await apiClient.get('/api/schedule-forms');
+        const allScheduleForms = await simpleApiClient.get('/api/schedule-forms');
         const relevantScheduleForms = allScheduleForms.filter((sf: any) => 
           scheduleIds.includes(sf.schedule_id)
         );
@@ -113,7 +113,7 @@ export const DataCollection = () => {
 
     try {
       console.log('Fetching user submissions...');
-      const data = await apiClient.get(`/api/form-submissions?userId=${profile.id}`);
+      const data = await simpleApiClient.get(`/api/form-submissions?userId=${profile.id}`);
 
       console.log('Submissions fetched:', data);
       setSubmissions(data || []);

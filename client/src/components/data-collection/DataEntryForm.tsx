@@ -92,6 +92,8 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
   const [error, setError] = useState<string | null>(null);
   const [submissionCount, setSubmissionCount] = useState(0);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [existingSubmissions, setExistingSubmissions] = useState<any[]>([]);
+  const [usedPrimaryValues, setUsedPrimaryValues] = useState<Set<string>>(new Set());
 
   // Memoize the fetch function to prevent unnecessary re-renders
   const fetchFormFields = useCallback(async () => {
@@ -150,19 +152,51 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
     }
   }, [profile?.id, scheduleForm.form_id, scheduleForm.id, schedule.id]);
 
+  const fetchExistingSubmissions = async () => {
+    if (!scheduleForm.form_id || !schedule.id || formFields.length === 0) return;
+
+    try {
+      // Get all submissions for this form in this schedule (all users)
+      const allSubmissions = await simpleApiClient.get(`/api/form-submissions?formId=${scheduleForm.form_id}&scheduleId=${schedule.id}`);
+      
+      setExistingSubmissions(allSubmissions || []);
+
+      // Extract used primary column values
+      const primaryField = formFields.find(field => field.is_primary_column);
+      if (primaryField && allSubmissions) {
+        const usedValues = new Set<string>(
+          allSubmissions
+            .map((submission: any) => submission.form_data?.[primaryField.field_name])
+            .filter((value: any) => value !== null && value !== undefined && value !== '')
+            .map(String)
+        );
+        setUsedPrimaryValues(usedValues);
+        console.log(`Found ${usedValues.size} used primary values for field "${primaryField.field_name}":`, Array.from(usedValues));
+      }
+
+    } catch (error) {
+      console.error('Error fetching existing submissions:', error);
+    }
+  };
+
   // Fetch form fields and submission status when component mounts
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      await Promise.all([
-        fetchFormFields(),
-        fetchSubmissionStatus()
-      ]);
+      await fetchFormFields();
+      await fetchSubmissionStatus();
       setLoading(false);
     };
     
     loadData();
-  }, [fetchFormFields, fetchSubmissionStatus]);
+  }, []);
+
+  // Fetch existing submissions after form fields are loaded
+  useEffect(() => {
+    if (formFields.length > 0) {
+      fetchExistingSubmissions();
+    }
+  }, [formFields.length]);
 
   const handleFieldChange = useCallback((fieldName: string, value: any) => {
     console.log(`Updating field "${fieldName}" with value:`, value);

@@ -57,7 +57,13 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       title: 'Data Collection',
       icon: ClipboardList,
       path: '/data-collection',
-      roles: ['data_entry_user', 'department_head']
+      roles: ['data_entry_user', 'department_user']
+    },
+    {
+      title: 'Completed Schedules',
+      icon: BarChart3,
+      path: '/completed-schedules',
+      roles: ['admin', 'department_user', 'data_entry_user']
     },
     {
       title: 'User Management',

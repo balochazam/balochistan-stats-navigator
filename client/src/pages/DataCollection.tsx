@@ -69,10 +69,10 @@ export const DataCollection = () => {
     try {
       console.log('Loading data for Data Collection...');
       
-      // Get schedules for data collection and viewing published reports
+      // Get active schedules (collection status only)
       const schedulesData = await simpleApiClient.get('/api/schedules');
       const relevantSchedules = schedulesData.filter((schedule: any) => 
-        schedule.status === 'collection' || schedule.status === 'published'
+        schedule.status === 'collection'
       ).sort((a: any, b: any) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
 
       if (relevantSchedules && relevantSchedules.length > 0) {
@@ -304,7 +304,7 @@ export const DataCollection = () => {
               )}
             </CardTitle>
             <CardDescription>
-              Complete forms for active schedules and view reports for published schedules
+              Complete forms for active data collection schedules
             </CardDescription>
           </CardHeader>
         </Card>
@@ -411,17 +411,7 @@ export const DataCollection = () => {
                                 Not yet open for data collection
                               </span>
                             )}
-                            {schedule.status === 'published' && (
-                              <Button
-                                onClick={() => navigate(`/reports?scheduleId=${schedule.id}`)}
-                                variant="outline"
-                                size="sm"
-                                className="flex items-center space-x-1"
-                              >
-                                <FileText className="h-4 w-4" />
-                                <span>View Reports</span>
-                              </Button>
-                            )}
+
                           </div>
                         </div>
                       );

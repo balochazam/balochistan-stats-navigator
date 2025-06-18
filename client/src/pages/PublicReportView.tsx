@@ -99,27 +99,28 @@ export const PublicReportView = () => {
   };
 
   const exportAllFormsData = () => {
-    if (forms.length === 0 || submissions.length === 0) return;
+    if (forms.length === 0 || submissions.length === 0 || !schedule) return;
 
-    const csvContent = forms.map(form => {
-      const formSubmissions = submissions.filter(sub => sub.form_id === form.id);
+    const csvContent = forms.map((form: any) => {
+      const formSubmissions = submissions.filter((sub: any) => sub.form_id === form.id);
+      
       if (formSubmissions.length === 0) return '';
 
       const formFields = form.form_fields || [];
-      const rows = [];
+      const rows: string[] = [];
 
       // Add form header
       rows.push(`\n=== ${form.name} ===`);
       
       // Add CSV headers
-      const headers = formFields.map(field => field.field_label);
+      const headers = formFields.map((field: any) => field.field_label);
       headers.push('Submitted Date');
       rows.push(headers.join(','));
 
       // Add data rows
-      formSubmissions.forEach(submission => {
+      formSubmissions.forEach((submission: any) => {
         const data = submission.data || {};
-        const row = formFields.map(field => {
+        const row = formFields.map((field: any) => {
           const value = data[field.field_name] || '';
           // Escape commas and quotes in CSV
           return `"${String(value).replace(/"/g, '""')}"`;
@@ -441,7 +442,7 @@ export const PublicReportView = () => {
             </div>
             <div className="flex items-center space-x-4">
               <Badge variant="secondary">Published</Badge>
-              <Button variant="outline">
+              <Button variant="outline" onClick={exportAllFormsData}>
                 <Download className="h-4 w-4 mr-2" />
                 Export Data
               </Button>

@@ -174,7 +174,6 @@ export const PublicLanding = () => {
           </div>
         </div>
       </header>
-
       {/* Hero Section */}
       <section className="py-12 bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -197,7 +196,7 @@ export const PublicLanding = () => {
               <div className="bg-white/20 rounded-lg p-6">
                 <BarChart3 className="h-8 w-8 mx-auto mb-3" />
                 <h3 className="text-lg font-semibold">Interactive Charts</h3>
-                <p className="text-blue-100">Visualize data with dynamic charts and graphs</p>
+                <p className="text-blue-100">Visualization and Data filters Help you find specific data</p>
               </div>
             </div>
             <div className="text-center">
@@ -210,7 +209,6 @@ export const PublicLanding = () => {
           </div>
         </div>
       </section>
-
       {/* Statistics Section */}
       <section className="py-12 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -317,7 +315,6 @@ export const PublicLanding = () => {
           </div>
         </div>
       </section>
-
       {/* Published Reports Section */}
       <section className="py-12 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -408,7 +405,6 @@ export const PublicLanding = () => {
           )}
         </div>
       </section>
-
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

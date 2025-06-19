@@ -308,6 +308,7 @@ export const Reports = () => {
     
     formFields.forEach((field: any) => {
       if (field.has_sub_headers && field.sub_headers) {
+        // Handle hierarchical fields (with sub-headers)
         field.sub_headers.forEach((subHeader: any) => {
           const categoryName = subHeader.label || subHeader.name;
           
@@ -350,6 +351,25 @@ export const Reports = () => {
             }
           });
         });
+      } else {
+        // Handle regular standalone fields (like "Projected Population 2022")
+        if (!field.is_primary_column) {
+          const categoryName = "Additional Data";
+          
+          if (!structure[categoryName]) {
+            structure[categoryName] = {
+              name: categoryName,
+              fields: [],
+              subCategories: {}
+            };
+          }
+          
+          structure[categoryName].fields.push({
+            key: field.field_name,
+            label: field.field_label,
+            type: 'standalone'
+          });
+        }
       }
     });
     

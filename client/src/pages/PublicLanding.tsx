@@ -195,7 +195,7 @@ export const PublicLanding = () => {
             <div className="text-center">
               <div className="bg-white/20 rounded-lg p-6">
                 <BarChart3 className="h-8 w-8 mx-auto mb-3" />
-                <h3 className="text-lg font-semibold">Interactive Charts</h3>
+                <h3 className="text-lg font-semibold">User Friendly</h3>
                 <p className="text-blue-100">Visualization and Data filters Help you find specific data</p>
               </div>
             </div>

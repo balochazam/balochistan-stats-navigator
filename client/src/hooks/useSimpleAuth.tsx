@@ -76,7 +76,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const timeout = setTimeout(() => {
       console.warn('Auth initialization timeout');
       setLoading(false);
-    }, 5000);
+    }, 2000);
 
     initializeAuth();
 

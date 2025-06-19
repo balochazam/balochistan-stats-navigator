@@ -204,10 +204,17 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
   const updateSubHeaderField = (fieldIndex: number, subIndex: number, fieldIndex2: number, updates: Partial<SubHeaderField>) => {
     const updatedFields = [...fields];
     if (updatedFields[fieldIndex].sub_headers?.[subIndex]?.fields[fieldIndex2]) {
-      updatedFields[fieldIndex].sub_headers![subIndex].fields[fieldIndex2] = {
+      const updatedSubField = {
         ...updatedFields[fieldIndex].sub_headers![subIndex].fields[fieldIndex2],
         ...updates
       };
+      
+      // Always auto-generate field_name from field_label when label changes
+      if (updates.field_label) {
+        updatedSubField.field_name = generateFieldName(updates.field_label);
+      }
+      
+      updatedFields[fieldIndex].sub_headers![subIndex].fields[fieldIndex2] = updatedSubField;
       onChange(updatedFields);
     }
   };

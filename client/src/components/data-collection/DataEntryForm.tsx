@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { simpleApiClient } from '@/lib/simpleApi';
 import { useAuth } from '@/hooks/useSimpleAuth';
 import { ReferenceDataSelect } from '@/components/reference-data/ReferenceDataSelect';
+import { MultiOptionSelect } from './MultiOptionSelect';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { CheckCircle, Plus } from 'lucide-react';
 
@@ -294,6 +295,12 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
         return;
       }
       
+      // For non-primary select fields with reference data, skip the main field validation
+      // since data is entered in the individual option fields
+      if (field.field_type === 'select' && !field.is_primary_column && field.reference_data_name) {
+        return;
+      }
+      
       const fieldValue = formData[field.field_name];
       if (field.is_required && (!fieldValue || fieldValue === '')) {
         errors.push(`${field.field_label} is required`);
@@ -427,6 +434,21 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
       
       case 'select':
         if (field.reference_data_name) {
+          // For non-primary select fields with reference data, render all options as separate inputs
+          if (!field.is_primary_column) {
+            return (
+              <MultiOptionSelect
+                referenceDataName={field.reference_data_name}
+                fieldName={field.field_name}
+                fieldLabel={field.field_label}
+                isRequired={field.is_required}
+                formData={formData}
+                onValueChange={handleFieldChange}
+              />
+            );
+          }
+          
+          // For primary select fields, use the normal dropdown
           return (
             <ReferenceDataSelect
               referenceDataName={field.reference_data_name}

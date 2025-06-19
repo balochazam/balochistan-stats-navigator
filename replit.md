@@ -144,6 +144,9 @@ Changelog:
 - June 19, 2025. Simplified user role system - removed department_user role, system now uses only admin and data_entry_user roles for cleaner permission structure and easier management
 - June 19, 2025. Created comprehensive Technology Transfer page for developers - admin-only access page positioned below Profile in sidebar containing complete technical documentation, system architecture, database schema, API endpoints, development workflow, and maintenance guidelines for future developers
 - June 19, 2025. Implemented official Balochistan Bureau of Statistics logo throughout application - added green circular logo with camels, mountains, crescent moon and Urdu text to all headers (dashboard sidebar, public landing page, admin login page, public report view, and Technology Transfer page) replacing generic icons for authentic Pakistani government branding
+- June 19, 2025. Enhanced form builder with auto-generated field names - removed manual field name column, system now automatically generates field names from labels for both main fields and sub-header fields, improved user experience by eliminating technical field naming requirements
+- June 19, 2025. Optimized dashboard loading performance - implemented parallel API calls instead of sequential requests, reduced authentication timeout from 5 seconds to 2 seconds, fixed form delete functionality with proper 204 response handling
+- June 19, 2025. Implemented multi-option select functionality for non-primary select fields - when a select field is not marked as primary column, system renders all reference data options as separate input fields allowing users to enter data for all options in single submission, eliminates need to create multiple submissions for different select options
 ```
 
 ## User Preferences

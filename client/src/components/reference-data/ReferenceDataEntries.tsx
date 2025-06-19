@@ -235,7 +235,7 @@ export const ReferenceDataEntries = ({ referenceData }: ReferenceDataEntriesProp
                     Add Multiple Options
                   </label>
                   <Textarea
-                    placeholder="Enter options separated by commas or new lines&#10;Example: New York, London, Tokyo&#10;or&#10;New York&#10;London&#10;Tokyo"
+                    placeholder="Enter options separated by commas or new lines&#10;Example: Quetta, Gwadar, Turbat&#10;or&#10;Quetta&#10;Gwadar&#10;Turbat"
                     value={bulkEntries}
                     onChange={(e) => setBulkEntries(e.target.value)}
                     rows={4}

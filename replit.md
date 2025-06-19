@@ -147,6 +147,7 @@ Changelog:
 - June 19, 2025. Enhanced form builder with auto-generated field names - removed manual field name column, system now automatically generates field names from labels for both main fields and sub-header fields, improved user experience by eliminating technical field naming requirements
 - June 19, 2025. Optimized dashboard loading performance - implemented parallel API calls instead of sequential requests, reduced authentication timeout from 5 seconds to 2 seconds, fixed form delete functionality with proper 204 response handling
 - June 19, 2025. Implemented multi-option select functionality for non-primary select fields - when a select field is not marked as primary column, system renders all reference data options as separate input fields allowing users to enter data for all options in single submission, eliminates need to create multiple submissions for different select options
+- June 19, 2025. Simplified reference data creation by removing unnecessary department field from data bank management and updated placeholder text to use culturally appropriate Balochistan cities (Quetta, Gwadar, Turbat) instead of Western examples, enhancing user experience for Pakistani government context
 ```
 
 ## User Preferences

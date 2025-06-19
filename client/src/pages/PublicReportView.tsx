@@ -868,7 +868,7 @@ export const PublicReportView = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Schedule Info */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center">
@@ -891,18 +891,6 @@ export const PublicReportView = () => {
                 <div>
                   <div className="font-medium">Department</div>
                   <div className="text-sm text-gray-600">{schedule.department?.name || 'General'}</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <FileText className="h-8 w-8 text-purple-600 mr-3" />
-                <div>
-                  <div className="font-medium">Total Submissions</div>
-                  <div className="text-sm text-gray-600">{submissions.length} entries</div>
                 </div>
               </div>
             </CardContent>
@@ -997,10 +985,15 @@ export const PublicReportView = () => {
             </CardHeader>
             <CardContent>
               <Tabs value={activeForm} onValueChange={setActiveForm}>
-                <TabsList className="mb-6">
-                  {forms.map((form) => (
-                    <TabsTrigger key={form.id} value={form.id}>
-                      {form.name}
+                <TabsList className="mb-6 flex-wrap">
+                  {forms.map((form, index) => (
+                    <TabsTrigger 
+                      key={form.id} 
+                      value={form.id} 
+                      className="text-xs px-3 py-2"
+                      title={form.name}
+                    >
+                      {form.name.length > 30 ? `Form ${index + 1}` : form.name}
                     </TabsTrigger>
                   ))}
                 </TabsList>

@@ -9,7 +9,6 @@ import { useToast } from '@/hooks/use-toast';
 import { simpleApiClient } from '@/lib/simpleApi';
 import { useAuth } from '@/hooks/useSimpleAuth';
 import { ReferenceDataSelect } from '@/components/reference-data/ReferenceDataSelect';
-import { MultiOptionSelect } from './MultiOptionSelect';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { CheckCircle, Plus } from 'lucide-react';
 
@@ -434,21 +433,6 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
       
       case 'select':
         if (field.reference_data_name) {
-          // For non-primary select fields with reference data, render all options as separate inputs
-          if (!field.is_primary_column) {
-            return (
-              <MultiOptionSelect
-                referenceDataName={field.reference_data_name}
-                fieldName={field.field_name}
-                fieldLabel={field.field_label}
-                isRequired={field.is_required}
-                formData={formData}
-                onValueChange={handleFieldChange}
-              />
-            );
-          }
-          
-          // For primary select fields, use the normal dropdown
           return (
             <ReferenceDataSelect
               referenceDataName={field.reference_data_name}
@@ -665,48 +649,33 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
               {/* Check if this sub-header has nested structure (like Specialists) */}
               {subHeader.fields.some(f => f.has_sub_headers && f.sub_headers && f.sub_headers.length > 0) ? (
                 <div className="space-y-4">
-                  {/* Render specialist type selector first */}
-                  {subHeader.fields
-                    .filter(f => f.field_type === 'select' && !f.has_sub_headers)
-                    .map((selectField, selectIndex) => (
-                      <div key={selectIndex} className="mb-6">
-                        <Label htmlFor={`${field.field_name}_${subHeader.name}_${selectField.field_name}`} className="text-lg font-medium">
-                          {selectField.field_label}
-                          {selectField.is_required && <span className="text-red-500 ml-1">*</span>}
-                        </Label>
-                        <div className="mt-2">
-                          {renderSubHeaderField(selectField, field.field_name, subHeader.name)}
-                        </div>
-                      </div>
-                    ))}
+                  {/* Skip the specialist type selector - show all types directly */}
                   
-                  {/* Render nested sub-headers (Medical/Dental) */}
+                  {/* Render all specialist types (Medical/Dental) with their fields */}
                   {subHeader.fields
                     .filter(f => f.has_sub_headers && f.sub_headers && f.sub_headers.length > 0)
-                    .map((nestedField, nestedIndex) => (
-                      <div key={nestedIndex} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {nestedField.sub_headers?.map((nestedSubHeader, nestedSubIndex) => (
-                          <div key={nestedSubIndex} className="border border-gray-300 rounded-lg p-4 bg-white">
-                            <h5 className="font-semibold text-lg mb-3 text-center bg-green-100 py-1 px-3 rounded">
-                              {nestedSubHeader.label}
-                            </h5>
-                            <div className="grid grid-cols-1 gap-3">
-                              {nestedSubHeader.fields.map((nestedSubField, nestedFieldIndex) => (
-                                <div key={nestedFieldIndex}>
-                                  <Label htmlFor={`${field.field_name}_${subHeader.name}_${nestedField.field_name}_${nestedSubHeader.name}_${nestedSubField.field_name}`} className="text-sm font-medium">
-                                    {nestedSubField.field_label}
-                                    {nestedSubField.is_required && <span className="text-red-500 ml-1">*</span>}
-                                  </Label>
-                                  <div className="mt-1">
-                                    {renderNestedSubHeaderField(nestedSubField, field.field_name, subHeader.name, nestedField.field_name, nestedSubHeader.name)}
-                                  </div>
+                    .map((nestedField, nestedIndex) => 
+                      nestedField.sub_headers?.map((nestedSubHeader, nestedSubIndex) => (
+                        <div key={`${nestedIndex}-${nestedSubIndex}`} className="border border-gray-300 rounded-lg p-4 bg-white mb-4">
+                          <h5 className="font-semibold text-lg mb-3 text-center bg-green-100 py-2 px-3 rounded">
+                            {nestedSubHeader.label}
+                          </h5>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {nestedSubHeader.fields.map((nestedSubField, nestedFieldIndex) => (
+                              <div key={nestedFieldIndex}>
+                                <Label htmlFor={`${field.field_name}_${subHeader.name}_${nestedField.field_name}_${nestedSubHeader.name}_${nestedSubField.field_name}`} className="text-sm font-medium">
+                                  {nestedSubField.field_label}
+                                  {nestedSubField.is_required && <span className="text-red-500 ml-1">*</span>}
+                                </Label>
+                                <div className="mt-1">
+                                  {renderNestedSubHeaderField(nestedSubField, field.field_name, subHeader.name, nestedField.field_name, nestedSubHeader.name)}
                                 </div>
-                              ))}
-                            </div>
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
-                    ))}
+                        </div>
+                      ))
+                    ).flat()}
                 </div>
               ) : (
                 /* Regular sub-header with direct fields (Doctors/Dentists) */

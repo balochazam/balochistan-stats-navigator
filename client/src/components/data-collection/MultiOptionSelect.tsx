@@ -15,7 +15,7 @@ interface MultiOptionSelectProps {
 
 interface ReferenceDataOption {
   id: string;
-  name: string;
+  key: string;
   value: string;
 }
 

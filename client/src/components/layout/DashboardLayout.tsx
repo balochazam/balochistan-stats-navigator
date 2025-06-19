@@ -60,12 +60,6 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       roles: ['data_entry_user', 'department_user']
     },
     {
-      title: 'Reports',
-      icon: BarChart3,
-      path: '/reports',
-      roles: ['admin', 'department_user', 'data_entry_user']
-    },
-    {
       title: 'User Management',
       icon: Users,
       path: '/admin/users',
@@ -94,6 +88,12 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       icon: Calendar,
       path: '/admin/schedules',
       roles: ['admin']
+    },
+    {
+      title: 'Reports',
+      icon: BarChart3,
+      path: '/reports',
+      roles: ['admin', 'department_user', 'data_entry_user']
     }
   ];
 

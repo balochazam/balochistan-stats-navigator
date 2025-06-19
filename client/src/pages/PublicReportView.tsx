@@ -288,6 +288,21 @@ export const PublicReportView = () => {
             } 
           });
 
+          // Standalone fields span all 3 rows
+          const standaloneFields = formFields.filter((field: any) => !field.has_sub_headers && !field.is_primary_column);
+          standaloneFields.forEach((field: any) => {
+            headerRow1.push({ 
+              content: field.field_label, 
+              rowSpan: 3, 
+              styles: { 
+                halign: 'center', 
+                valign: 'middle', 
+                fillColor: [243, 244, 246], // bg-gray-100
+                fontStyle: 'bold'
+              } 
+            });
+          });
+
           // First header row - Main categories (DOCTORS, DENTISTS, SPECIALISTS)
           Object.values(structure).forEach((category: any) => {
             const colSpan = getColumnSpan(category);
@@ -372,7 +387,12 @@ export const PublicReportView = () => {
 
             const row = [primaryValue];
             
-            // Add data in the same order as headers
+            // Add standalone fields data
+            standaloneFields.forEach((field: any) => {
+              row.push(data[field.field_name] || '-');
+            });
+            
+            // Add hierarchical data in the same order as headers
             Object.values(structure).forEach((category: any) => {
               // Add direct category fields first
               category.fields.forEach((field: any) => {
@@ -611,6 +631,13 @@ export const PublicReportView = () => {
               <th rowSpan={3} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border border-gray-300 bg-blue-50">
                 {primaryField.field_label}
               </th>
+              {/* Standalone fields */}
+              {formFields.filter((field: any) => !field.has_sub_headers && !field.is_primary_column).map((field: any) => (
+                <th key={field.id} rowSpan={3} className="px-2 py-2 text-center text-xs font-medium text-gray-600 border border-gray-300 bg-gray-100">
+                  {field.field_label}
+                </th>
+              ))}
+              {/* Hierarchical categories */}
               {Object.values(structure).map((category: any, index) => (
                 <th 
                   key={category.name} 
@@ -682,6 +709,13 @@ export const PublicReportView = () => {
                   <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 border border-gray-300">
                     {primaryValue}
                   </td>
+                  {/* Standalone fields data */}
+                  {formFields.filter((field: any) => !field.has_sub_headers && !field.is_primary_column).map((field: any) => (
+                    <td key={field.id} className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 text-center border border-gray-300">
+                      {data[field.field_name] || '-'}
+                    </td>
+                  ))}
+                  {/* Hierarchical fields data */}
                   {Object.values(structure).map((category: any) => [
                     ...category.fields.map((field: any) => (
                       <td key={field.key} className="px-2 py-3 whitespace-nowrap text-sm text-gray-900 text-center border border-gray-300">

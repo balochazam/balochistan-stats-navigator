@@ -351,25 +351,6 @@ export const Reports = () => {
             }
           });
         });
-      } else {
-        // Handle regular standalone fields (like "Projected Population 2022")
-        if (!field.is_primary_column) {
-          const categoryName = "Additional Data";
-          
-          if (!structure[categoryName]) {
-            structure[categoryName] = {
-              name: categoryName,
-              fields: [],
-              subCategories: {}
-            };
-          }
-          
-          structure[categoryName].fields.push({
-            key: field.field_name,
-            label: field.field_label,
-            type: 'standalone'
-          });
-        }
       }
     });
     
@@ -483,6 +464,9 @@ export const Reports = () => {
       // Generate hierarchical table structure for PDF
       const structure = getHierarchicalTableStructure();
       const primaryField = formFields.find((field: any) => field.is_primary_column);
+      const standaloneFields = formFields.filter((field: any) => 
+        !field.has_sub_headers && !field.is_primary_column
+      );
       
       // Calculate column spans
       const getColumnSpan = (category: any) => {
@@ -501,6 +485,11 @@ export const Reports = () => {
               <th rowspan="3" style="border: 1px solid #000; padding: 8px; text-align: center; font-weight: bold; background-color: #e3f2fd; min-width: 80px;">
                 ${primaryField?.field_label || 'Province'}
               </th>
+              ${standaloneFields.map((field: any) => `
+                <th rowspan="3" style="border: 1px solid #000; padding: 6px; text-align: center; font-weight: bold; background-color: #f5f5f5;">
+                  ${field.field_label}
+                </th>
+              `).join('')}
               ${Object.values(structure).map((category: any) => `
                 <th colspan="${getColumnSpan(category)}" style="border: 1px solid #000; padding: 6px; text-align: center; font-weight: bold; background-color: ${
                   category.name === 'Doctors' ? '#e8f5e8' :
@@ -555,6 +544,11 @@ export const Reports = () => {
                 <td style="border: 1px solid #000; padding: 6px; font-weight: bold; background-color: #f8f9fa; text-align: left;">
                   ${primaryField?.field_name ? (submission.data as any)?.[primaryField.field_name] || '-' : '-'}
                 </td>
+                ${standaloneFields.map((field: any) => `
+                  <td style="border: 1px solid #000; padding: 4px; text-align: center; font-size: 10px;">
+                    ${(submission.data as any)?.[field.field_name] || '-'}
+                  </td>
+                `).join('')}
                 ${Object.values(structure).map((category: any) => `
                   ${category.fields.map((field: any) => `
                     <td style="border: 1px solid #000; padding: 4px; text-align: center; font-size: 10px;">
@@ -1022,6 +1016,11 @@ export const Reports = () => {
                           return span;
                         };
                         
+                        // Get standalone fields that aren't part of hierarchical structure
+                        const standaloneFields = formFields.filter((field: any) => 
+                          !field.has_sub_headers && !field.is_primary_column
+                        );
+                        
                         return (
                           <div className="border rounded-lg overflow-hidden">
                             <table className="w-full border-collapse">
@@ -1031,6 +1030,13 @@ export const Reports = () => {
                                   <th rowSpan={3} className="border border-gray-300 p-3 text-center font-semibold bg-blue-50">
                                     {primaryField?.field_label || 'Province'}
                                   </th>
+                                  {/* Standalone fields */}
+                                  {standaloneFields.map((field: any) => (
+                                    <th key={field.id} rowSpan={3} className="border border-gray-300 p-2 text-center font-semibold bg-gray-100">
+                                      {field.field_label}
+                                    </th>
+                                  ))}
+                                  {/* Hierarchical categories */}
                                   {Object.values(structure).map((category: any) => (
                                     <th key={category.name} colSpan={getColumnSpan(category)} 
                                         className={`border border-gray-300 p-2 text-center font-semibold ${
@@ -1094,6 +1100,13 @@ export const Reports = () => {
                                     <td className="border border-gray-300 p-3 font-medium bg-blue-25">
                                       {primaryField?.field_name ? (submission.data as any)?.[primaryField.field_name] || '-' : '-'}
                                     </td>
+                                    {/* Standalone fields data */}
+                                    {standaloneFields.map((field: any) => (
+                                      <td key={field.id} className="border border-gray-300 p-2 text-center">
+                                        {submission.data?.[field.field_name] || '-'}
+                                      </td>
+                                    ))}
+                                    {/* Hierarchical fields data */}
                                     {Object.values(structure).map((category: any) => (
                                       <>
                                         {category.fields.map((field: any) => (

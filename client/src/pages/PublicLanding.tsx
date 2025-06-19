@@ -157,7 +157,11 @@ export const PublicLanding = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center">
-              <Database className="h-8 w-8 text-blue-600 mr-3" />
+              <img 
+                src="/attached_assets/6f64eb753133d8c8693ef11f8af6f2e5_1750318410601.png" 
+                alt="Balochistan Bureau of Statistics" 
+                className="h-12 w-12 object-contain mr-3"
+              />
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Balochistan Bureau of Statistics Dashboard</h1>
                 <p className="text-sm text-gray-600">Public Reports & Analytics</p>
@@ -414,7 +418,11 @@ export const PublicLanding = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <div className="flex items-center justify-center mb-4">
-              <Database className="h-6 w-6 mr-2" />
+              <img 
+                src="/attached_assets/6f64eb753133d8c8693ef11f8af6f2e5_1750318410601.png" 
+                alt="Balochistan Bureau of Statistics" 
+                className="h-8 w-8 object-contain mr-2"
+              />
               <span className="text-lg font-semibold">Balochistan Bureau of Statistics Dashboard</span>
             </div>
             <p className="text-gray-400 mb-4">

@@ -48,7 +48,11 @@ export const TechnologyTransfer = () => {
         <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
           <CardHeader>
             <CardTitle className="flex items-center text-2xl text-blue-900">
-              <Code className="h-8 w-8 mr-3" />
+              <img 
+                src="/attached_assets/6f64eb753133d8c8693ef11f8af6f2e5_1750318410601.png" 
+                alt="Balochistan Bureau of Statistics" 
+                className="h-8 w-8 object-contain mr-3"
+              />
               Technology Transfer Documentation
             </CardTitle>
             <CardDescription className="text-blue-700">

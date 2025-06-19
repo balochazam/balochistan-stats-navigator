@@ -105,7 +105,14 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
       <div className="p-6 border-b">
-        <h2 className="text-xl font-bold text-gray-800">BBS Dashboard</h2>
+        <div className="flex items-center space-x-3 mb-3">
+          <img 
+            src="/attached_assets/6f64eb753133d8c8693ef11f8af6f2e5_1750318410601.png" 
+            alt="Balochistan Bureau of Statistics" 
+            className="h-10 w-10 object-contain"
+          />
+          <h2 className="text-xl font-bold text-gray-800">BBS Dashboard</h2>
+        </div>
         {profile && (
           <div className="mt-3">
             <p className="text-sm text-gray-600">{profile.full_name || profile.email}</p>

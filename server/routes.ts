@@ -436,7 +436,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json(form);
     } catch (error) {
-      res.status(500).json({ error: 'Failed to update form' });
+      console.error('Error updating form via PATCH:', error);
+      res.status(500).json({ error: 'Failed to update form', details: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
+  app.put('/api/forms/:id', requireAuth, async (req, res) => {
+    try {
+      const form = await storage.updateForm(req.params.id, req.body);
+      if (!form) {
+        return res.status(404).json({ error: 'Form not found' });
+      }
+      res.json(form);
+    } catch (error) {
+      console.error('Error updating form via PUT:', error);
+      res.status(500).json({ error: 'Failed to update form', details: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 

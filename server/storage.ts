@@ -241,8 +241,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateForm(id: string, updates: Partial<Form>): Promise<Form | undefined> {
-    const result = await db.update(forms).set(updates).where(eq(forms.id, id)).returning();
-    return result[0];
+    try {
+      // Remove any read-only fields that shouldn't be updated
+      const { id: _, created_at, created_by, ...cleanUpdates } = updates as any;
+      
+      // Add updated_at timestamp
+      const updateData = {
+        ...cleanUpdates,
+        updated_at: new Date()
+      };
+      
+      const result = await db.update(forms).set(updateData).where(eq(forms.id, id)).returning();
+      return result[0];
+    } catch (error) {
+      console.error('Error updating form:', error);
+      throw error;
+    }
   }
 
   async deleteForm(id: string): Promise<boolean> {

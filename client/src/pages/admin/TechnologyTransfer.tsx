@@ -490,18 +490,7 @@ export const TechnologyTransfer = () => {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid grid-cols-1 gap-6">
-              <div>
-                <h4 className="font-semibold mb-3 flex items-center">
-                  <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
-                  Pakistani Localization
-                </h4>
-                <div className="text-sm space-y-2">
-                  <div>• All form placeholders use Pakistani names (Ahmad Hassan, Fatima Shahzad)</div>
-                  <div>• Email formats: admin@bbs.gov.pk</div>
-                  <div>• Government context throughout UI</div>
-                  <div>• "Balochistan Bureau of Statistics Dashboard" branding</div>
-                </div>
-              </div>
+              
               
               <div>
                 <h4 className="font-semibold mb-3 flex items-center">
@@ -558,7 +547,7 @@ export const TechnologyTransfer = () => {
               <div>
                 <h4 className="font-semibold mb-3">Production Deployment</h4>
                 <div className="text-sm space-y-2">
-                  <div>• Replit Autoscale deployment target</div>
+                  <div>• Autoscale deployment</div>
                   <div>• Vite build generates optimized assets</div>
                   <div>• Express serves both API and static files</div>
                   <div>• PostgreSQL via Neon Database</div>
@@ -643,7 +632,7 @@ export const TechnologyTransfer = () => {
           <CardContent className="text-center py-6">
             <p className="text-sm text-gray-600">
               Last updated: {new Date().toLocaleDateString()} | 
-              For additional support, refer to replit.md and component documentation
+              For additional support, please refer to the developer
             </p>
           </CardContent>
         </Card>

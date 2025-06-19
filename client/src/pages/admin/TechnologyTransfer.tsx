@@ -551,7 +551,7 @@ export const TechnologyTransfer = () => {
                   <div>• Vite build generates optimized assets</div>
                   <div>• Express serves both API and static files</div>
                   <div>• PostgreSQL via Neon Database</div>
-                  <div>• Environment variables via Replit Secrets</div>
+                  <div>• Environment variables</div>
                 </div>
               </div>
               <div>

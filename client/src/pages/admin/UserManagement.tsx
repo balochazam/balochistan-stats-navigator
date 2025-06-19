@@ -35,6 +35,15 @@ const createUserSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters'),
   role: z.enum(['department_user', 'data_entry_user', 'admin']),
   department_id: z.string().optional(),
+}).refine((data) => {
+  // Department is required for non-admin roles
+  if (data.role !== 'admin' && (!data.department_id || data.department_id === 'none')) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Department is required for non-admin users",
+  path: ["department_id"],
 });
 
 type CreateUserData = z.infer<typeof createUserSchema>;
@@ -89,7 +98,7 @@ export const UserManagement = () => {
     try {
       const userData = {
         ...data,
-        department_id: data.department_id === 'none' ? null : data.department_id || null,
+        department_id: data.role === 'admin' ? null : (data.department_id === 'none' ? null : data.department_id || null),
       };
       
       await simpleApiClient.post('/api/auth/create-user', userData);
@@ -229,7 +238,7 @@ export const UserManagement = () => {
                           <FormItem>
                             <FormLabel>Email Address</FormLabel>
                             <FormControl>
-                              <Input placeholder="user@example.com" {...field} />
+                              <Input placeholder="ahmad.hassan@example.com" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -243,7 +252,7 @@ export const UserManagement = () => {
                           <FormItem>
                             <FormLabel>Full Name</FormLabel>
                             <FormControl>
-                              <Input placeholder="John Doe" {...field} />
+                              <Input placeholder="Ahmad Hassan" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -290,27 +299,38 @@ export const UserManagement = () => {
                       <FormField
                         control={form.control}
                         name="department_id"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Department (Optional)</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select a department" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="none">No Department</SelectItem>
-                                {departments.map((dept) => (
-                                  <SelectItem key={dept.id} value={dept.id}>
-                                    {dept.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
+                        render={({ field }) => {
+                          const selectedRole = form.watch('role');
+                          const isAdmin = selectedRole === 'admin';
+                          
+                          return (
+                            <FormItem>
+                              <FormLabel>
+                                Department {isAdmin ? '(Disabled for Admin)' : '(Required)'}
+                              </FormLabel>
+                              <Select 
+                                onValueChange={field.onChange} 
+                                value={field.value}
+                                disabled={isAdmin}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder={isAdmin ? "Not applicable for Admin" : "Select a department"} />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {!isAdmin && <SelectItem value="none">No Department</SelectItem>}
+                                  {departments.map((dept) => (
+                                    <SelectItem key={dept.id} value={dept.id}>
+                                      {dept.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          );
+                        }}
                       />
 
                       <div className="flex justify-end space-x-2">

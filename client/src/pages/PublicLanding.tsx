@@ -415,13 +415,13 @@ export const PublicLanding = () => {
           <div className="text-center">
             <div className="flex items-center justify-center mb-4">
               <Database className="h-6 w-6 mr-2" />
-              <span className="text-lg font-semibold">Data Collection Portal</span>
+              <span className="text-lg font-semibold">Balochistan Bureau of Statistics Dashboard</span>
             </div>
             <p className="text-gray-400 mb-4">
               Transparent, accessible, and comprehensive data reporting for public benefit.
             </p>
             <p className="text-sm text-gray-500">
-              © {new Date().getFullYear()} Data Collection Portal. All rights reserved.
+              © {new Date().getFullYear()} Balochistan Bureau of Statistics. All rights reserved.
             </p>
           </div>
         </div>

@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, ArrowLeft, Shield, Database } from 'lucide-react';
+import logoPath from "@assets/6f64eb753133d8c8693ef11f8af6f2e5_1750318410601.png";
 
 export const AdminLoginPage = () => {
   const { signIn, user, loading: authLoading } = useAuth();
@@ -64,7 +65,11 @@ export const AdminLoginPage = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center">
-              <Database className="h-8 w-8 text-blue-600 mr-3" />
+              <img 
+                src={logoPath} 
+                alt="Balochistan Bureau of Statistics" 
+                className="h-10 w-10 object-contain mr-3"
+              />
               <div>
                 <h1 className="text-xl font-bold text-gray-900">Balochistan Bureau of Statistics Dashboard</h1>
                 <p className="text-sm text-gray-600">Administrator Access</p>

@@ -33,6 +33,7 @@ import {
   Shield
 } from 'lucide-react';
 import { simpleApiClient } from '@/lib/simpleApi';
+import logoPath from "@assets/6f64eb753133d8c8693ef11f8af6f2e5_1750318410601.png";
 
 interface Schedule {
   id: string;
@@ -158,7 +159,7 @@ export const PublicLanding = () => {
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center">
               <img 
-                src="/attached_assets/6f64eb753133d8c8693ef11f8af6f2e5_1750318410601.png" 
+                src={logoPath} 
                 alt="Balochistan Bureau of Statistics" 
                 className="h-12 w-12 object-contain mr-3"
               />
@@ -419,7 +420,7 @@ export const PublicLanding = () => {
           <div className="text-center">
             <div className="flex items-center justify-center mb-4">
               <img 
-                src="/attached_assets/6f64eb753133d8c8693ef11f8af6f2e5_1750318410601.png" 
+                src={logoPath} 
                 alt="Balochistan Bureau of Statistics" 
                 className="h-8 w-8 object-contain mr-2"
               />

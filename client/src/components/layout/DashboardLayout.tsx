@@ -19,7 +19,8 @@ import {
   LogOut,
   User,
   Menu,
-  X
+  X,
+  BookOpen
 } from 'lucide-react';
 
 interface DashboardLayoutProps {
@@ -152,6 +153,19 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           <User className="h-4 w-4 mr-3" />
           Profile
         </Button>
+        {profile?.role === 'admin' && (
+          <Button
+            variant="ghost"
+            className="w-full justify-start"
+            onClick={() => {
+              navigate('/admin/technology-transfer');
+              setSidebarOpen(false);
+            }}
+          >
+            <BookOpen className="h-4 w-4 mr-3" />
+            Technology Transfer
+          </Button>
+        )}
         <Button
           variant="ghost"
           className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"

@@ -18,6 +18,7 @@ import { FormManagement } from "./pages/admin/FormManagement";
 import { ScheduleManagement } from "./pages/admin/ScheduleManagement";
 import { DataCollection } from "./pages/DataCollection";
 import { Reports } from "./pages/Reports";
+import { TechnologyTransfer } from "./pages/admin/TechnologyTransfer";
 
 const queryClient = new QueryClient();
 
@@ -45,6 +46,7 @@ const App = () => (
             <Route path="/admin/data-banks" element={<DataBankManagement />} />
             <Route path="/admin/forms" element={<FormManagement />} />
             <Route path="/admin/schedules" element={<ScheduleManagement />} />
+            <Route path="/admin/technology-transfer" element={<TechnologyTransfer />} />
             <Route path="/reports" element={<Reports />} />
             
             <Route path="*" element={<NotFound />} />

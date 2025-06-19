@@ -142,8 +142,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Profile routes
   app.get('/api/profiles', requireAuth, async (req, res) => {
     try {
-      const profiles = await storage.getAllProfiles();
-      res.json(profiles);
+      const { department_id } = req.query;
+      
+      if (department_id) {
+        // Filter profiles by department
+        const allProfiles = await storage.getAllProfiles();
+        const filteredProfiles = allProfiles.filter(profile => profile.department_id === department_id);
+        res.json(filteredProfiles);
+      } else {
+        const profiles = await storage.getAllProfiles();
+        res.json(profiles);
+      }
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch profiles' });
     }

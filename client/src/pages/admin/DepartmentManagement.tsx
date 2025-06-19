@@ -74,10 +74,9 @@ export const DepartmentManagement = () => {
     try {
       if (editingDepartment) {
         // Update existing department
-        await simpleApiClient.put(`/api/departments/${editingDepartment.id}`, {
+        await simpleApiClient.patch(`/api/departments/${editingDepartment.id}`, {
           name: formData.name,
-          description: formData.description || null,
-          updated_at: new Date().toISOString()
+          description: formData.description || null
         });
 
         toast({

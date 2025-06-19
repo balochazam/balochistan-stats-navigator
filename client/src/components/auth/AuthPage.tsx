@@ -111,6 +111,7 @@ export const AuthPage = () => {
                     type="email"
                     value={signInData.email}
                     onChange={(e) => setSignInData({ ...signInData, email: e.target.value })}
+                    placeholder="salman.khan@bbs.gov.pk"
                     required
                     disabled={loading}
                   />
@@ -142,6 +143,7 @@ export const AuthPage = () => {
                     type="text"
                     value={signUpData.fullName}
                     onChange={(e) => setSignUpData({ ...signUpData, fullName: e.target.value })}
+                    placeholder="Fatima Shahzad"
                     required
                     disabled={loading}
                   />
@@ -153,6 +155,7 @@ export const AuthPage = () => {
                     type="email"
                     value={signUpData.email}
                     onChange={(e) => setSignUpData({ ...signUpData, email: e.target.value })}
+                    placeholder="fatima.shahzad@bbs.gov.pk"
                     required
                     disabled={loading}
                   />

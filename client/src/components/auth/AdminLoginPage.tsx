@@ -120,7 +120,7 @@ export const AdminLoginPage = () => {
                     required
                     value={signInData.email}
                     onChange={(e) => setSignInData({ ...signInData, email: e.target.value })}
-                    placeholder="admin@example.com"
+                    placeholder="admin@bbs.gov.pk"
                     disabled={loading}
                     className="relative block w-full"
                   />

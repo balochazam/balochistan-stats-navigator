@@ -82,6 +82,16 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
+  // Utility function to generate field name from label
+  const generateFieldName = (label: string): string => {
+    return label
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '') // Remove special characters except spaces
+      .replace(/\s+/g, '_') // Replace spaces with underscores
+      .replace(/^_+|_+$/g, '') // Remove leading/trailing underscores
+      .substring(0, 50); // Limit length
+  };
+
   useEffect(() => {
     fetchReferenceDataSets();
   }, []);
@@ -243,8 +253,8 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
       if (i === index) {
         const updatedField = { ...field, ...updates };
         
-        // Auto-generate field_name from field_label if field_name is empty
-        if (updates.field_label && (!field.field_name || field.field_name === '')) {
+        // Always auto-generate field_name from field_label when label changes
+        if (updates.field_label) {
           const generatedName = generateFieldName(updates.field_label);
           updatedField.field_name = generatedName;
         }
@@ -363,18 +373,7 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Field Name</Label>
-                <Input
-                  value={field.field_name}
-                  onChange={(e) => updateField(index, { field_name: e.target.value })}
-                  placeholder="Auto-generated from label"
-                />
-                <p className="text-xs text-gray-500">
-                  {field.field_name ? `Will be saved as: ${field.field_name}` : 'Auto-generated from field label'}
-                </p>
-              </div>
+            <div className="grid grid-cols-1 gap-4">
               <div className="space-y-2">
                 <Label>Placeholder Text</Label>
                 <Input
@@ -383,6 +382,13 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
                   placeholder="Enter placeholder text"
                 />
               </div>
+              {field.field_name && (
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="text-xs text-gray-600">
+                    <strong>Auto-generated field name:</strong> {field.field_name}
+                  </p>
+                </div>
+              )}
             </div>
 
             {field.field_type === 'aggregate' && (

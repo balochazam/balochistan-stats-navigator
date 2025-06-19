@@ -53,11 +53,11 @@ export const DashboardHome = () => {
 
   const fetchDashboardData = async () => {
     try {
-      // Fetch schedules
-      const schedulesData = await simpleApiClient.get('/api/schedules');
-
-      // Fetch departments
-      const departmentsData = await simpleApiClient.get('/api/departments');
+      // Fetch data in parallel for faster loading
+      const [schedulesData, departmentsData] = await Promise.all([
+        simpleApiClient.get('/api/schedules'),
+        simpleApiClient.get('/api/departments')
+      ]);
 
       setSchedules(schedulesData || []);
       setDepartments(departmentsData || []);

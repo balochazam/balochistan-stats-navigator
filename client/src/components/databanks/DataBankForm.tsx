@@ -44,8 +44,7 @@ export const DataBankForm = ({
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: '',
-    description: '',
-    department_id: ''
+    description: ''
   });
   const [loading, setLoading] = useState(false);
 
@@ -53,14 +52,12 @@ export const DataBankForm = ({
     if (editingDataBank) {
       setFormData({
         name: editingDataBank.name,
-        description: editingDataBank.description || '',
-        department_id: editingDataBank.department_id || ''
+        description: editingDataBank.description || ''
       });
     } else {
       setFormData({
         name: '',
-        description: '',
-        department_id: ''
+        description: ''
       });
     }
   }, [editingDataBank]);
@@ -74,17 +71,11 @@ export const DataBankForm = ({
     try {
       if (editingDataBank) {
         // Update existing data bank
-        const { error } = await apiClient
-          .get
-          .put({
-            name: formData.name,
-            description: formData.description || null,
-            department_id: formData.department_id || null,
-            updated_at: new Date().toISOString()
-          })
-          .get;
-
-        if (error) throw error;
+        await simpleApiClient.put(`/api/data-banks/${editingDataBank.id}`, {
+          name: formData.name,
+          description: formData.description || null,
+          updated_at: new Date().toISOString()
+        });
 
         toast({
           title: "Success",
@@ -92,16 +83,11 @@ export const DataBankForm = ({
         });
       } else {
         // Create new data bank
-        const { error } = await apiClient
-          .get
-          .post({
-            name: formData.name,
-            description: formData.description || null,
-            department_id: formData.department_id || null,
-            created_by: user.id
-          });
-
-        if (error) throw error;
+        await simpleApiClient.post('/api/data-banks', {
+          name: formData.name,
+          description: formData.description || null,
+          created_by: user.id
+        });
 
         toast({
           title: "Success",
@@ -158,28 +144,7 @@ export const DataBankForm = ({
             />
           </div>
           
-          <div>
-            <label className="text-sm font-medium">Department</label>
-            <Select
-              value={formData.department_id}
-              onValueChange={(value) => setFormData(prev => ({ 
-                ...prev, 
-                department_id: value === 'none' ? '' : value 
-              }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select department (optional)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">No Department</SelectItem>
-                {departments.map((dept) => (
-                  <SelectItem key={dept.id} value={dept.id}>
-                    {dept.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+
           
           <div className="flex justify-end space-x-2 pt-4">
             <Button type="button" variant="outline" onClick={onClose}>

@@ -244,8 +244,13 @@ export const FormBuilderDialog = ({
 
           console.log('Fields to insert:', fieldsToInsert);
 
-          await simpleApiClient.post('/api/form-fields', fieldsToInsert);
-          console.log('Form fields inserted successfully');
+          try {
+            await simpleApiClient.post('/api/form-fields', fieldsToInsert);
+            console.log('Form fields inserted successfully');
+          } catch (fieldError: any) {
+            console.error('Error inserting form fields:', fieldError);
+            throw new Error(`Failed to insert form fields: ${fieldError.message || fieldError}`);
+          }
         }
       }
 

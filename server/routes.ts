@@ -561,21 +561,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Request body must be an array of form fields' });
       }
 
+      console.log('Creating form fields, received data:', JSON.stringify(req.body, null, 2));
+
       const createdFields = [];
       for (const fieldData of req.body) {
         // Handle null aggregate_fields by converting to empty array
         if (fieldData.aggregate_fields === null) {
           fieldData.aggregate_fields = [];
         }
-        const validatedData = insertFormFieldSchema.parse(fieldData);
-        const field = await storage.createFormField(validatedData);
-        createdFields.push(field);
+        
+        // Handle null sub_headers by converting to empty array
+        if (fieldData.sub_headers === null) {
+          fieldData.sub_headers = [];
+        }
+        
+        console.log('Processing field:', fieldData.field_label);
+        try {
+          const validatedData = insertFormFieldSchema.parse(fieldData);
+          const field = await storage.createFormField(validatedData);
+          createdFields.push(field);
+          console.log('Successfully created field:', field.field_label);
+        } catch (fieldError) {
+          console.error(`Error creating field ${fieldData.field_label}:`, fieldError);
+          throw fieldError;
+        }
       }
       
       res.status(201).json(createdFields);
     } catch (error) {
       console.error('Error creating form fields:', error);
-      res.status(400).json({ error: 'Invalid form field data' });
+      res.status(400).json({ 
+        error: 'Invalid form field data', 
+        details: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
     }
   });
 

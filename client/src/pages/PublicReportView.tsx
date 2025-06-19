@@ -796,6 +796,11 @@ export const PublicReportView = () => {
                   Back to Home
                 </Button>
               </Link>
+              <img 
+                src="/attached_assets/6f64eb753133d8c8693ef11f8af6f2e5_1750318410601.png" 
+                alt="Balochistan Bureau of Statistics" 
+                className="h-10 w-10 object-contain mr-4"
+              />
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">{schedule.name}</h1>
                 <p className="text-sm text-gray-600">{schedule.description}</p>

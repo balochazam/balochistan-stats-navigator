@@ -66,7 +66,7 @@ export const AdminLoginPage = () => {
             <div className="flex items-center">
               <Database className="h-8 w-8 text-blue-600 mr-3" />
               <div>
-                <h1 className="text-xl font-bold text-gray-900">Data Collection Portal</h1>
+                <h1 className="text-xl font-bold text-gray-900">Balochistan Bureau of Statistics Dashboard</h1>
                 <p className="text-sm text-gray-600">Administrator Access</p>
               </div>
             </div>

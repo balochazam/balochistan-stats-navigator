@@ -104,7 +104,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
       <div className="p-6 border-b">
-        <h2 className="text-xl font-bold text-gray-800">Data Portal</h2>
+        <h2 className="text-xl font-bold text-gray-800">BBS Dashboard</h2>
         {profile && (
           <div className="mt-3">
             <p className="text-sm text-gray-600">{profile.full_name || profile.email}</p>

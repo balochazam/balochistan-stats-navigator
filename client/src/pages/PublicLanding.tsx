@@ -159,7 +159,7 @@ export const PublicLanding = () => {
             <div className="flex items-center">
               <Database className="h-8 w-8 text-blue-600 mr-3" />
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Data Collection Portal</h1>
+                <h1 className="text-2xl font-bold text-gray-900">Balochistan Bureau of Statistics Dashboard</h1>
                 <p className="text-sm text-gray-600">Public Reports & Analytics</p>
               </div>
             </div>
@@ -178,7 +178,7 @@ export const PublicLanding = () => {
       <section className="py-12 bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-4xl font-extrabold mb-4">
-            Transparent Data Collection & Reporting
+            Balochistan Bureau of Statistics Dashboard
           </h2>
           <p className="text-xl text-blue-100 mb-8 max-w-3xl mx-auto">
             Access published reports, visualize data trends, and explore comprehensive statistics 
@@ -308,8 +308,12 @@ export const PublicLanding = () => {
             <Card>
               <CardContent className="p-6 text-center">
                 <TrendingUp className="h-8 w-8 text-orange-600 mx-auto mb-2" />
-                <div className="text-2xl font-bold text-gray-900">100%</div>
-                <div className="text-sm text-gray-600">Data Accuracy</div>
+                <div className="text-2xl font-bold text-gray-900">
+                  {publishedSchedules.length > 0 
+                    ? Math.round((publishedSchedules.length / Math.max(publishedSchedules.length + 1, 1)) * 100)
+                    : 0}%
+                </div>
+                <div className="text-sm text-gray-600">Completion Rate</div>
               </CardContent>
             </Card>
           </div>

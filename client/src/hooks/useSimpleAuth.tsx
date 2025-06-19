@@ -10,7 +10,7 @@ interface Profile {
   id: string;
   email: string;
   full_name: string | null;
-  role: 'admin' | 'department_user' | 'data_entry_user';
+  role: 'admin' | 'data_entry_user';
   department_id: string | null;
   created_at: string;
   updated_at: string;

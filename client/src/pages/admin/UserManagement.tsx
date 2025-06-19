@@ -19,7 +19,7 @@ interface User {
   id: string;
   email: string;
   full_name: string | null;
-  role: 'admin' | 'department_user' | 'data_entry_user';
+  role: 'admin' | 'data_entry_user';
   department_id: string | null;
   created_at: string;
 }
@@ -33,7 +33,7 @@ const createUserSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
   full_name: z.string().min(2, 'Full name must be at least 2 characters'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
-  role: z.enum(['department_user', 'data_entry_user', 'admin']),
+  role: z.enum(['data_entry_user', 'admin']),
   department_id: z.string().optional(),
 }).refine((data) => {
   // Department is required for non-admin roles
@@ -159,8 +159,6 @@ export const UserManagement = () => {
     switch (role) {
       case 'admin':
         return 'destructive';
-      case 'department_user':
-        return 'default';
       case 'data_entry_user':
         return 'secondary';
       default:
@@ -287,7 +285,6 @@ export const UserManagement = () => {
                               </FormControl>
                               <SelectContent>
                                 <SelectItem value="data_entry_user">Data Entry User</SelectItem>
-                                <SelectItem value="department_user">Department User</SelectItem>
                                 <SelectItem value="admin">Admin</SelectItem>
                               </SelectContent>
                             </Select>

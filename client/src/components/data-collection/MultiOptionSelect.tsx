@@ -99,7 +99,7 @@ export const MultiOptionSelect = ({
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {options.map((option) => {
-            const optionFieldName = `${fieldName}_${option.name.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+            const optionFieldName = `${fieldName}_${option.key.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
             const currentValue = formData[optionFieldName] || '';
             
             return (
@@ -108,7 +108,7 @@ export const MultiOptionSelect = ({
                   htmlFor={optionFieldName} 
                   className="text-sm font-medium"
                 >
-                  {option.name}
+                  {option.value}
                 </Label>
                 <Input
                   id={optionFieldName}

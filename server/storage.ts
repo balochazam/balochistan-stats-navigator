@@ -260,8 +260,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteForm(id: string): Promise<boolean> {
-    const result = await db.update(forms).set({ is_active: false }).where(eq(forms.id, id));
-    return (result.rowCount ?? 0) > 0;
+    try {
+      console.log('Storage: Attempting to delete form with ID:', id);
+      const result = await db.update(forms).set({ 
+        is_active: false,
+        updated_at: new Date()
+      }).where(eq(forms.id, id));
+      console.log('Storage: Delete result rowCount:', result.rowCount);
+      return (result.rowCount ?? 0) > 0;
+    } catch (error) {
+      console.error('Storage: Error deleting form:', error);
+      throw error;
+    }
   }
 
   // Field Group methods

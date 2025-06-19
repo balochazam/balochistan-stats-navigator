@@ -382,16 +382,13 @@ export const PublicLanding = () => {
                       </span>
                     </div>
                   </div>
-                  <div className="flex gap-2 mt-4">
-                    <Link to={`/public/reports/${schedule.id}`} className="flex-1">
+                  <div className="mt-4">
+                    <Link to={`/public/reports/${schedule.id}`} className="block">
                       <Button variant="outline" className="w-full">
                         <Eye className="h-4 w-4 mr-2" />
                         View Report
                       </Button>
                     </Link>
-                    <Button variant="outline" size="sm">
-                      <Download className="h-4 w-4" />
-                    </Button>
                   </div>
                 </CardContent>
               </Card>

@@ -591,14 +591,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk delete all fields for a form
+  app.delete('/api/forms/:formId/fields', requireAuth, async (req, res) => {
+    try {
+      const formId = req.params.formId;
+      const existingFields = await storage.getFormFields(formId);
+      
+      // Delete all existing fields for this form
+      for (const field of existingFields) {
+        await storage.deleteFormField(field.id);
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error bulk deleting form fields:', error);
+      res.status(500).json({ error: 'Failed to delete form fields' });
+    }
+  });
+
   app.delete('/api/form-fields/:id', requireAuth, async (req, res) => {
     try {
-      const success = await storage.deleteFormField(req.params.id);
+      // Check if this is a bulk delete by form ID or individual field delete
+      const id = req.params.id;
+      
+      // If this looks like a form deletion (bulk delete all fields for a form)
+      const existingFields = await storage.getFormFields(id);
+      if (existingFields && existingFields.length > 0) {
+        // Bulk delete all fields for this form
+        for (const field of existingFields) {
+          await storage.deleteFormField(field.id);
+        }
+        res.status(204).send();
+        return;
+      }
+      
+      // Individual field delete
+      const success = await storage.deleteFormField(id);
       if (!success) {
         return res.status(404).json({ error: 'Form field not found' });
       }
       res.status(204).send();
     } catch (error) {
+      console.error('Error deleting form field(s):', error);
       res.status(500).json({ error: 'Failed to delete form field' });
     }
   });

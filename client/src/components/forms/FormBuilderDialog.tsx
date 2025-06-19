@@ -215,7 +215,7 @@ export const FormBuilderDialog = ({
         // Delete existing fields if editing
         if (editingForm) {
           console.log('Deleting existing fields...');
-          await simpleApiClient.delete(`/api/form-fields/${formId}`);
+          await simpleApiClient.delete(`/api/forms/${formId}/fields`);
         }
 
         // Insert new fields with proper field names

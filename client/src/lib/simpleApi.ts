@@ -20,7 +20,18 @@ class SimpleApiClient {
       throw new Error(error.message || `HTTP ${response.status}`);
     }
 
-    return response.json();
+    // Handle 204 No Content responses
+    if (response.status === 204) {
+      return null;
+    }
+
+    // Handle empty responses
+    const text = await response.text();
+    if (!text) {
+      return null;
+    }
+
+    return JSON.parse(text);
   }
 
   // Auth methods

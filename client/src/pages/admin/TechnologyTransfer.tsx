@@ -22,6 +22,7 @@ import {
   Users,
   Calendar
 } from 'lucide-react';
+import logoPath from "@assets/6f64eb753133d8c8693ef11f8af6f2e5_1750318410601.png";
 
 export const TechnologyTransfer = () => {
   const { profile } = useAuth();
@@ -49,7 +50,7 @@ export const TechnologyTransfer = () => {
           <CardHeader>
             <CardTitle className="flex items-center text-2xl text-blue-900">
               <img 
-                src="/attached_assets/6f64eb753133d8c8693ef11f8af6f2e5_1750318410601.png" 
+                src={logoPath} 
                 alt="Balochistan Bureau of Statistics" 
                 className="h-8 w-8 object-contain mr-3"
               />

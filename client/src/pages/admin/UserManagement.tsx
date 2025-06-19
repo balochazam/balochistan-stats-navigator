@@ -388,7 +388,6 @@ export const UserManagement = () => {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="data_entry_user">Data Entry User</SelectItem>
-                          <SelectItem value="department_user">Department User</SelectItem>
                           <SelectItem value="admin">Admin</SelectItem>
                         </SelectContent>
                       </Select>

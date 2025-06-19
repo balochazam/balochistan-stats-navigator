@@ -138,6 +138,7 @@ Changelog:
 - June 18, 2025. Added comprehensive filtering system to public reports matching authenticated reports functionality - includes data search, date range filtering, department filtering, and real-time filter status with submission count indicators
 - June 18, 2025. Removed chart visualizations from Reports page per user request - eliminated pie charts and bar charts to simplify the interface while maintaining all data filtering and export functionality
 - June 19, 2025. Removed non-functional download button from public report cards on main dashboard - simplified interface to show only working "View Report" button while preserving functional export options within detailed report view
+- June 19, 2025. Updated system naming to "Balochistan Bureau of Statistics Dashboard" throughout application and made statistics card dynamic - replaced static "Data accuracy 100%" with dynamic "Publication Rate" based on actual published schedules data
 ```
 
 ## User Preferences

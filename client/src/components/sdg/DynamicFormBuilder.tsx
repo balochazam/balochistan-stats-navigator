@@ -128,13 +128,33 @@ export const DynamicFormBuilder: React.FC<DynamicFormBuilderProps> = ({
   // Mutation to save form to database
   const saveFormMutation = useMutation({
     mutationFn: async (formData: DynamicForm) => {
-      // Convert the DynamicForm to the database format
+      // First create the form
       const dbForm = {
         name: `${formData.indicatorCode} - ${formData.indicatorTitle}`,
         description: formData.description,
         is_active: true
       };
-      return simpleApiClient.post('/api/forms', dbForm);
+      
+      const formResponse = await simpleApiClient.post('/api/forms', dbForm);
+      const createdForm = formResponse;
+      
+      // Then save the form fields
+      if (formData.sections[0]?.fields?.length > 0) {
+        const fieldsToSave = formData.sections[0].fields.map((field, index) => ({
+          form_id: createdForm.id,
+          field_name: field.name || field.label.toLowerCase().replace(/\s+/g, '_'),
+          field_label: field.label,
+          field_type: field.type,
+          is_required: field.required || false,
+          placeholder_text: field.placeholder || '',
+          field_order: index + 1
+        }));
+        
+        // Save fields to form_fields table
+        await simpleApiClient.post(`/api/forms/${createdForm.id}/fields`, fieldsToSave);
+      }
+      
+      return createdForm;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/forms'] });

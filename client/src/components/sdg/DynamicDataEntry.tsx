@@ -36,10 +36,14 @@ export const DynamicDataEntry: React.FC<DynamicDataEntryProps> = ({
     enabled: !!formId,
   });
 
-  // Since we don't store the actual form structure in the database yet,
-  // let's provide a fallback form for now but also show a message about the actual saved form
+  // Fetch the form fields
+  const { data: formFields, isLoading: fieldsLoading, error: fieldsError } = useQuery({
+    queryKey: ['/api/forms', formId, 'fields'],
+    enabled: !!formId,
+  });
+
   const renderFormFields = () => {
-    if (formLoading) {
+    if (formLoading || fieldsLoading) {
       return (
         <div className="flex items-center justify-center p-8">
           <Loader2 className="h-6 w-6 animate-spin mr-2" />
@@ -48,40 +52,157 @@ export const DynamicDataEntry: React.FC<DynamicDataEntryProps> = ({
       );
     }
 
-    if (formError) {
+    if (formError || fieldsError) {
       return (
         <div className="p-8 text-center text-red-600">
-          <p>Error loading form: {formError.message}</p>
+          <p>Error loading form: {(formError || fieldsError)?.message}</p>
         </div>
       );
     }
 
-    // Show information about the actual form that was created
-    if (form) {
-      return (
-        <div className="space-y-6">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h4 className="font-medium text-blue-900 mb-2">Form Information</h4>
-            <p className="text-sm text-blue-700">
-              <strong>Form Name:</strong> {(form as any).name || 'Unnamed Form'}
-            </p>
-            {(form as any).description && (
-              <p className="text-sm text-blue-700 mt-1">
-                <strong>Description:</strong> {(form as any).description}
-              </p>
-            )}
-            <p className="text-xs text-blue-600 mt-2">
-              Note: The form builder structure will be fully integrated in the next update. 
-              For now, please use the standard data entry fields below.
-            </p>
-          </div>
-          
-          {renderStandardFields()}
-        </div>
-      );
+    // If we have actual form fields, render them
+    if (formFields && formFields.length > 0) {
+      return renderDynamicFields(formFields);
     }
 
+    // Fallback to standard fields if no custom fields are defined
     return renderStandardFields();
+  };
+
+  const renderDynamicFields = (fields: any[]) => {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Badge variant="outline">{indicatorCode}</Badge>
+            {(form as any)?.name || 'Custom Data Entry Form'}
+          </CardTitle>
+          {(form as any)?.description && (
+            <p className="text-sm text-gray-600">{(form as any).description}</p>
+          )}
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {fields
+            .sort((a, b) => (a.field_order || 0) - (b.field_order || 0))
+            .map((field) => renderField(field))}
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderField = (field: any) => {
+    const fieldId = `field_${field.id}`;
+    const label = field.field_label || 'Field';
+    const fieldName = field.field_name || 'field';
+    const placeholder = field.placeholder_text || `Enter ${label.toLowerCase()}`;
+    
+    switch (field.field_type) {
+      case 'text':
+        return (
+          <div key={field.id}>
+            <Label htmlFor={fieldId}>
+              {label}
+              {field.is_required && <span className="text-red-500 ml-1">*</span>}
+            </Label>
+            <Input
+              id={fieldId}
+              placeholder={placeholder}
+              value={formData[fieldName] || ''}
+              onChange={(e) => setFormData(prev => ({ ...prev, [fieldName]: e.target.value }))}
+            />
+          </div>
+        );
+      
+      case 'number':
+      case 'percentage':
+        return (
+          <div key={field.id}>
+            <Label htmlFor={fieldId}>
+              {label}
+              {field.is_required && <span className="text-red-500 ml-1">*</span>}
+            </Label>
+            <Input
+              id={fieldId}
+              type="number"
+              step="0.01"
+              placeholder={placeholder}
+              value={formData[fieldName] || ''}
+              onChange={(e) => setFormData(prev => ({ ...prev, [fieldName]: e.target.value }))}
+            />
+          </div>
+        );
+      
+      case 'textarea':
+        return (
+          <div key={field.id}>
+            <Label htmlFor={fieldId}>
+              {label}
+              {field.is_required && <span className="text-red-500 ml-1">*</span>}
+            </Label>
+            <Textarea
+              id={fieldId}
+              placeholder={placeholder}
+              value={formData[fieldName] || ''}
+              onChange={(e) => setFormData(prev => ({ ...prev, [fieldName]: e.target.value }))}
+              rows={3}
+            />
+          </div>
+        );
+      
+      case 'select':
+        return (
+          <div key={field.id}>
+            <Label htmlFor={fieldId}>
+              {label}
+              {field.is_required && <span className="text-red-500 ml-1">*</span>}
+            </Label>
+            <Select
+              value={formData[fieldName] || ''}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, [fieldName]: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={`Select ${label.toLowerCase()}`} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="option1">Option 1</SelectItem>
+                <SelectItem value="option2">Option 2</SelectItem>
+                <SelectItem value="option3">Option 3</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        );
+      
+      case 'checkbox':
+        return (
+          <div key={field.id} className="flex items-center space-x-2">
+            <Checkbox
+              id={fieldId}
+              checked={formData[fieldName] || false}
+              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, [fieldName]: checked }))}
+            />
+            <Label htmlFor={fieldId}>
+              {label}
+              {field.is_required && <span className="text-red-500 ml-1">*</span>}
+            </Label>
+          </div>
+        );
+      
+      default:
+        return (
+          <div key={field.id}>
+            <Label htmlFor={fieldId}>
+              {label}
+              {field.is_required && <span className="text-red-500 ml-1">*</span>}
+            </Label>
+            <Input
+              id={fieldId}
+              placeholder={placeholder}
+              value={formData[fieldName] || ''}
+              onChange={(e) => setFormData(prev => ({ ...prev, [fieldName]: e.target.value }))}
+            />
+          </div>
+        );
+    }
   };
 
   const renderStandardFields = () => {

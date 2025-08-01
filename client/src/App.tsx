@@ -19,6 +19,7 @@ import { ScheduleManagement } from "./pages/admin/ScheduleManagement";
 import { DataCollection } from "./pages/DataCollection";
 import { Reports } from "./pages/Reports";
 import { TechnologyTransfer } from "./pages/admin/TechnologyTransfer";
+import { SDGDashboard } from "./pages/SDGDashboard";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +40,7 @@ const App = () => (
             
             {/* Protected Admin Routes */}
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/sdg-dashboard" element={<SDGDashboard />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/data-collection" element={<DataCollection />} />
             <Route path="/admin/users" element={<UserManagement />} />

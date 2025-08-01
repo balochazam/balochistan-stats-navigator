@@ -20,7 +20,8 @@ import {
   User,
   Menu,
   X,
-  BookOpen
+  BookOpen,
+  Target
 } from 'lucide-react';
 import logoPath from "@assets/6f64eb753133d8c8693ef11f8af6f2e5_1750318410601.png";
 
@@ -53,6 +54,12 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       title: 'Dashboard',
       icon: LayoutDashboard,
       path: '/dashboard',
+      roles: ['admin', 'department_head', 'data_entry_user']
+    },
+    {
+      title: 'SDG Dashboard',
+      icon: Target,
+      path: '/sdg-dashboard',
       roles: ['admin', 'department_head', 'data_entry_user']
     },
     {

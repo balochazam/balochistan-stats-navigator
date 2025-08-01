@@ -22,72 +22,206 @@ const sdgGoalsData = [
   { id: 17, title: "Partnerships for the Goals", description: "Strengthen the means of implementation and revitalize the global partnership for sustainable development", color: "#19486a" },
 ];
 
-// Sample targets for key SDGs
+// Comprehensive SDG targets based on actual indicators with data
 const sdgTargetsData = [
-  { id: "1.1", sdg_goal_id: 1, title: "Eradicate extreme poverty", description: "By 2030, eradicate extreme poverty for all people everywhere, currently measured as people living on less than $1.25 a day" },
   { id: "1.2", sdg_goal_id: 1, title: "Reduce poverty by half", description: "By 2030, reduce at least by half the proportion of men, women and children of all ages living in poverty in all its dimensions according to national definitions" },
-  { id: "2.1", sdg_goal_id: 2, title: "End hunger", description: "By 2030, end hunger and ensure access by all people, in particular the poor and people in vulnerable situations, including infants, to safe, nutritious and sufficient food all year round" },
+  { id: "1.3", sdg_goal_id: 1, title: "Social protection systems", description: "Implement nationally appropriate social protection systems and measures for all, including floors, and by 2030 achieve substantial coverage of the poor and the vulnerable" },
+  { id: "1.4", sdg_goal_id: 1, title: "Equal access to basic services", description: "By 2030, ensure that all men and women, in particular the poor and the vulnerable, have equal rights to economic resources, as well as access to basic services" },
+  { id: "1.5", sdg_goal_id: 1, title: "Resilience to disasters", description: "By 2030, build the resilience of the poor and those in vulnerable situations and reduce their exposure and vulnerability to climate-related extreme events" },
+  { id: "1.a", sdg_goal_id: 1, title: "Resource mobilization", description: "Ensure significant mobilization of resources from a variety of sources, including through enhanced development cooperation, in order to provide adequate and predictable means for developing countries" },
   { id: "2.2", sdg_goal_id: 2, title: "End malnutrition", description: "By 2030, end all forms of malnutrition, including achieving, by 2025, the internationally agreed targets on stunting and wasting in children under 5 years of age" },
   { id: "3.1", sdg_goal_id: 3, title: "Reduce maternal mortality", description: "By 2030, reduce the global maternal mortality ratio to less than 70 per 100,000 live births" },
   { id: "3.2", sdg_goal_id: 3, title: "End preventable deaths of children", description: "By 2030, end preventable deaths of newborns and children under 5 years of age" },
-  { id: "4.1", sdg_goal_id: 4, title: "Free primary and secondary education", description: "By 2030, ensure that all girls and boys complete free, equitable and quality primary and secondary education leading to relevant and effective learning outcomes" },
-  { id: "5.1", sdg_goal_id: 5, title: "End discrimination against women", description: "End all forms of discrimination against all women and girls everywhere" },
+  { id: "4.6", sdg_goal_id: 4, title: "Adult literacy and numeracy", description: "By 2030, ensure that all youth and a substantial proportion of adults, both men and women, achieve literacy and numeracy" },
+  { id: "8.5", sdg_goal_id: 8, title: "Full employment and decent work", description: "By 2030, achieve full and productive employment and decent work for all women and men, including for young people and persons with disabilities" },
+  { id: "8.6", sdg_goal_id: 8, title: "Reduce youth NEET", description: "By 2020, substantially reduce the proportion of youth not in employment, education or training" },
+  { id: "15.1", sdg_goal_id: 15, title: "Conserve terrestrial ecosystems", description: "By 2020, ensure the conservation, restoration and sustainable use of terrestrial and inland freshwater ecosystems" },
+  { id: "16.9", sdg_goal_id: 16, title: "Legal identity for all", description: "By 2030, provide legal identity for all, including birth registration" },
 ];
 
-// Sample indicators based on Pakistan's SDG data
+// All SDG indicators based on your actual data document
 const sdgIndicatorsData = [
   {
     id: "1.2.2",
     sdg_target_id: "1.2",
     indicator_code: "1.2.2",
-    title: "Proportion of population living in poverty (national poverty line)",
-    description: "Percentage of population below national poverty line",
+    title: "Proportion of men, women and children of all ages living in poverty in all its dimensions according to national definitions",
+    description: "Multi-dimensional Poverty Index (MPI) measuring poverty across health, education and living standards",
     indicator_type: "percentage",
     unit: "percentage",
-    methodology: "Based on Pakistan Social and Living Standards Measurement (PSLM) survey data",
-    data_collection_frequency: "Every 2-3 years",
-    responsible_departments: ["PBS", "Planning Commission"]
+    methodology: "Multi-dimensional Poverty Index computation based on MICS and PSLM data",
+    data_collection_frequency: "Every 3-5 years",
+    responsible_departments: ["Planning Commission", "PBS", "UNICEF"]
   },
   {
-    id: "2.2.1", 
+    id: "1.3.1",
+    sdg_target_id: "1.3",
+    indicator_code: "1.3.1",
+    title: "Proportion of population covered by social protection floors/systems",
+    description: "Percentage of population receiving social protection benefits including BISP and other transfers",
+    indicator_type: "percentage", 
+    unit: "percentage",
+    methodology: "Based on PDHS and MICS household surveys on social protection coverage",
+    data_collection_frequency: "Every 3-5 years",
+    responsible_departments: ["Ministry of Social Protection", "BISP", "PBS"]
+  },
+  {
+    id: "1.4.1",
+    sdg_target_id: "1.4",
+    indicator_code: "1.4.1",
+    title: "Proportion of population living in households with access to basic services",
+    description: "Access to improved water source, sanitation, electricity and cooking fuel",
+    indicator_type: "multi_dimensional",
+    unit: "percentage",
+    methodology: "Based on PSLM and MICS data on household access to basic services",
+    data_collection_frequency: "Every 2-3 years",
+    responsible_departments: ["PBS", "Ministry of Water Resources", "Ministry of Energy"]
+  },
+  {
+    id: "1.5.1",
+    sdg_target_id: "1.5",
+    indicator_code: "1.5.1", 
+    title: "Number of deaths, missing persons and directly affected persons attributed to disasters per 100,000 population",
+    description: "Disaster impact statistics including fatalities, injuries and affected population",
+    indicator_type: "rate",
+    unit: "per 100,000 population",
+    methodology: "Based on NDMA annual disaster reports and provincial disaster management data",
+    data_collection_frequency: "Annual",
+    responsible_departments: ["NDMA", "PDMA Balochistan"]
+  },
+  {
+    id: "1.a.2",
+    sdg_target_id: "1.a",
+    indicator_code: "1.a.2",
+    title: "Proportion of total government spending on essential services (education, health and social protection)",
+    description: "Government budget allocation to education, health and social protection as percentage of total spending",
+    indicator_type: "budget",
+    unit: "percentage",
+    methodology: "Based on provincial budget statements and PRSP Ministry of Finance data",
+    data_collection_frequency: "Annual",
+    responsible_departments: ["Ministry of Finance Balochistan", "Planning & Development"]
+  },
+  {
+    id: "2.2.1",
     sdg_target_id: "2.2",
     indicator_code: "2.2.1",
-    title: "Prevalence of stunting among children under 5 years",
-    description: "Percentage of children under 5 who are stunted (height-for-age)",
+    title: "Prevalence of stunting among children under 5 years of age",
+    description: "Percentage of children under 5 with height-for-age below -2 standard deviations from median",
     indicator_type: "percentage",
     unit: "percentage",
-    methodology: "Based on National Nutrition Survey (NNS) and PDHS data",
-    data_collection_frequency: "Every 5 years",
-    responsible_departments: ["Ministry of Health", "UNICEF"]
+    methodology: "Based on National Nutrition Survey (NNS), PDHS and MICS anthropometric measurements",
+    data_collection_frequency: "Every 3-5 years",
+    responsible_departments: ["Ministry of Health", "UNICEF", "Aga Khan University"]
   },
   {
-    id: "3.1.2",
-    sdg_target_id: "3.1", 
-    indicator_code: "3.1.2",
-    title: "Proportion of births attended by skilled health personnel",
-    description: "Percentage of deliveries attended by skilled birth attendants",
-    indicator_type: "percentage",
-    unit: "percentage", 
-    methodology: "Based on Pakistan Demographic and Health Survey (PDHS)",
-    data_collection_frequency: "Every 5 years",
-    responsible_departments: ["Ministry of Health", "PBS"]
+    id: "2.2.2",
+    sdg_target_id: "2.2",
+    indicator_code: "2.2.2",
+    title: "Prevalence of malnutrition among children under 5 years of age, by type (wasting and overweight)",
+    description: "Percentage of children under 5 with wasting (weight-for-height) and overweight conditions",
+    indicator_type: "multi_dimensional",
+    unit: "percentage",
+    methodology: "Based on NNS, PDHS and MICS anthropometric measurements for wasting and overweight",
+    data_collection_frequency: "Every 3-5 years",
+    responsible_departments: ["Ministry of Health", "UNICEF", "Aga Khan University"]
   },
   {
-    id: "4.1.1",
-    sdg_target_id: "4.1",
-    indicator_code: "4.1.1", 
-    title: "Primary education completion rate",
-    description: "Percentage of children completing primary education",
+    id: "3.1.1",
+    sdg_target_id: "3.1",
+    indicator_code: "3.1.1",
+    title: "Maternal mortality ratio",
+    description: "Number of maternal deaths per 100,000 live births",
+    indicator_type: "rate",
+    unit: "per 100,000 live births",
+    methodology: "Based on PDHS and Pakistan MMR Survey data on maternal deaths",
+    data_collection_frequency: "Every 5-7 years",
+    responsible_departments: ["Ministry of Health", "NIPS", "PBS"]
+  },
+  {
+    id: "3.2.1",
+    sdg_target_id: "3.2",
+    indicator_code: "3.2.1",
+    title: "Under-5 mortality rate",
+    description: "Probability of dying between birth and exactly 5 years of age per 1,000 live births",
+    indicator_type: "rate",
+    unit: "per 1,000 live births",
+    methodology: "Based on PDHS, PSLM and MICS data on child mortality",
+    data_collection_frequency: "Every 3-5 years",
+    responsible_departments: ["Ministry of Health", "PBS", "UNICEF"]
+  },
+  {
+    id: "4.6.1",
+    sdg_target_id: "4.6",
+    indicator_code: "4.6.1",
+    title: "Proportion of population in a given age group achieving at least a fixed level of proficiency in functional literacy and numeracy skills by sex",
+    description: "Adult literacy rate for population 10 years and above",
     indicator_type: "percentage",
     unit: "percentage",
-    methodology: "Based on Pakistan Social and Living Standards Measurement (PSLM)",
-    data_collection_frequency: "Annual",
+    methodology: "Based on PSLM and Labour Force Survey (LFS) data on literacy rates",
+    data_collection_frequency: "Every 2-3 years",
     responsible_departments: ["Ministry of Education", "PBS"]
+  },
+  {
+    id: "8.5.2",
+    sdg_target_id: "8.5",
+    indicator_code: "8.5.2",
+    title: "Unemployment rate by sex, age and persons with disabilities",
+    description: "Percentage of labour force that is unemployed, disaggregated by sex",
+    indicator_type: "percentage",
+    unit: "percentage",
+    methodology: "Based on Labour Force Survey (LFS) quarterly data on employment status",
+    data_collection_frequency: "Quarterly/Annual",
+    responsible_departments: ["PBS", "Ministry of Labour"]
+  },
+  {
+    id: "8.6.1",
+    sdg_target_id: "8.6",
+    indicator_code: "8.6.1",
+    title: "Proportion of youth (aged 15–24 years) not in education, employment or training",
+    description: "NEET rate - youth not engaged in education, employment or training",
+    indicator_type: "percentage",
+    unit: "percentage",
+    methodology: "Based on Labour Force Survey (LFS) data on youth education and employment status",
+    data_collection_frequency: "Annual",
+    responsible_departments: ["PBS", "Ministry of Education", "Ministry of Labour"]
+  },
+  {
+    id: "15.1.1",
+    sdg_target_id: "15.1",
+    indicator_code: "15.1.1",
+    title: "Forest area as a proportion of total land area",
+    description: "Percentage of total land area covered by forests",
+    indicator_type: "percentage",
+    unit: "percentage",
+    methodology: "Based on Balochistan Development Statistics and Agriculture Statistics forest cover data",
+    data_collection_frequency: "Annual",
+    responsible_departments: ["Forest Department Balochistan", "Agriculture Department"]
+  },
+  {
+    id: "16.9.1",
+    sdg_target_id: "16.9",
+    indicator_code: "16.9.1",
+    title: "Proportion of children under 5 years of age whose births have been registered with a civil authority by age",
+    description: "Birth registration coverage for children under 5 years",
+    indicator_type: "percentage",
+    unit: "percentage",
+    methodology: "Based on PDHS and MICS data on civil registration and vital statistics",
+    data_collection_frequency: "Every 3-5 years",
+    responsible_departments: ["NADRA", "Civil Registration", "PBS"]
   }
 ];
 
-// Data sources used in Pakistan
+// All data sources mentioned in your document
 const sdgDataSourcesData = [
+  {
+    id: "MPI2014",
+    name: "MPI Report 2014-15",
+    full_name: "Multi-dimensional Poverty Index Report 2014-15", 
+    description: "Baseline MPI computation for poverty measurement",
+    organization: "Planning Commission Pakistan",
+    frequency: "Irregular",
+    last_survey_year: 2015
+  },
   {
     id: "MICS",
     name: "MICS",
@@ -95,14 +229,14 @@ const sdgDataSourcesData = [
     description: "UNICEF-supported household survey program",
     organization: "UNICEF Pakistan",
     frequency: "Every 3-5 years",
-    last_survey_year: 2018
+    last_survey_year: 2020
   },
   {
     id: "PDHS", 
     name: "PDHS",
     full_name: "Pakistan Demographic and Health Survey",
     description: "National demographic and health survey",
-    organization: "National Institute of Population Studies",
+    organization: "National Institute of Population Studies (NIPS)",
     frequency: "Every 5-7 years", 
     last_survey_year: 2018
   },
@@ -123,17 +257,686 @@ const sdgDataSourcesData = [
     organization: "Aga Khan University",
     frequency: "Every 5-10 years",
     last_survey_year: 2018
+  },
+  {
+    id: "NDMA",
+    name: "NDMA Reports",
+    full_name: "National Disaster Management Authority Annual Reports",
+    description: "Disaster impact and response data",
+    organization: "National Disaster Management Authority",
+    frequency: "Annual",
+    last_survey_year: 2021
+  },
+  {
+    id: "BUDGET",
+    name: "Budget Statements",
+    full_name: "Provincial Budget Statements and PRSP Reports",
+    description: "Government spending and budget allocation data",
+    organization: "Ministry of Finance Balochistan",
+    frequency: "Annual",
+    last_survey_year: 2023
+  },
+  {
+    id: "MMR",
+    name: "Pakistan MMR Survey",
+    full_name: "Pakistan Maternal Mortality Rate Survey",
+    description: "Specialized survey on maternal mortality",
+    organization: "Ministry of Health Pakistan",
+    frequency: "Irregular",
+    last_survey_year: 2019
+  },
+  {
+    id: "LFS",
+    name: "LFS",
+    full_name: "Labour Force Survey",
+    description: "Quarterly employment and labour statistics",
+    organization: "Pakistan Bureau of Statistics",
+    frequency: "Quarterly",
+    last_survey_year: 2021
+  },
+  {
+    id: "FORESTRY",
+    name: "Balochistan Development Statistics",
+    full_name: "Balochistan Development Statistics and Agriculture Statistics",
+    description: "Provincial development and agriculture data including forestry",
+    organization: "Government of Balochistan",
+    frequency: "Annual",
+    last_survey_year: 2022
   }
 ];
 
-// We'll skip indicator values for now since we need proper user IDs
-const sdgIndicatorValuesData: any[] = [
-  // Will be populated after users are created
+// All actual SDG indicator values from your document - using admin user ID that exists
+async function getAdminUserId() {
+  // Query to get the admin user ID - this will be called during seeding
+  const result = await db.query.profiles.findFirst({
+    where: (profiles, { eq }) => eq(profiles.role, 'admin')
+  });
+  return result?.id || null;
+}
+
+// Sample data values based on your document (will use admin ID dynamically)
+const createSdgIndicatorValuesData = (adminId: string) => [
+  // 1.2.2 - Poverty (MPI)
+  {
+    indicator_id: "1.2.2",
+    data_source_id: "MPI2014",
+    year: 2015,
+    value: "71.2",
+    value_numeric: 71.2,
+    breakdown_data: { overall: 71.2, urban: 37.7, rural: 84.6 },
+    baseline_indicator: true,
+    notes: "Baseline MPI from 2014-15 showing high poverty rates in Balochistan",
+    reference_document: "MPI Report 2014-15",
+    data_quality_score: 4,
+    submitted_by: adminId
+  },
+  {
+    indicator_id: "1.2.2",
+    data_source_id: "MICS",
+    year: 2020,
+    value: "63.4",
+    value_numeric: 63.4,
+    breakdown_data: { overall: 63.4, urban: 41.7, rural: 71.0 },
+    progress_indicator: true,
+    notes: "Progress measurement showing improvement in MPI",
+    reference_document: "MICS 2019-20",
+    data_quality_score: 5,
+    submitted_by: adminId
+  },
+  // 1.3.1 - Social Protection
+  {
+    indicator_id: "1.3.1",
+    data_source_id: "PDHS",
+    year: 2018,
+    value: "8.0",
+    value_numeric: 8.0,
+    breakdown_data: { bisp_coverage: 8.0 },
+    baseline_indicator: true,
+    notes: "BISP coverage among ever-married women (15-49)",
+    reference_document: "PDHS 2017-18",
+    data_quality_score: 5,
+    submitted_by: adminId
+  },
+  {
+    indicator_id: "1.3.1",
+    data_source_id: "MICS",
+    year: 2020,
+    value: "14.4",
+    value_numeric: 14.4,
+    breakdown_data: { social_transfers: 14.4 },
+    progress_indicator: true,
+    notes: "Household members receiving social transfers in last 3 months",
+    reference_document: "MICS 2019-20",
+    data_quality_score: 5,
+    submitted_by: adminId
+  },
+  // 1.4.1 - Access to Basic Services (Multiple sub-indicators)
+  {
+    indicator_id: "1.4.1",
+    data_source_id: "PSLM",
+    year: 2015,
+    value: "Multiple Services",
+    breakdown_data: { 
+      improved_water: 67, 
+      flush_toilet: 31, 
+      flush_toilet_urban: 78, 
+      flush_toilet_rural: 14,
+      electricity: 80.73,
+      electricity_urban: 97.59,
+      electricity_rural: 74.42,
+      gas_cooking: 25,
+      gas_urban: 60,
+      gas_rural: 12
+    },
+    baseline_indicator: true,
+    notes: "Baseline access to basic services across multiple indicators",
+    reference_document: "PSLM 2014-15",
+    data_quality_score: 4,
+    submitted_by: adminId
+  },
+  {
+    indicator_id: "1.4.1",
+    data_source_id: "PSLM",
+    year: 2019,
+    value: "Multiple Services",
+    breakdown_data: { 
+      improved_water: 84, 
+      flush_toilet: 41, 
+      flush_toilet_urban: 82, 
+      flush_toilet_rural: 25,
+      electricity: 75,
+      electricity_urban: 95,
+      electricity_rural: 67,
+      gas_cooking: 37,
+      gas_urban: 70,
+      gas_rural: 24
+    },
+    progress_indicator: true,
+    notes: "Progress in access to basic services showing improvements",
+    reference_document: "PSLM 2018-19",
+    data_quality_score: 4,
+    submitted_by: adminId
+  },
+  {
+    indicator_id: "1.4.1",
+    data_source_id: "MICS",
+    year: 2020,
+    value: "Water and Sanitation",
+    breakdown_data: { 
+      basic_drinking_water: 79.6,
+      basic_sanitation: 62.8
+    },
+    progress_indicator: true,
+    notes: "Latest data on water and sanitation services",
+    reference_document: "MICS 2019-20",
+    data_quality_score: 5,
+    submitted_by: adminId
+  },
+  // 1.5.1 - Disaster Impact
+  {
+    indicator_id: "1.5.1",
+    data_source_id: "NDMA",
+    year: 2015,
+    value: "Disaster Impact",
+    breakdown_data: { 
+      deaths_per_100k: 0.13,
+      injured_per_100k: 0.29,
+      affected_per_100k: 70.35
+    },
+    baseline_indicator: true,
+    notes: "Baseline disaster impact statistics",
+    reference_document: "NDMA Annual Report 2015",
+    data_quality_score: 4,
+    submitted_by: adminId
+  },
+  {
+    indicator_id: "1.5.1",
+    data_source_id: "NDMA",
+    year: 2018,
+    value: "Disaster Impact",
+    breakdown_data: { 
+      deaths_per_100k: 0.04,
+      injured_per_100k: 0.08,
+      affected_per_100k: 24.62
+    },
+    progress_indicator: true,
+    notes: "Improved disaster management and reduced impact",
+    reference_document: "NDMA Annual Report 2018",
+    data_quality_score: 4,
+    submitted_by: adminId
+  },
+  {
+    indicator_id: "1.5.1",
+    data_source_id: "NDMA",
+    year: 2021,
+    value: "Disaster Impact",
+    breakdown_data: { 
+      deaths_per_100k: 0.17,
+      injured_per_100k: 0.06,
+      affected_per_100k: 19.92
+    },
+    progress_indicator: true,
+    notes: "Latest disaster impact data",
+    reference_document: "NDMA Annual Report 2021",
+    data_quality_score: 4,
+    submitted_by: adminId
+  },
+  // 1.a.2 - Government Spending
+  {
+    indicator_id: "1.a.2",
+    data_source_id: "BUDGET",
+    year: 2015,
+    value: "26.78",
+    value_numeric: 26.78,
+    breakdown_data: { 
+      total_spending: 26.78,
+      education: 18.35,
+      health: 7.8,
+      social_protection: 0.62
+    },
+    baseline_indicator: true,
+    notes: "Baseline government spending on essential services",
+    reference_document: "Annual Budget Statements 2014-15",
+    data_quality_score: 5,
+    submitted_by: adminId
+  },
+  {
+    indicator_id: "1.a.2",
+    data_source_id: "BUDGET",
+    year: 2019,
+    value: "30.20",
+    value_numeric: 30.20,
+    breakdown_data: { 
+      total_spending: 30.20,
+      education: 21.26,
+      health: 8.42,
+      social_protection: 0.53
+    },
+    progress_indicator: true,
+    notes: "Increased spending on essential services",
+    reference_document: "Annual Budget Statements 2018-19",
+    data_quality_score: 5,
+    submitted_by: adminId
+  },
+  {
+    indicator_id: "1.a.2",
+    data_source_id: "BUDGET",
+    year: 2023,
+    value: "27.90",
+    value_numeric: 27.90,
+    breakdown_data: { 
+      total_spending: 27.90,
+      education: 17.60,
+      health: 7.39,
+      social_protection: 2.91
+    },
+    progress_indicator: true,
+    notes: "Latest budget allocation with significant increase in social protection",
+    reference_document: "Revised Budget 2022-23",
+    data_quality_score: 5,
+    submitted_by: adminId
+  },
+  // 2.2.1 - Stunting
+  {
+    indicator_id: "2.2.1",
+    data_source_id: "NNS",
+    year: 2011,
+    value: "32.0",
+    value_numeric: 32.0,
+    breakdown_data: { stunting_rate: 32.0 },
+    baseline_indicator: true,
+    notes: "Baseline stunting rate from NNS",
+    reference_document: "National Nutrition Survey 2011",
+    data_quality_score: 4,
+    submitted_by: adminId
+  },
+  {
+    indicator_id: "2.2.1",
+    data_source_id: "PDHS",
+    year: 2018,
+    value: "47.0",
+    value_numeric: 47.0,
+    breakdown_data: { stunting_rate: 47.0 },
+    progress_indicator: true,
+    notes: "Concerning increase in stunting rates",
+    reference_document: "PDHS 2017-18",
+    data_quality_score: 5,
+    submitted_by: adminId
+  },
+  {
+    indicator_id: "2.2.1",
+    data_source_id: "MICS",
+    year: 2020,
+    value: "49.7",
+    value_numeric: 49.7,
+    breakdown_data: { 
+      moderate_severe_stunting: 49.7,
+      severe_stunting: 29.1
+    },
+    progress_indicator: true,
+    notes: "Latest stunting data showing continued challenges",
+    reference_document: "MICS 2019-20",
+    data_quality_score: 5,
+    submitted_by: adminId
+  },
+  // 2.2.2 - Malnutrition (Wasting)
+  {
+    indicator_id: "2.2.2",
+    data_source_id: "NNS",
+    year: 2011,
+    value: "18.0",
+    value_numeric: 18.0,
+    breakdown_data: { wasting_rate: 18.0 },
+    baseline_indicator: true,
+    notes: "Baseline wasting rate",
+    reference_document: "National Nutrition Survey 2011",
+    data_quality_score: 4,
+    submitted_by: adminId
+  },
+  {
+    indicator_id: "2.2.2",
+    data_source_id: "PDHS",
+    year: 2018,
+    value: "18.3",
+    value_numeric: 18.3,
+    breakdown_data: { wasting_rate: 18.3 },
+    progress_indicator: true,
+    notes: "Stable wasting rates",
+    reference_document: "PDHS 2017-18",
+    data_quality_score: 5,
+    submitted_by: adminId
+  },
+  {
+    indicator_id: "2.2.2",
+    data_source_id: "MICS",
+    year: 2020,
+    value: "9.2",
+    value_numeric: 9.2,
+    breakdown_data: { 
+      moderate_severe_wasting: 9.2,
+      severe_wasting: 4.3,
+      overweight: 11.5
+    },
+    progress_indicator: true,
+    notes: "Significant improvement in wasting rates",
+    reference_document: "MICS 2019-20",
+    data_quality_score: 5,
+    submitted_by: adminId
+  },
+  // 3.1.1 - Maternal Mortality
+  {
+    indicator_id: "3.1.1",
+    data_source_id: "PDHS",
+    year: 2007,
+    value: "785",
+    value_numeric: 785,
+    breakdown_data: { mmr: 785 },
+    baseline_indicator: true,
+    notes: "High baseline maternal mortality ratio",
+    reference_document: "PDHS 2006-07",
+    data_quality_score: 4,
+    submitted_by: adminId
+  },
+  {
+    indicator_id: "3.1.1",
+    data_source_id: "MMR",
+    year: 2019,
+    value: "298",
+    value_numeric: 298,
+    breakdown_data: { mmr: 298 },
+    progress_indicator: true,
+    notes: "Significant improvement in maternal mortality",
+    reference_document: "Pakistan MMR Survey 2019",
+    data_quality_score: 5,
+    submitted_by: adminId
+  },
+  // 3.2.1 - Under-5 Mortality
+  {
+    indicator_id: "3.2.1",
+    data_source_id: "PDHS",
+    year: 2013,
+    value: "111",
+    value_numeric: 111,
+    breakdown_data: { 
+      overall: 111,
+      urban: 101,
+      rural: 102
+    },
+    baseline_indicator: true,
+    notes: "Baseline under-5 mortality rate",
+    reference_document: "PDHS 2012-13",
+    data_quality_score: 5,
+    submitted_by: adminId
+  },
+  {
+    indicator_id: "3.2.1",
+    data_source_id: "PSLM",
+    year: 2019,
+    value: "35",
+    value_numeric: 35,
+    breakdown_data: { 
+      overall: 35,
+      urban: 32,
+      rural: 36
+    },
+    progress_indicator: true,
+    notes: "Dramatic improvement in child survival",
+    reference_document: "PSLM 2018-19",
+    data_quality_score: 4,
+    submitted_by: adminId
+  },
+  {
+    indicator_id: "3.2.1",
+    data_source_id: "MICS",
+    year: 2020,
+    value: "53",
+    value_numeric: 53,
+    breakdown_data: { under5_mortality: 53 },
+    progress_indicator: true,
+    notes: "Latest under-5 mortality data",
+    reference_document: "MICS 2019-20",
+    data_quality_score: 5,
+    submitted_by: adminId
+  },
+  // 4.6.1 - Literacy
+  {
+    indicator_id: "4.6.1",
+    data_source_id: "PSLM",
+    year: 2014,
+    value: "44.0",
+    value_numeric: 44.0,
+    breakdown_data: { literacy_rate: 44.0 },
+    baseline_indicator: true,
+    notes: "Baseline literacy rate",
+    reference_document: "PSLM 2013-14",
+    data_quality_score: 4,
+    submitted_by: adminId
+  },
+  {
+    indicator_id: "4.6.1",
+    data_source_id: "PSLM",
+    year: 2020,
+    value: "46.0",
+    value_numeric: 46.0,
+    breakdown_data: { literacy_rate: 46.0 },
+    progress_indicator: true,
+    notes: "Modest improvement in literacy",
+    reference_document: "PSLM 2019-20",
+    data_quality_score: 4,
+    submitted_by: adminId
+  },
+  {
+    indicator_id: "4.6.1",
+    data_source_id: "LFS",
+    year: 2021,
+    value: "54.5",
+    value_numeric: 54.5,
+    breakdown_data: { literacy_rate_10plus: 54.5 },
+    progress_indicator: true,
+    notes: "Latest literacy rate showing good progress",
+    reference_document: "Labour Force Survey 2020-21",
+    data_quality_score: 5,
+    submitted_by: adminId
+  },
+  // 8.5.2 - Unemployment
+  {
+    indicator_id: "8.5.2",
+    data_source_id: "LFS",
+    year: 2015,
+    value: "3.92",
+    value_numeric: 3.92,
+    breakdown_data: { 
+      overall: 3.92,
+      male: 2.84,
+      female: 8.54
+    },
+    baseline_indicator: true,
+    notes: "Baseline unemployment rate",
+    reference_document: "Labour Force Survey 2014-15",
+    data_quality_score: 5,
+    submitted_by: adminId
+  },
+  {
+    indicator_id: "8.5.2",
+    data_source_id: "LFS",
+    year: 2019,
+    value: "4.6",
+    value_numeric: 4.6,
+    breakdown_data: { 
+      overall: 4.6,
+      male: 4.2,
+      female: 7.4
+    },
+    progress_indicator: true,
+    notes: "Slight increase in unemployment",
+    reference_document: "Labour Force Survey 2018-19",
+    data_quality_score: 5,
+    submitted_by: adminId
+  },
+  {
+    indicator_id: "8.5.2",
+    data_source_id: "LFS",
+    year: 2021,
+    value: "4.3",
+    value_numeric: 4.3,
+    breakdown_data: { 
+      overall: 4.3,
+      male: 4.2,
+      female: 5.0
+    },
+    progress_indicator: true,
+    notes: "Recent improvement in unemployment, especially for women",
+    reference_document: "Labour Force Survey 2020-21",
+    data_quality_score: 5,
+    submitted_by: adminId
+  },
+  // 8.6.1 - Youth NEET
+  {
+    indicator_id: "8.6.1",
+    data_source_id: "LFS",
+    year: 2015,
+    value: "24.0",
+    value_numeric: 24.0,
+    breakdown_data: { 
+      overall: 24.0,
+      urban: 23.0,
+      rural: 25.0
+    },
+    baseline_indicator: true,
+    notes: "Baseline youth NEET rate",
+    reference_document: "Labour Force Survey 2014-15",
+    data_quality_score: 5,
+    submitted_by: adminId
+  },
+  {
+    indicator_id: "8.6.1",
+    data_source_id: "LFS",
+    year: 2019,
+    value: "27.0",
+    value_numeric: 27.0,
+    breakdown_data: { 
+      overall: 27.0,
+      urban: 27.0,
+      rural: 27.0
+    },
+    progress_indicator: true,
+    notes: "Increase in youth NEET rate",
+    reference_document: "Labour Force Survey 2018-19",
+    data_quality_score: 5,
+    submitted_by: adminId
+  },
+  {
+    indicator_id: "8.6.1",
+    data_source_id: "LFS",
+    year: 2021,
+    value: "41.8",
+    value_numeric: 41.8,
+    breakdown_data: { 
+      overall: 41.8,
+      urban: 41.0,
+      rural: 42.1,
+      male_overall: 14.1,
+      male_urban: 15.8,
+      male_rural: 13.3,
+      female_overall: 75.4,
+      female_urban: 71.6,
+      female_rural: 77.6
+    },
+    progress_indicator: true,
+    notes: "Significant increase in youth NEET, particularly affecting females",
+    reference_document: "Labour Force Survey 2020-21",
+    data_quality_score: 5,
+    submitted_by: adminId
+  },
+  // 15.1.1 - Forest Area
+  {
+    indicator_id: "15.1.1",
+    data_source_id: "FORESTRY",
+    year: 2015,
+    value: "3.25",
+    value_numeric: 3.25,
+    breakdown_data: { forest_percentage: 3.25 },
+    baseline_indicator: true,
+    notes: "Baseline forest coverage",
+    reference_document: "Balochistan Development Statistics 2014-15",
+    data_quality_score: 4,
+    submitted_by: adminId
+  },
+  {
+    indicator_id: "15.1.1",
+    data_source_id: "FORESTRY",
+    year: 2019,
+    value: "3.35",
+    value_numeric: 3.35,
+    breakdown_data: { forest_percentage: 3.35 },
+    progress_indicator: true,
+    notes: "Slight increase in forest coverage",
+    reference_document: "Balochistan Development Statistics 2018-19",
+    data_quality_score: 4,
+    submitted_by: adminId
+  },
+  {
+    indicator_id: "15.1.1",
+    data_source_id: "FORESTRY",
+    year: 2022,
+    value: "5.15",
+    value_numeric: 5.15,
+    breakdown_data: { forest_percentage: 5.15 },
+    progress_indicator: true,
+    notes: "Significant improvement in forest coverage",
+    reference_document: "Balochistan Agriculture Statistics 2021-22",
+    data_quality_score: 4,
+    submitted_by: adminId
+  },
+  // 16.9.1 - Birth Registration
+  {
+    indicator_id: "16.9.1",
+    data_source_id: "PDHS",
+    year: 2013,
+    value: "7.7",
+    value_numeric: 7.7,
+    breakdown_data: { birth_registration: 7.7 },
+    baseline_indicator: true,
+    notes: "Very low baseline birth registration",
+    reference_document: "PDHS 2012-13",
+    data_quality_score: 5,
+    submitted_by: adminId
+  },
+  {
+    indicator_id: "16.9.1",
+    data_source_id: "PDHS",
+    year: 2018,
+    value: "37.6",
+    value_numeric: 37.6,
+    breakdown_data: { 
+      overall: 37.6,
+      urban: 46.0,
+      rural: 34.0
+    },
+    progress_indicator: true,
+    notes: "Significant improvement in birth registration",
+    reference_document: "PDHS 2017-18",
+    data_quality_score: 5,
+    submitted_by: adminId
+  },
+  {
+    indicator_id: "16.9.1",
+    data_source_id: "MICS",
+    year: 2020,
+    value: "44.1",
+    value_numeric: 44.1,
+    breakdown_data: { birth_registration: 44.1 },
+    progress_indicator: true,
+    notes: "Continued improvement in birth registration",
+    reference_document: "MICS 2019-20",
+    data_quality_score: 5,
+    submitted_by: adminId
+  }
 ];
 
 export async function seedSDGData() {
   try {
-    console.log('Starting SDG data seeding...');
+    console.log('Starting comprehensive SDG data seeding...');
 
     // Insert SDG Goals
     console.log('Inserting SDG Goals...');
@@ -175,18 +978,27 @@ export async function seedSDGData() {
       }
     }
 
-    // Insert Indicator Values
-    console.log('Inserting Indicator Values...');
-    for (const value of sdgIndicatorValuesData) {
+    // Get admin user ID for data values
+    const adminUser = await getAdminUserId();
+    if (!adminUser) {
+      console.log('No admin user found, skipping indicator values');
+      return { success: true, message: 'SDG structure seeded successfully (no admin user for values)' };
+    }
+
+    // Insert Indicator Values with actual data
+    console.log('Inserting comprehensive indicator values...');
+    const indicatorValues = createSdgIndicatorValuesData(adminUser);
+    for (const value of indicatorValues) {
       try {
         await db.insert(sdg_indicator_values).values(value).onConflictDoNothing();
       } catch (error) {
-        console.log(`Indicator value already exists or error:`, error);
+        console.log(`Indicator value error:`, error);
       }
     }
 
     console.log('SDG data seeding completed successfully!');
-    return { success: true, message: 'SDG data seeded successfully' };
+    console.log(`Seeded: ${sdgGoalsData.length} goals, ${sdgTargetsData.length} targets, ${sdgIndicatorsData.length} indicators, ${sdgDataSourcesData.length} data sources, ${indicatorValues.length} data values`);
+    return { success: true, message: 'Complete SDG database populated with authentic Balochistan data' };
   } catch (error) {
     console.error('Error seeding SDG data:', error);
     return { success: false, error: error };

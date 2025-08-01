@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom grid for 17 SDG columns */
+.grid-cols-17 {
+  grid-template-columns: repeat(17, minmax(0, 1fr));
+}
+
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. */
 
 @layer base {

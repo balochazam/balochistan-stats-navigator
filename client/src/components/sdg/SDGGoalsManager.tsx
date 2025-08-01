@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Plus, Edit2, Target, TrendingUp, Database, AlertCircle } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { simpleApiClient } from '@/lib/simpleApi';
 import { z } from 'zod';
 
@@ -345,35 +345,65 @@ export const SDGGoalsManager = () => {
           </p>
         </CardHeader>
         <CardContent>
-          <div className="h-96">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={sdgData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="id" 
-                  tick={{ fontSize: 12 }}
-                  tickFormatter={(value) => `SDG ${value}`}
-                />
-                <YAxis 
-                  tick={{ fontSize: 12 }}
-                  tickFormatter={(value) => `${value}%`}
-                />
-                <Tooltip 
-                  formatter={(value, name, props) => [
-                    `${value}%`, 
-                    `SDG ${props.payload.id}: ${props.payload.title}`
-                  ]}
-                  labelFormatter={(label) => `SDG ${label}`}
-                />
-                <Bar 
-                  dataKey="progress" 
-                  fill="#4c9f38"
-                  stroke="#fff"
-                  strokeWidth={1}
-                  radius={[2, 2, 0, 0]}
-                />
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="space-y-4">
+            {/* Main Chart */}
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={sdgData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="id" 
+                    tick={{ fontSize: 10 }}
+                    tickFormatter={(value) => `${value}`}
+                    interval={0}
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 12 }}
+                    tickFormatter={(value) => `${value}%`}
+                    domain={[0, 100]}
+                  />
+                  <Tooltip 
+                    formatter={(value, name, props) => [
+                      `${value}%`, 
+                      `SDG ${props.payload.id}: ${props.payload.title}`
+                    ]}
+                    labelFormatter={(label) => `SDG ${label}`}
+                  />
+                  <Bar 
+                    dataKey="progress" 
+                    stroke="#fff"
+                    strokeWidth={1}
+                    radius={[4, 4, 0, 0]}
+                  >
+                    {sdgData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            
+            {/* SDG Icons Legend */}
+            <div className="grid grid-cols-17 gap-1 px-4">
+              {sdgData.map((sdg) => (
+                <div key={sdg.id} className="flex flex-col items-center">
+                  <div 
+                    className="w-10 h-10 rounded flex items-center justify-center text-white text-xs font-bold mb-1"
+                    style={{ backgroundColor: sdg.color }}
+                    title={`SDG ${sdg.id}: ${sdg.title}`}
+                  >
+                    {sdg.id}
+                  </div>
+                  <div className="text-xs text-gray-600 text-center leading-tight">
+                    {sdg.title.split(' ').slice(0, 2).join(' ')}
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            <div className="text-xs text-gray-500 text-right">
+              Reporting matters 2021 | 17
+            </div>
           </div>
         </CardContent>
       </Card>

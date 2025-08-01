@@ -8,8 +8,44 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search, Target, Database, BarChart3, Globe, Users, Calendar, Filter } from 'lucide-react';
-import { COMPLETE_SDG_INDICATORS, getIndicatorsByGoal, getIndicatorsByTarget, type IndicatorStructure } from '@/data/completeSDGIndicators';
 import { AuthenticSDGDataEntryForm } from './AuthenticSDGDataEntryForm';
+
+// Types for database data
+interface DatabaseIndicator {
+  id: string;
+  indicator_code: string;
+  title: string;
+  indicator_type: string;
+  unit: string;
+  data_structure: any;
+  sdg_target_id: string;
+  target?: {
+    target_number: string;
+    title: string;
+    sdg_goal_id: number;
+  };
+}
+
+interface IndicatorStructure {
+  code: string;
+  title: string;
+  goal_id: number;
+  target_code: string;
+  tier: string;
+  type: string;
+  measurement_unit: string;
+  collection_frequency: string;
+  data_sources: string[];
+  custodian_agencies: string[];
+  disaggregation: {
+    required: string[];
+    optional: string[];
+  };
+  form_structure: {
+    fields: any[];
+    calculation?: any;
+  };
+}
 
 // SDG Goals with official titles and colors
 const SDG_GOALS = [
@@ -57,16 +93,105 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
   const [filterType, setFilterType] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'browse' | 'data_entry'>('browse');
 
+  // Fetch real indicators from database
+  const { data: indicators = [], isLoading } = useQuery({
+    queryKey: ['/api/sdg/indicators'],
+  });
+
+  // Fetch targets with goal information
+  const { data: targets = [] } = useQuery({
+    queryKey: ['/api/sdg/targets'],
+  });
+
+  // Convert database indicators to our format
+  const convertToIndicatorStructure = (dbIndicator: DatabaseIndicator): IndicatorStructure => {
+    const target = targets.find((t: any) => t.id === dbIndicator.sdg_target_id);
+    const dataStructure = dbIndicator.data_structure || {};
+    
+    return {
+      code: dbIndicator.indicator_code,
+      title: dbIndicator.title,
+      goal_id: target?.sdg_goal_id || 1,
+      target_code: target?.target_number || '1.1',
+      tier: dataStructure.tier || 'I',
+      type: dbIndicator.indicator_type || 'percentage',
+      measurement_unit: dbIndicator.unit,
+      collection_frequency: dataStructure.collection_frequency || 'Annual',
+      data_sources: dataStructure.data_sources || ['Official statistics'],
+      custodian_agencies: dataStructure.custodian_agencies ? 
+        (typeof dataStructure.custodian_agencies === 'string' ? 
+          dataStructure.custodian_agencies.split(', ') : 
+          dataStructure.custodian_agencies) : ['WHO'],
+      disaggregation: {
+        required: ['sex', 'age', 'geographic_location'],
+        optional: ['wealth_quintile', 'education_level']
+      },
+      form_structure: {
+        fields: generateFieldsForIndicator(dbIndicator),
+        calculation: dbIndicator.indicator_type === 'ratio' ? { formula: 'Numerator ÷ Denominator' } : undefined
+      }
+    };
+  };
+
+  // Generate form fields based on indicator type
+  const generateFieldsForIndicator = (indicator: DatabaseIndicator) => {
+    const baseFields = [
+      { name: 'data_year', label: 'Data Year', type: 'number', required: true },
+      { name: 'data_source', label: 'Data Source', type: 'select', required: true, options: ['MICS', 'PDHS', 'PSLM', 'Administrative Data'] },
+      { name: 'geographic_coverage', label: 'Geographic Coverage', type: 'select', required: true, options: ['National', 'Provincial', 'District'] }
+    ];
+
+    switch (indicator.indicator_type) {
+      case 'percentage':
+        return [
+          ...baseFields,
+          { name: 'percentage_value', label: 'Percentage Value', type: 'percentage', required: true, validation: { min: 0, max: 100 } }
+        ];
+      case 'ratio':
+        return [
+          ...baseFields,
+          { name: 'numerator', label: 'Numerator', type: 'number', required: true },
+          { name: 'denominator', label: 'Denominator', type: 'number', required: true },
+          { name: 'multiplier', label: 'Multiplier (e.g., 1000, 100000)', type: 'number', required: true }
+        ];
+      case 'count':
+        return [
+          ...baseFields,
+          { name: 'count_value', label: 'Count Value', type: 'number', required: true }
+        ];
+      case 'demographic_breakdown':
+        return [
+          ...baseFields,
+          { name: 'male_value', label: 'Male Value', type: 'number', required: true },
+          { name: 'female_value', label: 'Female Value', type: 'number', required: true },
+          { name: 'urban_value', label: 'Urban Value', type: 'number', required: false },
+          { name: 'rural_value', label: 'Rural Value', type: 'number', required: false }
+        ];
+      case 'index':
+        return [
+          ...baseFields,
+          { name: 'index_value', label: 'Index Value', type: 'number', required: true, validation: { min: 0, max: 1 } }
+        ];
+      default:
+        return [
+          ...baseFields,
+          { name: 'value', label: 'Value', type: 'number', required: true }
+        ];
+    }
+  };
+
+  const processedIndicators = indicators.map(convertToIndicatorStructure);
+
   // Filter indicators based on search and filters
   const filteredIndicators = useMemo(() => {
-    let indicators = COMPLETE_SDG_INDICATORS;
+    let indicators = processedIndicators;
     
     if (selectedGoal) {
-      indicators = getIndicatorsByGoal(selectedGoal);
+      indicators = indicators.filter(ind => ind.goal_id === selectedGoal);
     }
     
     if (selectedTarget) {
-      indicators = getIndicatorsByTarget(selectedTarget);
+      indicators = indicators.filter(ind => ind.target_code === selectedTarget);
     }
     
     if (searchTerm) {
@@ -85,7 +210,13 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
     }
     
     return indicators;
-  }, [selectedGoal, selectedTarget, searchTerm, filterTier, filterType]);
+  }, [processedIndicators, selectedGoal, selectedTarget, searchTerm, filterTier, filterType]);
+
+  // Get unique targets for selected goal
+  const getTargetsForGoal = (goalId: number) => {
+    const goalIndicators = processedIndicators.filter(ind => ind.goal_id === goalId);
+    return [...new Set(goalIndicators.map(ind => ind.target_code))].sort();
+  };
 
   if (viewMode === 'data_entry' && selectedIndicator) {
     return (
@@ -139,7 +270,7 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
                     Complete SDG Indicators System
                   </h1>
                   <p className="text-sm text-gray-600">
-                    All {COMPLETE_SDG_INDICATORS.length} official UN SDG indicators with authentic data collection forms
+                    All {processedIndicators.length} official UN SDG indicators with authentic data collection forms
                   </p>
                 </div>
               </div>
@@ -148,9 +279,13 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
               <Badge variant="outline" className="text-xs">
                 {filteredIndicators.length} indicators
               </Badge>
-              <Badge variant="secondary" className="text-xs">
-                17 Goals • 169 Targets
-              </Badge>
+              {isLoading ? (
+                <Badge variant="outline" className="text-xs">Loading...</Badge>
+              ) : (
+                <Badge variant="secondary" className="text-xs">
+                  17 Goals • Database Connected
+                </Badge>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -259,8 +394,8 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
             <ScrollArea className="h-96">
               {selectedGoal ? (
                 <div className="space-y-4">
-                  {getTargetsByGoal(selectedGoal).map((targetCode) => {
-                    const targetIndicators = getIndicatorsByTarget(targetCode);
+                  {getTargetsForGoal(selectedGoal).map((targetCode) => {
+                    const targetIndicators = filteredIndicators.filter(ind => ind.target_code === targetCode);
                     return (
                       <Card key={targetCode} className="p-4">
                         <div className="flex items-center gap-3 mb-3">

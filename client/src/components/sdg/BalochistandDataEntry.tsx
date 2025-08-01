@@ -13,7 +13,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertCircle, Calculator, Database, FileText } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { getBalochistandFormStructure, type BalochistanIndicatorForm, type BalochistanFormField } from '@/data/balochistandGoal1Forms';
+import { getBalochistandFormStructure, type BalochistanIndicatorForm, type BalochistanFormField } from '@/data/balochistandAllForms';
 
 interface BalochistandDataEntryProps {
   indicatorCode: string;
@@ -293,7 +293,7 @@ export const BalochistandDataEntry: React.FC<BalochistandDataEntryProps> = ({
                     Next
                   </Button>
                 ) : (
-                  <Button type="submit" className="bg-green-600 hover:bg-green-700">
+                  <Button type="submit">
                     Submit Data
                   </Button>
                 )}

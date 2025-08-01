@@ -11,7 +11,7 @@ import { Search, Target, Database, BarChart3, Globe, Users, Calendar, Filter } f
 // import { AuthenticSDGDataEntryForm } from './AuthenticSDGDataEntryForm';
 import { Goal1SpecificDataEntry } from './Goal1SpecificDataEntry';
 import { BalochistandDataEntry } from './BalochistandDataEntry';
-import { getIndicatorFormStructure } from '@/data/goal1IndicatorForms';
+import { hasBalochistanForm } from '@/data/balochistandAllForms';
 
 // Types for database data
 interface DatabaseIndicator {
@@ -240,7 +240,7 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
             <p className="text-sm text-gray-600">{selectedIndicator.title}</p>
           </div>
         </div>
-        {selectedIndicator.goal_id === 1 ? (
+        {hasBalochistanForm(selectedIndicator.code) ? (
           <BalochistandDataEntry
             indicatorCode={selectedIndicator.code}
             indicatorTitle={selectedIndicator.title}
@@ -257,8 +257,8 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
           />
         ) : (
           <div className="p-8 text-center">
-            <p className="text-gray-600">Balochistan-specific forms are currently available for Goal 1 indicators only.</p>
-            <p className="text-sm text-gray-500 mt-2">Other goals will use Balochistan format once development is complete.</p>
+            <p className="text-gray-600">Balochistan-specific form for indicator {selectedIndicator.code} is not yet available.</p>
+            <p className="text-sm text-gray-500 mt-2">This indicator will be available once the form is created.</p>
           </div>
         )}
       </div>
@@ -481,6 +481,11 @@ const IndicatorCard: React.FC<IndicatorCardProps> = ({ indicator, onEnterData })
               <Badge variant="secondary" className="text-xs">
                 {indicator.type}
               </Badge>
+              {hasBalochistanForm(indicator.code) && (
+                <Badge className="text-xs bg-green-100 text-green-800">
+                  Form Ready
+                </Badge>
+              )}
             </div>
             <h4 className="font-medium text-sm leading-tight mb-2">
               {indicator.title}
@@ -516,9 +521,14 @@ const IndicatorCard: React.FC<IndicatorCardProps> = ({ indicator, onEnterData })
         </div>
 
         <div className="flex gap-2 pt-2 border-t">
-          <Button size="sm" onClick={onEnterData} className="flex-1">
+          <Button 
+            size="sm" 
+            onClick={onEnterData} 
+            className="flex-1"
+            variant={hasBalochistanForm(indicator.code) ? "default" : "outline"}
+          >
             <BarChart3 className="h-3 w-3 mr-1" />
-            Enter Data
+            {hasBalochistanForm(indicator.code) ? "Enter Data" : "Create Form"}
           </Button>
           <Button size="sm" variant="outline">
             <Target className="h-3 w-3 mr-1" />

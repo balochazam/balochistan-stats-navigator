@@ -1,8 +1,8 @@
 import React from 'react';
-import { SimpleSDGSystem } from './SimpleSDGSystem';
+import { ComprehensiveSDGSystem } from './ComprehensiveSDGSystem';
 
 export const SDGIndicatorsManager = () => {
   return (
-    <SimpleSDGSystem onBack={() => {}} />
+    <ComprehensiveSDGSystem onBack={() => {}} />
   );
 };

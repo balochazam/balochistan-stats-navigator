@@ -442,17 +442,22 @@ export class DatabaseStorage implements IStorage {
 
   // Form Submission methods
   async getFormSubmissions(formId?: string, scheduleId?: string): Promise<FormSubmission[]> {
-    let query = db.select().from(form_submissions);
-    
     if (formId && scheduleId) {
-      query = query.where(and(eq(form_submissions.form_id, formId), eq(form_submissions.schedule_id, scheduleId)));
+      return await db.select().from(form_submissions)
+        .where(and(eq(form_submissions.form_id, formId), eq(form_submissions.schedule_id, scheduleId)))
+        .orderBy(desc(form_submissions.submitted_at));
     } else if (formId) {
-      query = query.where(eq(form_submissions.form_id, formId));
+      return await db.select().from(form_submissions)
+        .where(eq(form_submissions.form_id, formId))
+        .orderBy(desc(form_submissions.submitted_at));
     } else if (scheduleId) {
-      query = query.where(eq(form_submissions.schedule_id, scheduleId));
+      return await db.select().from(form_submissions)
+        .where(eq(form_submissions.schedule_id, scheduleId))
+        .orderBy(desc(form_submissions.submitted_at));
     }
     
-    return await query.orderBy(desc(form_submissions.submitted_at));
+    return await db.select().from(form_submissions)
+      .orderBy(desc(form_submissions.submitted_at));
   }
 
   async createFormSubmission(submission: InsertFormSubmission): Promise<FormSubmission> {
@@ -497,11 +502,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSdgTargets(goalId?: number): Promise<SdgTarget[]> {
-    let query = db.select().from(sdg_targets);
     if (goalId) {
-      query = query.where(eq(sdg_targets.sdg_goal_id, goalId));
+      return await db.select().from(sdg_targets)
+        .where(eq(sdg_targets.sdg_goal_id, goalId))
+        .orderBy(asc(sdg_targets.target_number));
     }
-    return await query.orderBy(asc(sdg_targets.target_number));
+    return await db.select().from(sdg_targets)
+      .orderBy(asc(sdg_targets.target_number));
   }
 
   async createSdgTarget(target: InsertSdgTarget): Promise<SdgTarget> {
@@ -520,11 +527,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSdgIndicators(targetId?: string): Promise<SdgIndicator[]> {
-    let query = db.select().from(sdg_indicators).where(eq(sdg_indicators.is_active, true));
     if (targetId) {
-      query = query.where(and(eq(sdg_indicators.sdg_target_id, targetId), eq(sdg_indicators.is_active, true)));
+      return await db.select().from(sdg_indicators)
+        .where(and(eq(sdg_indicators.sdg_target_id, targetId), eq(sdg_indicators.is_active, true)))
+        .orderBy(asc(sdg_indicators.indicator_code));
     }
-    return await query.orderBy(asc(sdg_indicators.indicator_code));
+    return await db.select().from(sdg_indicators)
+      .where(eq(sdg_indicators.is_active, true))
+      .orderBy(asc(sdg_indicators.indicator_code));
   }
 
   async getSdgIndicator(id: string): Promise<SdgIndicator | undefined> {
@@ -578,11 +588,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSdgProgressCalculations(goalId?: number): Promise<SdgProgressCalculation[]> {
-    let query = db.select().from(sdg_progress_calculations);
     if (goalId) {
-      query = query.where(eq(sdg_progress_calculations.sdg_goal_id, goalId));
+      return await db.select().from(sdg_progress_calculations)
+        .where(eq(sdg_progress_calculations.sdg_goal_id, goalId))
+        .orderBy(desc(sdg_progress_calculations.last_calculation_date));
     }
-    return await query.orderBy(desc(sdg_progress_calculations.last_calculation_date));
+    return await db.select().from(sdg_progress_calculations)
+      .orderBy(desc(sdg_progress_calculations.last_calculation_date));
   }
 
   async createSdgProgressCalculation(calculation: InsertSdgProgressCalculation): Promise<SdgProgressCalculation> {

@@ -234,10 +234,9 @@ export const SDGGoalsManager = () => {
           {!Array.isArray(goals) || goals.length === 0 ? (
             <div className="text-center py-8">
               <Target className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">SDG Data Available</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Loading SDG Goals</h3>
               <p className="text-gray-600 mb-4">
-                Database contains 17 UN SDG goals with authentic Balochistan data.
-                {isLoading ? " Loading data..." : " Please refresh if data doesn't appear."}
+                {isLoading ? "Loading 17 UN SDG goals with authentic Balochistan data..." : "No data found. Please refresh or check your connection."}
               </p>
             </div>
           ) : (

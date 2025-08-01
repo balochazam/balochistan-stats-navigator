@@ -322,10 +322,9 @@ export const SDGIndicatorsManager = () => {
           {filteredIndicators.length === 0 ? (
             <div className="text-center py-8">
               <Database className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">SDG Indicators Available</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Loading SDG Indicators</h3>
               <p className="text-gray-600 mb-4">
-                Database contains 14 authentic SDG indicators with Balochistan data.
-                {isLoading ? " Loading indicators..." : " Please refresh if data doesn't appear."}
+                {isLoading ? "Loading 14 authentic SDG indicators with Balochistan data..." : "No indicators found. Please refresh or check your connection."}
               </p>
             </div>
           ) : (

@@ -10,7 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { simpleApiClient } from '@/lib/simpleApi';
-import { Save, X } from 'lucide-react';
+import { Save, X, Loader2 } from 'lucide-react';
 
 interface DynamicDataEntryProps {
   indicatorCode: string;
@@ -30,9 +30,61 @@ export const DynamicDataEntry: React.FC<DynamicDataEntryProps> = ({
   const [formData, setFormData] = useState<{ [key: string]: any }>({});
   const { toast } = useToast();
 
-  // For now, since we don't have the form structure stored in the database yet,
-  // let's create a basic form based on the saved form name
-  const renderBasicForm = () => {
+  // Fetch the form structure from the database
+  const { data: form, isLoading: formLoading, error: formError } = useQuery({
+    queryKey: ['/api/forms', formId],
+    enabled: !!formId,
+  });
+
+  // Since we don't store the actual form structure in the database yet,
+  // let's provide a fallback form for now but also show a message about the actual saved form
+  const renderFormFields = () => {
+    if (formLoading) {
+      return (
+        <div className="flex items-center justify-center p-8">
+          <Loader2 className="h-6 w-6 animate-spin mr-2" />
+          <span>Loading form structure...</span>
+        </div>
+      );
+    }
+
+    if (formError) {
+      return (
+        <div className="p-8 text-center text-red-600">
+          <p>Error loading form: {formError.message}</p>
+        </div>
+      );
+    }
+
+    // Show information about the actual form that was created
+    if (form) {
+      return (
+        <div className="space-y-6">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h4 className="font-medium text-blue-900 mb-2">Form Information</h4>
+            <p className="text-sm text-blue-700">
+              <strong>Form Name:</strong> {(form as any).name || 'Unnamed Form'}
+            </p>
+            {(form as any).description && (
+              <p className="text-sm text-blue-700 mt-1">
+                <strong>Description:</strong> {(form as any).description}
+              </p>
+            )}
+            <p className="text-xs text-blue-600 mt-2">
+              Note: The form builder structure will be fully integrated in the next update. 
+              For now, please use the standard data entry fields below.
+            </p>
+          </div>
+          
+          {renderStandardFields()}
+        </div>
+      );
+    }
+
+    return renderStandardFields();
+  };
+
+  const renderStandardFields = () => {
     return (
       <Card>
         <CardHeader>
@@ -218,7 +270,7 @@ export const DynamicDataEntry: React.FC<DynamicDataEntryProps> = ({
         <Badge variant="outline" className="mt-2">Dynamic Form</Badge>
       </div>
 
-      {renderBasicForm()}
+      {renderFormFields()}
 
       <div className="flex gap-4 justify-end">
         <Button variant="outline" onClick={onCancel}>

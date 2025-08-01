@@ -85,7 +85,14 @@ export const FormBuilderWithHierarchy: React.FC<FormBuilderWithHierarchyProps> =
       setSavedGroups(fieldGroups as FieldGroup[]);
     }
     if (formFields && Array.isArray(formFields) && formFields.length > 0) {
-      setSavedFields(formFields as FormField[]);
+      const typedFields = formFields.map(field => ({
+        ...field,
+        reference_data_name: field.reference_data_name || undefined,
+        validation_rules: field.validation_rules || undefined,
+        options: field.options || undefined,
+        sub_headers: field.sub_headers || undefined
+      }));
+      setSavedFields(typedFields);
     }
   }, [fieldGroups, formFields]);
 

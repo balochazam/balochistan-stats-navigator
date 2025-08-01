@@ -1343,7 +1343,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(goalsWithProgress);
     } catch (error) {
       console.error('Failed to calculate SDG progress:', error);
-      console.error('Error details:', error.message);
+      console.error('Error details:', error instanceof Error ? error.message : String(error));
       res.status(500).json({ error: 'Failed to calculate progress' });
     }
   });

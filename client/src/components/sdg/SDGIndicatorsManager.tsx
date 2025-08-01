@@ -16,6 +16,7 @@ import { simpleApiClient } from '@/lib/simpleApi';
 import { z } from 'zod';
 
 const indicatorSchema = z.object({
+  sdg_goal_id: z.string().min(1, "Goal is required"),
   sdg_target_id: z.string().min(1, "Target is required"),
   indicator_code: z.string().min(1, "Indicator code is required"),
   title: z.string().min(1, "Title is required"),
@@ -47,6 +48,7 @@ export const SDGIndicatorsManager = () => {
   const form = useForm({
     resolver: zodResolver(indicatorSchema),
     defaultValues: {
+      sdg_goal_id: '',
       sdg_target_id: '',
       indicator_code: '',
       title: '',
@@ -116,9 +118,11 @@ export const SDGIndicatorsManager = () => {
   }) : [];
 
   const getGoalById = (targetId: string) => {
-    const target = targets.find((t: any) => t.id === targetId);
+    const targetsArray = Array.isArray(targets) ? targets : [];
+    const goalsArray = Array.isArray(goals) ? goals : [];
+    const target = targetsArray.find((t: any) => t.id === targetId);
     if (!target) return null;
-    return goals.find((g: any) => g.id === target.sdg_goal_id);
+    return goalsArray.find((g: any) => g.id === target.sdg_goal_id);
   };
 
   if (isLoading) {
@@ -158,6 +162,78 @@ export const SDGIndicatorsManager = () => {
                 </DialogHeader>
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    {/* SDG Goal and Target Selection */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="sdg_goal_id"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>SDG Goal</FormLabel>
+                            <Select onValueChange={(value) => {
+                              field.onChange(value);
+                              // Reset target when goal changes
+                              form.setValue('sdg_target_id', '');
+                            }} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select SDG Goal" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {Array.isArray(goals) && goals.map((goal: any) => (
+                                  <SelectItem key={goal.id} value={goal.id.toString()}>
+                                    SDG {goal.id}: {goal.title}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="sdg_target_id"
+                        render={({ field }) => {
+                          const selectedGoalId = form.watch('sdg_goal_id');
+                          const targetsArray = Array.isArray(targets) ? targets : [];
+                          const availableTargets = targetsArray.filter((target: any) => 
+                            target.sdg_goal_id === parseInt(selectedGoalId || '0')
+                          );
+                          
+                          return (
+                            <FormItem>
+                              <FormLabel>SDG Target</FormLabel>
+                              <Select 
+                                onValueChange={field.onChange} 
+                                value={field.value}
+                                disabled={!selectedGoalId}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder={
+                                      selectedGoalId 
+                                        ? "Select Target" 
+                                        : "First select a Goal"
+                                    } />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {availableTargets.map((target: any) => (
+                                    <SelectItem key={target.id} value={target.id}>
+                                      {target.target_number}: {target.title}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          );
+                        }}
+                      />
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
                       <FormField
                         control={form.control}

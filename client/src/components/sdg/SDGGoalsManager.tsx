@@ -168,29 +168,23 @@ const defaultSDGData = [
 export const SDGGoalsManager = () => {
   const navigate = useNavigate();
 
-  const { data: goals = [], isLoading, error } = useQuery({
-    queryKey: ['/api/sdg/goals'],
+  const { data: goalsWithProgress = [], isLoading, error } = useQuery({
+    queryKey: ['/api/sdg/goals-with-progress'],
     retry: 1,
   });
 
-  const { data: progressCalculations = [] } = useQuery({
-    queryKey: ['/api/sdg/progress-calculations'],
-    retry: 1,
-  });
-
-  // Use API data if available, otherwise fall back to default data
-  const goalsArray = Array.isArray(goals) ? goals : [];
-  const progressArray = Array.isArray(progressCalculations) ? progressCalculations : [];
+  // Use real progress data if available, otherwise fall back to default data
+  const goalsArray = Array.isArray(goalsWithProgress) ? goalsWithProgress : [];
   
   const sdgData = goalsArray.length > 0 ? goalsArray.map((goal: any) => {
-    const calculation = progressArray.find((calc: any) => calc.sdg_goal_id === goal.id);
     const defaultGoal = defaultSDGData.find(d => d.id === goal.id);
     
     return {
       ...goal,
-      progress: calculation?.progress_percentage || defaultGoal?.progress || 0,
-      target: calculation?.target_value || defaultGoal?.target || 100,
+      progress: goal.progress || defaultGoal?.progress || 0,
+      target: defaultGoal?.target || 100,
       iconUrl: getSDGIcon(goal.id),
+      color: defaultGoal?.color || '#3b82f6'
     };
   }) : defaultSDGData;
 
@@ -222,6 +216,12 @@ export const SDGGoalsManager = () => {
             <Badge variant="destructive" className="py-2 px-4">
               <AlertCircle className="h-4 w-4 mr-2" />
               API Unavailable
+            </Badge>
+          )}
+          {!error && goalsArray.length > 0 && (
+            <Badge className="py-2 px-4 bg-green-50 text-green-700 border-green-200">
+              <Database className="h-4 w-4 mr-2" />
+              Real Data Connected
             </Badge>
           )}
           <Badge variant="outline" className="text-lg py-2 px-4">

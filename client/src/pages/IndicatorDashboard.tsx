@@ -25,6 +25,7 @@ import {
   Percent,
   Hash
 } from 'lucide-react';
+import { LineChart, Line, AreaChart, Area, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { getIndicatorData, type IndicatorTimeSeries } from '@shared/balochistandIndicatorData';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
@@ -172,6 +173,159 @@ const TimelinePath: React.FC<{ data: IndicatorTimeSeries }> = ({ data }) => {
         </div>
       ))}
     </div>
+  );
+};
+
+// Dynamic Progress Chart Component
+const ProgressChart: React.FC<{ data: IndicatorTimeSeries }> = ({ data }) => {
+  const chartData = [
+    {
+      period: data.baseline.year,
+      value: parseFloat(String(data.baseline.value).replace(/[%,]/g, '')) || 0,
+      type: 'Baseline'
+    },
+    {
+      period: data.progress.year,
+      value: parseFloat(String(data.progress.value).replace(/[%,]/g, '')) || 0,
+      type: 'Progress'
+    },
+    {
+      period: data.latest.year,
+      value: String(data.latest.value).toLowerCase().includes('process') ? null : 
+             parseFloat(String(data.latest.value).replace(/[%,]/g, '')) || 0,
+      type: 'Latest'
+    }
+  ].filter(item => item.value !== null);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <BarChart3 className="h-5 w-5" />
+          Progress Trend Analysis
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="period" />
+            <YAxis />
+            <Tooltip 
+              formatter={(value, name) => [`${value}${data.unit.includes('%') ? '%' : ''}`, name]}
+              labelFormatter={(label) => `Period: ${label}`}
+            />
+            <Line 
+              type="monotone" 
+              dataKey="value" 
+              stroke="#3b82f6" 
+              strokeWidth={3}
+              dot={{ fill: '#3b82f6', strokeWidth: 2, r: 6 }}
+              activeDot={{ r: 8 }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </CardContent>
+    </Card>
+  );
+};
+
+// Breakdown Comparison Chart
+const BreakdownChart: React.FC<{ data: IndicatorTimeSeries }> = ({ data }) => {
+  const latestBreakdown = data.latest.breakdown || data.progress.breakdown;
+  
+  if (!latestBreakdown) return null;
+
+  const chartData = Object.entries(latestBreakdown)
+    .filter(([key, value]) => key !== 'overall' && value && String(value) !== 'N/A')
+    .map(([key, value]) => ({
+      category: key.replace(/_/g, ' ').toUpperCase(),
+      value: parseFloat(String(value).replace(/[%,]/g, '')) || 0,
+      color: key === 'urban' ? '#3b82f6' : 
+             key === 'rural' ? '#ef4444' :
+             key === 'male' ? '#10b981' :
+             key === 'female' ? '#f59e0b' : '#8b5cf6'
+    }));
+
+  if (chartData.length === 0) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <BarChart3 className="h-5 w-5" />
+          Latest Data Breakdown
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="category" />
+            <YAxis />
+            <Tooltip 
+              formatter={(value) => [`${value}${data.unit.includes('%') ? '%' : ''}`, 'Value']}
+            />
+            <Bar dataKey="value">
+              {chartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.color} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </CardContent>
+    </Card>
+  );
+};
+
+// Urban-Rural Comparison Pie Chart
+const UrbanRuralChart: React.FC<{ data: IndicatorTimeSeries }> = ({ data }) => {
+  const latestBreakdown = data.latest.breakdown || data.progress.breakdown;
+  
+  if (!latestBreakdown?.urban || !latestBreakdown?.rural) return null;
+
+  const chartData = [
+    {
+      name: 'Urban',
+      value: parseFloat(String(latestBreakdown.urban).replace(/[%,]/g, '')) || 0,
+      color: '#3b82f6'
+    },
+    {
+      name: 'Rural',
+      value: parseFloat(String(latestBreakdown.rural).replace(/[%,]/g, '')) || 0,
+      color: '#ef4444'
+    }
+  ];
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <MapPin className="h-5 w-5" />
+          Urban vs Rural Distribution
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ResponsiveContainer width="100%" height={250}>
+          <PieChart>
+            <Pie
+              data={chartData}
+              cx="50%"
+              cy="50%"
+              outerRadius={80}
+              dataKey="value"
+              label={({ name, value }) => `${name}: ${value}%`}
+            >
+              {chartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.color} />
+              ))}
+            </Pie>
+            <Tooltip formatter={(value) => [`${value}%`, 'Value']} />
+            <Legend />
+          </PieChart>
+        </ResponsiveContainer>
+      </CardContent>
+    </Card>
   );
 };
 
@@ -409,6 +563,14 @@ export const IndicatorDashboard: React.FC<IndicatorDashboardProps> = ({ indicato
                 </div>
               </CardContent>
             </Card>
+
+            {/* Dynamic Charts */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <ProgressChart data={indicatorData} />
+              <UrbanRuralChart data={indicatorData} />
+            </div>
+            
+            <BreakdownChart data={indicatorData} />
           </TabsContent>
 
           <TabsContent value="timeline" className="space-y-6">

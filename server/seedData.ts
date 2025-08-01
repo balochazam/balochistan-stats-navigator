@@ -228,177 +228,194 @@ const sdgTargetsData = [
   { target_number: "17.19", sdg_goal_id: 17, title: "Develop broader progress measures", description: "By 2030, build on existing initiatives to develop measurements of progress on sustainable development that complement gross domestic product, and support statistical capacity-building in developing countries" }
 ];
 
-// SDG Indicators data - static definition
-const sdgIndicatorsData = [
-  {
-    id: "1.2.2",
-    sdg_target_id: "1.2",
-    indicator_code: "1.2.2",
-    title: "Proportion of men, women and children of all ages living in poverty in all its dimensions according to national definitions",
-    description: "Multi-dimensional Poverty Index (MPI) measuring poverty across health, education and living standards",
-    indicator_type: "percentage" as const,
-    unit: "percentage",
-    methodology: "Multi-dimensional Poverty Index computation based on MICS and PSLM data",
-    data_collection_frequency: "Every 3-5 years",
-    responsible_departments: ["Planning Commission", "PBS", "UNICEF"]
-  },
-  {
-    id: "1.3.1",
-    sdg_target_id: "1.3",
-    indicator_code: "1.3.1",
-    title: "Proportion of population covered by social protection floors/systems",
-    description: "Percentage of population receiving social protection benefits including BISP and other transfers",
-    indicator_type: "percentage" as const, 
-    unit: "percentage",
-    methodology: "Based on PDHS and MICS household surveys on social protection coverage",
-    data_collection_frequency: "Every 3-5 years",
-    responsible_departments: ["Ministry of Social Protection", "BISP", "PBS"]
-  },
-  {
-    id: "1.4.1",
-    sdg_target_id: "1.4",
-    indicator_code: "1.4.1",
-    title: "Proportion of population living in households with access to basic services",
-    description: "Access to improved water source, sanitation, electricity and cooking fuel",
-    indicator_type: "multi_dimensional",
-    unit: "percentage",
-    methodology: "Based on PSLM and MICS data on household access to basic services",
-    data_collection_frequency: "Every 2-3 years",
-    responsible_departments: ["PBS", "Ministry of Water Resources", "Ministry of Energy"]
-  },
-  {
-    id: "1.5.1",
-    sdg_target_id: "1.5",
-    indicator_code: "1.5.1", 
-    title: "Number of deaths, missing persons and directly affected persons attributed to disasters per 100,000 population",
-    description: "Disaster impact statistics including fatalities, injuries and affected population",
-    indicator_type: "rate",
-    unit: "per 100,000 population",
-    methodology: "Based on NDMA annual disaster reports and provincial disaster management data",
-    data_collection_frequency: "Annual",
-    responsible_departments: ["NDMA", "PDMA Balochistan"]
-  },
-  {
-    id: "1.a.2",
-    sdg_target_id: "1.a",
-    indicator_code: "1.a.2",
-    title: "Proportion of total government spending on essential services (education, health and social protection)",
-    description: "Government budget allocation to education, health and social protection as percentage of total spending",
-    indicator_type: "budget",
-    unit: "percentage",
-    methodology: "Based on provincial budget statements and PRSP Ministry of Finance data",
-    data_collection_frequency: "Annual",
-    responsible_departments: ["Ministry of Finance Balochistan", "Planning & Development"]
-  },
-  {
-    id: "2.2.1",
-    sdg_target_id: "2.2",
-    indicator_code: "2.2.1",
-    title: "Prevalence of stunting among children under 5 years of age",
-    description: "Percentage of children under 5 with height-for-age below -2 standard deviations from median",
-    indicator_type: "percentage",
-    unit: "percentage",
-    methodology: "Based on National Nutrition Survey (NNS), PDHS and MICS anthropometric measurements",
-    data_collection_frequency: "Every 3-5 years",
-    responsible_departments: ["Ministry of Health", "UNICEF", "Aga Khan University"]
-  },
-  {
-    id: "2.2.2",
-    sdg_target_id: "2.2",
-    indicator_code: "2.2.2",
-    title: "Prevalence of malnutrition among children under 5 years of age, by type (wasting and overweight)",
-    description: "Percentage of children under 5 with wasting (weight-for-height) and overweight conditions",
-    indicator_type: "multi_dimensional",
-    unit: "percentage",
-    methodology: "Based on NNS, PDHS and MICS anthropometric measurements for wasting and overweight",
-    data_collection_frequency: "Every 3-5 years",
-    responsible_departments: ["Ministry of Health", "UNICEF", "Aga Khan University"]
-  },
-  {
-    id: "3.1.1",
-    sdg_target_id: "3.1",
-    indicator_code: "3.1.1",
-    title: "Maternal mortality ratio",
-    description: "Number of maternal deaths per 100,000 live births",
-    indicator_type: "rate",
-    unit: "per 100,000 live births",
-    methodology: "Based on PDHS and Pakistan MMR Survey data on maternal deaths",
-    data_collection_frequency: "Every 5-7 years",
-    responsible_departments: ["Ministry of Health", "NIPS", "PBS"]
-  },
-  {
-    id: "3.2.1",
-    sdg_target_id: "3.2",
-    indicator_code: "3.2.1",
-    title: "Under-5 mortality rate",
-    description: "Probability of dying between birth and exactly 5 years of age per 1,000 live births",
-    indicator_type: "rate",
-    unit: "per 1,000 live births",
-    methodology: "Based on PDHS, PSLM and MICS data on child mortality",
-    data_collection_frequency: "Every 3-5 years",
-    responsible_departments: ["Ministry of Health", "PBS", "UNICEF"]
-  },
-  {
-    id: "4.6.1",
-    sdg_target_id: "4.6",
-    indicator_code: "4.6.1",
-    title: "Proportion of population in a given age group achieving at least a fixed level of proficiency in functional literacy and numeracy skills by sex",
-    description: "Adult literacy rate for population 10 years and above",
-    indicator_type: "percentage",
-    unit: "percentage",
-    methodology: "Based on PSLM and Labour Force Survey (LFS) data on literacy rates",
-    data_collection_frequency: "Every 2-3 years",
-    responsible_departments: ["Ministry of Education", "PBS"]
-  },
-  {
-    id: "8.5.2",
-    sdg_target_id: "8.5",
-    indicator_code: "8.5.2",
-    title: "Unemployment rate by sex, age and persons with disabilities",
-    description: "Percentage of labour force that is unemployed, disaggregated by sex",
-    indicator_type: "percentage",
-    unit: "percentage",
-    methodology: "Based on Labour Force Survey (LFS) quarterly data on employment status",
-    data_collection_frequency: "Quarterly/Annual",
-    responsible_departments: ["PBS", "Ministry of Labour"]
-  },
-  {
-    id: "8.6.1",
-    sdg_target_id: "8.6",
-    indicator_code: "8.6.1",
-    title: "Proportion of youth (aged 15–24 years) not in education, employment or training",
-    description: "NEET rate - youth not engaged in education, employment or training",
-    indicator_type: "percentage",
-    unit: "percentage",
-    methodology: "Based on Labour Force Survey (LFS) data on youth education and employment status",
-    data_collection_frequency: "Annual",
-    responsible_departments: ["PBS", "Ministry of Education", "Ministry of Labour"]
-  },
-  {
-    id: "15.1.1",
-    sdg_target_id: "15.1",
-    indicator_code: "15.1.1",
-    title: "Forest area as a proportion of total land area",
-    description: "Percentage of total land area covered by forests",
-    indicator_type: "percentage",
-    unit: "percentage",
-    methodology: "Based on Balochistan Development Statistics and Agriculture Statistics forest cover data",
-    data_collection_frequency: "Annual",
-    responsible_departments: ["Forest Department Balochistan", "Agriculture Department"]
-  },
-  {
-    id: "16.9.1",
-    sdg_target_id: "16.9",
-    indicator_code: "16.9.1",
-    title: "Proportion of children under 5 years of age whose births have been registered with a civil authority by age",
-    description: "Birth registration coverage for children under 5 years",
-    indicator_type: "percentage",
-    unit: "percentage",
-    methodology: "Based on PDHS and MICS data on civil registration and vital statistics",
-    data_collection_frequency: "Every 3-5 years",
-    responsible_departments: ["NADRA", "Civil Registration", "PBS"]
-  }
-];
+// SDG Indicators data - will use proper UUIDs and target references
+const createSdgIndicatorsData = async () => {
+  // Get target IDs from database
+  const targets = await db.query.sdg_targets.findMany({
+    where: (sdg_targets, { inArray }) => inArray(sdg_targets.target_number, ['1.2', '1.3', '1.4', '1.5', '1.a', '2.2', '3.1', '3.2', '4.6', '8.5', '8.6', '15.1', '16.9'])
+  });
+  
+  const targetMap = targets.reduce((acc, target) => {
+    acc[target.target_number] = target.id;
+    return acc;
+  }, {} as Record<string, string>);
+
+  // Get default admin user
+  const adminUser = await db.query.profiles.findFirst({
+    where: (profiles, { eq }) => eq(profiles.role, 'admin')
+  });
+
+  return [
+    {
+      sdg_target_id: targetMap['1.2'],
+      indicator_code: "1.2.2",
+      created_by: adminUser?.id || 'bbb55fbb-dc8d-44a4-9389-584261e031bc',
+      title: "Proportion of men, women and children of all ages living in poverty in all its dimensions according to national definitions",
+      description: "Multi-dimensional Poverty Index (MPI) measuring poverty across health, education and living standards",
+      indicator_type: "percentage" as const,
+      unit: "percentage",
+      methodology: "Multi-dimensional Poverty Index computation based on MICS and PSLM data",
+      data_collection_frequency: "Every 3-5 years",
+      responsible_departments: ["Planning Commission", "PBS", "UNICEF"]
+    },
+    {
+      sdg_target_id: targetMap['1.3'],
+      indicator_code: "1.3.1",
+      created_by: adminUser?.id || 'bbb55fbb-dc8d-44a4-9389-584261e031bc',
+      title: "Proportion of population covered by social protection floors/systems",
+      description: "Percentage of population receiving social protection benefits including BISP and other transfers",
+      indicator_type: "percentage" as const, 
+      unit: "percentage",
+      methodology: "Based on PDHS and MICS household surveys on social protection coverage",
+      data_collection_frequency: "Every 3-5 years",
+      responsible_departments: ["Ministry of Social Protection", "BISP", "PBS"]
+    },
+    {
+      sdg_target_id: targetMap['1.4'],
+      indicator_code: "1.4.1",
+      created_by: adminUser?.id || 'bbb55fbb-dc8d-44a4-9389-584261e031bc',
+      title: "Proportion of population living in households with access to basic services",
+      description: "Access to improved water source, sanitation, electricity and cooking fuel",
+      indicator_type: "multi_dimensional" as const,
+      unit: "percentage",
+      methodology: "Based on PSLM and MICS data on household access to basic services",
+      data_collection_frequency: "Every 2-3 years",
+      responsible_departments: ["PBS", "Ministry of Water Resources", "Ministry of Energy"]
+    },
+    {
+      sdg_target_id: targetMap['1.5'],
+      indicator_code: "1.5.1",
+      created_by: adminUser?.id || 'bbb55fbb-dc8d-44a4-9389-584261e031bc', 
+      title: "Number of deaths, missing persons and directly affected persons attributed to disasters per 100,000 population",
+      description: "Disaster impact statistics including fatalities, injuries and affected population",
+      indicator_type: "rate" as const,
+      unit: "per 100,000 population",
+      methodology: "Based on NDMA annual disaster reports and provincial disaster management data",
+      data_collection_frequency: "Annual",
+      responsible_departments: ["NDMA", "PDMA Balochistan"]
+    },
+    {
+      sdg_target_id: targetMap['1.a'],
+      indicator_code: "1.a.2",
+      created_by: adminUser?.id || 'bbb55fbb-dc8d-44a4-9389-584261e031bc',
+      title: "Proportion of total government spending on essential services (education, health and social protection)",
+      description: "Government budget allocation to education, health and social protection as percentage of total spending",
+      indicator_type: "budget" as const,
+      unit: "percentage",
+      methodology: "Based on provincial budget statements and PRSP Ministry of Finance data",
+      data_collection_frequency: "Annual",
+      responsible_departments: ["Ministry of Finance Balochistan", "Planning & Development"]
+    },
+    {
+      sdg_target_id: targetMap['2.2'],
+      indicator_code: "2.2.1",
+      created_by: adminUser?.id || 'bbb55fbb-dc8d-44a4-9389-584261e031bc',
+      title: "Prevalence of stunting among children under 5 years of age",
+      description: "Percentage of children under 5 with height-for-age below -2 standard deviations from median",
+      indicator_type: "percentage" as const,
+      unit: "percentage",
+      methodology: "Based on National Nutrition Survey (NNS), PDHS and MICS anthropometric measurements",
+      data_collection_frequency: "Every 3-5 years",
+      responsible_departments: ["Ministry of Health", "UNICEF", "Aga Khan University"]
+    },
+    {
+      sdg_target_id: targetMap['2.2'],
+      indicator_code: "2.2.2",
+      created_by: adminUser?.id || 'bbb55fbb-dc8d-44a4-9389-584261e031bc',
+      title: "Prevalence of malnutrition among children under 5 years of age, by type (wasting and overweight)",
+      description: "Percentage of children under 5 with wasting (weight-for-height) and overweight conditions",
+      indicator_type: "multi_dimensional" as const,
+      unit: "percentage",
+      methodology: "Based on NNS, PDHS and MICS anthropometric measurements for wasting and overweight",
+      data_collection_frequency: "Every 3-5 years",
+      responsible_departments: ["Ministry of Health", "UNICEF", "Aga Khan University"]
+    },
+    {
+      sdg_target_id: targetMap['3.1'],
+      indicator_code: "3.1.1",
+      created_by: adminUser?.id || 'bbb55fbb-dc8d-44a4-9389-584261e031bc',
+      title: "Maternal mortality ratio",
+      description: "Number of maternal deaths per 100,000 live births",
+      indicator_type: "rate" as const,
+      unit: "per 100,000 live births",
+      methodology: "Based on PDHS and Pakistan MMR Survey data on maternal deaths",
+      data_collection_frequency: "Every 5-7 years",
+      responsible_departments: ["Ministry of Health", "NIPS", "PBS"]
+    },
+    {
+      sdg_target_id: targetMap['3.2'],
+      indicator_code: "3.2.1",
+      created_by: adminUser?.id || 'bbb55fbb-dc8d-44a4-9389-584261e031bc',
+      title: "Under-5 mortality rate",
+      description: "Probability of dying between birth and exactly 5 years of age per 1,000 live births",
+      indicator_type: "rate" as const,
+      unit: "per 1,000 live births",
+      methodology: "Based on PDHS, PSLM and MICS data on child mortality",
+      data_collection_frequency: "Every 3-5 years",
+      responsible_departments: ["Ministry of Health", "PBS", "UNICEF"]
+    },
+    {
+      sdg_target_id: targetMap['4.6'],
+      indicator_code: "4.6.1",
+      created_by: adminUser?.id || 'bbb55fbb-dc8d-44a4-9389-584261e031bc',
+      title: "Proportion of population in a given age group achieving at least a fixed level of proficiency in functional literacy and numeracy skills by sex",
+      description: "Adult literacy rate for population 10 years and above",
+      indicator_type: "percentage" as const,
+      unit: "percentage",
+      methodology: "Based on PSLM and Labour Force Survey (LFS) data on literacy rates",
+      data_collection_frequency: "Every 2-3 years",
+      responsible_departments: ["Ministry of Education", "PBS"]
+    },
+    {
+      sdg_target_id: targetMap['8.5'],
+      indicator_code: "8.5.2",
+      created_by: adminUser?.id || 'bbb55fbb-dc8d-44a4-9389-584261e031bc',
+      title: "Unemployment rate by sex, age and persons with disabilities",
+      description: "Percentage of labour force that is unemployed, disaggregated by sex",
+      indicator_type: "percentage" as const,
+      unit: "percentage",
+      methodology: "Based on Labour Force Survey (LFS) quarterly data on employment status",
+      data_collection_frequency: "Quarterly/Annual",
+      responsible_departments: ["PBS", "Ministry of Labour"]
+    },
+    {
+      sdg_target_id: targetMap['8.6'],
+      indicator_code: "8.6.1",
+      created_by: adminUser?.id || 'bbb55fbb-dc8d-44a4-9389-584261e031bc',
+      title: "Proportion of youth (aged 15–24 years) not in education, employment or training",
+      description: "NEET rate - youth not engaged in education, employment or training",
+      indicator_type: "percentage" as const,
+      unit: "percentage",
+      methodology: "Based on Labour Force Survey (LFS) data on youth education and employment status",
+      data_collection_frequency: "Annual",
+      responsible_departments: ["PBS", "Ministry of Education", "Ministry of Labour"]
+    },
+    {
+      sdg_target_id: targetMap['15.1'],
+      indicator_code: "15.1.1",
+      created_by: adminUser?.id || 'bbb55fbb-dc8d-44a4-9389-584261e031bc',
+      title: "Forest area as a proportion of total land area",
+      description: "Percentage of total land area covered by forests",
+      indicator_type: "percentage" as const,
+      unit: "percentage",
+      methodology: "Based on Balochistan Development Statistics and Agriculture Statistics forest cover data",
+      data_collection_frequency: "Annual",
+      responsible_departments: ["Forest Department Balochistan", "Agriculture Department"]
+    },
+    {
+      sdg_target_id: targetMap['16.9'],
+      indicator_code: "16.9.1",
+      created_by: adminUser?.id || 'bbb55fbb-dc8d-44a4-9389-584261e031bc',
+      title: "Proportion of children under 5 years of age whose births have been registered with a civil authority by age",
+      description: "Birth registration coverage for children under 5 years",
+      indicator_type: "percentage" as const,
+      unit: "percentage",
+      methodology: "Based on PDHS and MICS data on civil registration and vital statistics",
+      data_collection_frequency: "Every 3-5 years",
+      responsible_departments: ["NADRA", "Civil Registration", "PBS"]
+    }
+  ];
+};
 
 // All data sources mentioned in your document
 const sdgDataSourcesData = [
@@ -1129,11 +1146,12 @@ export async function seedSDGData() {
 
     // Insert SDG Indicators
     console.log('Inserting SDG Indicators...');
-    for (const indicator of sdgIndicatorsData) {
+    const indicatorsData = await createSdgIndicatorsData();
+    for (const indicator of indicatorsData) {
       try {
         await db.insert(sdg_indicators).values([indicator]).onConflictDoNothing();
       } catch (error) {
-        console.log(`Indicator ${indicator.id} already exists or error:`, error);
+        console.log(`Indicator ${indicator.indicator_code} already exists or error:`, error);
       }
     }
 
@@ -1156,7 +1174,7 @@ export async function seedSDGData() {
     }
 
     console.log('SDG data seeding completed successfully!');
-    console.log(`Seeded: ${sdgGoalsData.length} goals, ${sdgTargetsData.length} targets, ${sdgIndicatorsData.length} indicators, ${sdgDataSourcesData.length} data sources, ${indicatorValues.length} data values`);
+    console.log(`Seeded: ${sdgGoalsData.length} goals, ${sdgTargetsData.length} targets, ${indicatorsData.length} indicators, ${sdgDataSourcesData.length} data sources, ${indicatorValues.length} data values`);
     return { success: true, message: 'Complete SDG database populated with authentic Balochistan data' };
   } catch (error) {
     console.error('Error seeding SDG data:', error);

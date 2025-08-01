@@ -5,11 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Target, Database, TrendingUp, Users } from 'lucide-react';
+import { Plus, Target, Database, Users } from 'lucide-react';
 import { SDGGoalsManager } from '@/components/sdg/SDGGoalsManager';
 import { SDGIndicatorsManager } from '@/components/sdg/SDGIndicatorsManager';
-
-import { SDGProgressTracker } from '@/components/sdg/SDGProgressTracker';
 
 
 export const SDGManagement = () => {
@@ -48,7 +46,7 @@ export const SDGManagement = () => {
 
         {/* Management Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="goals" className="flex items-center gap-2">
               <Target className="h-4 w-4" />
               Goals & Targets
@@ -57,10 +55,7 @@ export const SDGManagement = () => {
               <Database className="h-4 w-4" />
               Indicators
             </TabsTrigger>
-            <TabsTrigger value="progress" className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Progress Tracking
-            </TabsTrigger>
+            
           </TabsList>
 
           <TabsContent value="goals" className="space-y-6">
@@ -71,9 +66,7 @@ export const SDGManagement = () => {
             <SDGIndicatorsManager />
           </TabsContent>
 
-          <TabsContent value="progress" className="space-y-6">
-            <SDGProgressTracker />
-          </TabsContent>
+          
         </Tabs>
       </div>
     </DashboardLayout>

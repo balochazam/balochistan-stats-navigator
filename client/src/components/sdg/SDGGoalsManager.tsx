@@ -1,20 +1,9 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Plus, Edit2, Target, TrendingUp, Database, AlertCircle } from 'lucide-react';
+import { Target, TrendingUp, Database, AlertCircle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { simpleApiClient } from '@/lib/simpleApi';
-import { z } from 'zod';
 import { getSDGIcon } from '@/assets/sdg-icons';
 
 
@@ -175,29 +164,7 @@ const defaultSDGData = [
   },
 ];
 
-const sdgGoalSchema = z.object({
-  id: z.number().min(1).max(17),
-  title: z.string().min(1, "Title is required"),
-  description: z.string().optional(),
-  color: z.string().min(1, "Color is required"),
-});
-
 export const SDGGoalsManager = () => {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingGoal, setEditingGoal] = useState<any>(null);
-
-  const form = useForm({
-    resolver: zodResolver(sdgGoalSchema),
-    defaultValues: {
-      id: 1,
-      title: '',
-      description: '',
-      color: '#e5243b',
-    },
-  });
 
   const { data: goals = [], isLoading, error } = useQuery({
     queryKey: ['/api/sdg/goals'],
@@ -227,70 +194,6 @@ export const SDGGoalsManager = () => {
 
   const avgProgress = Math.round(sdgData.reduce((acc: number, sdg: any) => acc + sdg.progress, 0) / sdgData.length);
   const onTrackCount = sdgData.filter((sdg: any) => sdg.progress >= (sdg.target * 0.7)).length;
-
-  const createGoalMutation = useMutation({
-    mutationFn: async (data: any) => {
-      return await simpleApiClient.post('/api/sdg/goals', data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/sdg/goals'] });
-      setIsDialogOpen(false);
-      form.reset();
-      toast({
-        title: "Success",
-        description: "SDG goal created successfully",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: "Failed to create SDG goal",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const updateGoalMutation = useMutation({
-    mutationFn: async (data: any) => {
-      return await simpleApiClient.put(`/api/sdg/goals/${data.id}`, data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/sdg/goals'] });
-      setIsDialogOpen(false);
-      form.reset();
-      setEditingGoal(null);
-      toast({
-        title: "Success",
-        description: "SDG goal updated successfully",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: "Failed to update SDG goal",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleEdit = (goal: any) => {
-    setEditingGoal(goal);
-    form.reset({
-      id: goal.id,
-      title: goal.title,
-      description: goal.description || '',
-      color: goal.color,
-    });
-    setIsDialogOpen(true);
-  };
-
-  const onSubmit = (data: any) => {
-    if (editingGoal) {
-      updateGoalMutation.mutate(data);
-    } else {
-      createGoalMutation.mutate(data);
-    }
-  };
 
   if (isLoading) {
     return (
@@ -323,109 +226,6 @@ export const SDGGoalsManager = () => {
             <Target className="h-5 w-5 mr-2" />
             17 Goals Active
           </Badge>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={() => {
-                setEditingGoal(null);
-                form.reset();
-              }}>
-                <Plus className="h-4 w-4 mr-2" />
-                Manage Goal
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>
-                  {editingGoal ? 'Edit SDG Goal' : 'Add New SDG Goal'}
-                </DialogTitle>
-              </DialogHeader>
-              
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="id"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>SDG Number (1-17)</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            min="1" 
-                            max="17"
-                            {...field}
-                            onChange={(e) => field.onChange(parseInt(e.target.value))}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="title"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Title</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl>
-                          <Textarea {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="color"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Color</FormLabel>
-                        <FormControl>
-                          <div className="flex items-center gap-2">
-                            <Input type="color" {...field} className="w-16 h-10" />
-                            <Input {...field} placeholder="#e5243b" />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <div className="flex justify-end gap-2">
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      onClick={() => setIsDialogOpen(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button type="submit" disabled={createGoalMutation.isPending || updateGoalMutation.isPending}>
-                      {createGoalMutation.isPending || updateGoalMutation.isPending 
-                        ? 'Saving...' 
-                        : editingGoal ? 'Update Goal' : 'Create Goal'
-                      }
-                    </Button>
-                  </div>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
         </div>
       </div>
 
@@ -615,13 +415,6 @@ export const SDGGoalsManager = () => {
                       <div className="flex-1">
                         <h3 className="font-semibold text-sm leading-tight">{sdg.title}</h3>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleEdit(sdg)}
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
                     </div>
                     
                     <div className="space-y-2">

@@ -9,7 +9,8 @@ This is a full-stack data collection management system with a public-first appro
 - **Comprehensive Indicator Coverage**: Goals 1-5 fully populated with all official targets and indicators (13+14+27+11+14 = 79 indicators)
 - **Database Foundation Complete**: One-time setup completed - users will only enter data values, not create indicators
 - **Dynamic Form Builder System**: Comprehensive visual form creation tool with drag-and-drop interface, supporting 10+ field types, validation rules, conditional logic, and real-time preview
-- **Enhanced User Experience**: Toast notifications centered, streamlined navigation with SDG Management prominently positioned, form submission with proper feedback
+- **Enhanced User Experience**: Toast notifications centered with beautiful styling, streamlined navigation with SDG Management prominently positioned, form submission with proper feedback
+- **Simplified Dynamic Form Builder**: Clean modal-based form creator integrated directly into indicator cards, triggered by "Create Form" button for indicators without existing forms
 - **Ready for Goal-by-Goal Finalization**: Systematic approach to finalize data collection forms for each remaining goal
 
 ## User Preferences

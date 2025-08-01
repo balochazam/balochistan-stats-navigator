@@ -11,6 +11,7 @@ import { Search, Target, Database, BarChart3, Globe, Users, Calendar, Filter } f
 // import { AuthenticSDGDataEntryForm } from './AuthenticSDGDataEntryForm';
 import { Goal1SpecificDataEntry } from './Goal1SpecificDataEntry';
 import { BalochistandDataEntry } from './BalochistandDataEntry';
+import { DynamicFormBuilder } from './DynamicFormBuilder';
 import { hasBalochistanForm } from '@/data/balochistandAllForms';
 
 // Types for database data
@@ -95,6 +96,8 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
   const [filterTier, setFilterTier] = useState<string>('all');
   const [filterType, setFilterType] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'browse' | 'data_entry'>('browse');
+  const [formBuilderOpen, setFormBuilderOpen] = useState(false);
+  const [formBuilderIndicator, setFormBuilderIndicator] = useState<IndicatorStructure | null>(null);
 
   // Fetch real indicators from database
   const { data: indicators = [], isLoading } = useQuery({
@@ -421,6 +424,10 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
                                 setSelectedIndicator(indicator);
                                 setViewMode('data_entry');
                               }}
+                              onCreateForm={() => {
+                                setFormBuilderIndicator(indicator);
+                                setFormBuilderOpen(true);
+                              }}
                             />
                           ))}
                         </div>
@@ -438,6 +445,10 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
                         setSelectedIndicator(indicator);
                         setViewMode('data_entry');
                       }}
+                      onCreateForm={() => {
+                        setFormBuilderIndicator(indicator);
+                        setFormBuilderOpen(true);
+                      }}
                     />
                   ))}
                 </div>
@@ -446,6 +457,22 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
           </CardContent>
         </Card>
       </div>
+
+      {/* Dynamic Form Builder */}
+      {formBuilderIndicator && (
+        <DynamicFormBuilder
+          indicatorCode={formBuilderIndicator.code}
+          indicatorTitle={formBuilderIndicator.title}
+          open={formBuilderOpen}
+          onOpenChange={setFormBuilderOpen}
+          onSave={(form) => {
+            console.log('Form saved:', form);
+            // Here you would typically save to backend
+            setFormBuilderOpen(false);
+            setFormBuilderIndicator(null);
+          }}
+        />
+      )}
     </div>
   );
 };
@@ -454,9 +481,10 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
 interface IndicatorCardProps {
   indicator: IndicatorStructure;
   onEnterData: () => void;
+  onCreateForm: () => void;
 }
 
-const IndicatorCard: React.FC<IndicatorCardProps> = ({ indicator, onEnterData }) => {
+const IndicatorCard: React.FC<IndicatorCardProps> = ({ indicator, onEnterData, onCreateForm }) => {
   const getTierColor = (tier: string) => {
     switch (tier) {
       case 'I': return 'bg-green-100 text-green-800';
@@ -523,7 +551,7 @@ const IndicatorCard: React.FC<IndicatorCardProps> = ({ indicator, onEnterData })
         <div className="flex gap-2 pt-2 border-t">
           <Button 
             size="sm" 
-            onClick={onEnterData} 
+            onClick={hasBalochistanForm(indicator.code) ? onEnterData : onCreateForm} 
             className="flex-1"
             variant={hasBalochistanForm(indicator.code) ? "default" : "outline"}
           >

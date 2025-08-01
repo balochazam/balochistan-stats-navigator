@@ -10,7 +10,7 @@ import { SDGGoalsManager } from '@/components/sdg/SDGGoalsManager';
 import { SDGIndicatorsManager } from '@/components/sdg/SDGIndicatorsManager';
 
 import { SDGProgressTracker } from '@/components/sdg/SDGProgressTracker';
-import { DynamicFormBuilder } from '@/components/sdg/DynamicFormBuilder';
+
 
 export const SDGManagement = () => {
   const { profile } = useAuth();
@@ -48,7 +48,7 @@ export const SDGManagement = () => {
 
         {/* Management Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="goals" className="flex items-center gap-2">
               <Target className="h-4 w-4" />
               Goals & Targets
@@ -56,10 +56,6 @@ export const SDGManagement = () => {
             <TabsTrigger value="indicators" className="flex items-center gap-2">
               <Database className="h-4 w-4" />
               Indicators
-            </TabsTrigger>
-            <TabsTrigger value="form-builder" className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              Form Builder
             </TabsTrigger>
             <TabsTrigger value="progress" className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
@@ -73,10 +69,6 @@ export const SDGManagement = () => {
 
           <TabsContent value="indicators" className="space-y-6">
             <SDGIndicatorsManager />
-          </TabsContent>
-
-          <TabsContent value="form-builder" className="space-y-6">
-            <DynamicFormBuilder />
           </TabsContent>
 
           <TabsContent value="progress" className="space-y-6">

@@ -20,6 +20,7 @@ import { DataCollection } from "./pages/DataCollection";
 import { Reports } from "./pages/Reports";
 import { TechnologyTransfer } from "./pages/admin/TechnologyTransfer";
 import { SDGDashboard } from "./pages/SDGDashboard";
+import { SDGManagement } from "./pages/admin/SDGManagement";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +49,7 @@ const App = () => (
             <Route path="/admin/data-banks" element={<DataBankManagement />} />
             <Route path="/admin/forms" element={<FormManagement />} />
             <Route path="/admin/schedules" element={<ScheduleManagement />} />
+            <Route path="/admin/sdg-management" element={<SDGManagement />} />
             <Route path="/admin/technology-transfer" element={<TechnologyTransfer />} />
             <Route path="/reports" element={<Reports />} />
             

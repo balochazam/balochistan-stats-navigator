@@ -99,6 +99,12 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       roles: ['admin']
     },
     {
+      title: 'SDG Management',
+      icon: Target,
+      path: '/admin/sdg-management',
+      roles: ['admin']
+    },
+    {
       title: 'Reports',
       icon: BarChart3,
       path: '/reports',

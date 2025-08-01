@@ -1252,12 +1252,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Calculate real progress for SDG goals based on indicators  
   app.get('/api/sdg/goals-with-progress', requireAuth, async (req, res) => {
     try {
+      console.log('=== Starting SDG progress calculation ===');
       const goals = await storage.getSdgGoals();
       const targets = await storage.getSdgTargets();
       const indicators = await storage.getSdgIndicators();
       
+      console.log(`Found ${goals.length} goals, ${targets.length} targets, ${indicators.length} indicators`);
+      
       // Import Balochistan indicator data for calculations
       const { balochistandIndicatorData } = await import('@shared/balochistandIndicatorData');
+      console.log(`Loaded ${balochistandIndicatorData.length} Balochistan indicator records`);
       
       const goalsWithProgress = goals.map(goal => {
         // Get targets for this goal
@@ -1273,38 +1277,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Calculate progress based on Balochistan data
         goalIndicators.forEach(indicator => {
+          const indicatorCode = indicator.indicator_code;
           const balochistandData = balochistandIndicatorData.find(
-            data => data.indicator_code === (indicator as any).code || (indicator as any).indicator_code
+            data => data.indicator_code === indicatorCode
           );
           
           if (balochistandData) {
-            // Calculate progress from baseline to latest
-            const baselineValue = parseFloat(String(balochistandData.baseline.value).replace(/[%,]/g, '')) || 0;
-            const latestValue = parseFloat(String(balochistandData.latest.value).replace(/[%,]/g, '')) || 0;
+            console.log(`Found Balochistan data for ${indicatorCode}:`, balochistandData.baseline.value, '->', balochistandData.progress.value);
             
-            // For poverty indicators, improvement means reduction (invert the calculation)
-            let progress;
-            const indicatorCode = (indicator as any).code || (indicator as any).indicator_code || '';
-            if (indicatorCode.startsWith('1.') && (baselineValue > latestValue)) {
-              // Poverty reduction: calculate improvement as percentage
-              progress = Math.min(100, ((baselineValue - latestValue) / baselineValue) * 100);
-            } else if (latestValue > baselineValue) {
-              // Regular improvement: increase in value
-              progress = Math.min(100, ((latestValue - baselineValue) / Math.max(baselineValue, 1)) * 100);
+            // Calculate progress from baseline to progress (more reliable than latest which might be "In Process")
+            const baselineValue = parseFloat(String(balochistandData.baseline.value).replace(/[%,]/g, '')) || 0;
+            const progressValue = parseFloat(String(balochistandData.progress.value).replace(/[%,]/g, '')) || 0;
+            
+            let progress = 0;
+            
+            if (indicatorCode.startsWith('1.')) {
+              // For poverty indicators, reduction is improvement
+              if (baselineValue > 0 && progressValue > 0 && baselineValue > progressValue) {
+                progress = ((baselineValue - progressValue) / baselineValue) * 100;
+                console.log(`Poverty reduction calculation for ${indicatorCode}: ${baselineValue} -> ${progressValue} = ${progress}% improvement`);
+              }
+            } else if (indicatorCode.startsWith('2.') || indicatorCode.startsWith('3.')) {
+              // For nutrition/health indicators, increase is improvement  
+              if (baselineValue > 0 && progressValue > baselineValue) {
+                progress = ((progressValue - baselineValue) / baselineValue) * 100;
+              } else if (progressValue > 0) {
+                // Use progress value as baseline if baseline not available
+                progress = Math.min(progressValue, 80);
+              }
             } else {
-              // Use a baseline progress based on data availability
-              progress = balochistandData.latest.value.toString().toLowerCase().includes('process') ? 50 : 60;
+              // For other indicators, generally increase is improvement
+              if (progressValue > baselineValue && baselineValue > 0) {
+                progress = ((progressValue - baselineValue) / baselineValue) * 100;
+              } else if (progressValue > 0) {
+                progress = Math.min(progressValue, 80);
+              }
             }
             
-            totalProgress += Math.max(0, progress);
+            // Cap progress at reasonable levels
+            progress = Math.min(Math.max(progress, 0), 95);
+            totalProgress += progress;
             validIndicatorCount++;
+            
+            console.log(`Final progress for ${indicatorCode}: ${progress}%`);
+          } else {
+            console.log(`No Balochistan data found for indicator: ${indicatorCode}`);
           }
         });
         
         // Calculate average progress for the goal
         const averageProgress = validIndicatorCount > 0 ? 
           Math.round(totalProgress / validIndicatorCount) : 
-          Math.round(Math.random() * 30 + 40); // Fallback with realistic range
+          0; // No fallback - show 0 if no real data available
+        
+        console.log(`Goal ${goal.id} (${goal.title}): ${validIndicatorCount} indicators, average progress: ${averageProgress}%`);
         
         return {
           ...goal,
@@ -1317,6 +1343,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(goalsWithProgress);
     } catch (error) {
       console.error('Failed to calculate SDG progress:', error);
+      console.error('Error details:', error.message);
       res.status(500).json({ error: 'Failed to calculate progress' });
     }
   });

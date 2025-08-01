@@ -150,8 +150,8 @@ export const DynamicFormBuilder: React.FC<DynamicFormBuilderProps> = ({
           field_order: index + 1
         }));
         
-        // Save fields to form_fields table
-        await simpleApiClient.post(`/api/forms/${createdForm.id}/fields`, fieldsToSave);
+        // Save fields using bulk creation endpoint
+        await simpleApiClient.post(`/api/form-fields`, fieldsToSave);
       }
       
       return createdForm;

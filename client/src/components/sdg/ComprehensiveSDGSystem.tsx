@@ -113,6 +113,21 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
     queryKey: ['/api/sdg/targets'],
   });
 
+  // Fetch forms to check which indicators have forms
+  const { data: forms = [] } = useQuery({
+    queryKey: ['/api/forms'],
+  });
+
+  // Helper function to check if indicator has a database form
+  const hasIndicatorForm = (indicatorCode: string): boolean => {
+    // Check both Balochistan static forms and database forms
+    const hasStaticForm = hasBalochistanForm(indicatorCode);
+    const hasDatabaseForm = forms.some((form: any) => 
+      form.name && form.name.includes(indicatorCode)
+    );
+    return hasStaticForm || hasDatabaseForm;
+  };
+
   // Convert database indicators to our format
   const convertToIndicatorStructure = (dbIndicator: DatabaseIndicator): IndicatorStructure => {
     const target = (targets as any[]).find((t: any) => t.id === dbIndicator.sdg_target_id);
@@ -247,12 +262,12 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
             <p className="text-sm text-gray-600">{selectedIndicator.title}</p>
           </div>
         </div>
-        {hasBalochistanForm(selectedIndicator.code) ? (
+        {hasIndicatorForm(selectedIndicator.code) ? (
           <BalochistandDataEntry
             indicatorCode={selectedIndicator.code}
             indicatorTitle={selectedIndicator.title}
             onSubmit={(data) => {
-              console.log('Balochistan data submitted:', data);
+              console.log('Indicator data submitted:', data);
               // TODO: Save to backend
               setViewMode('browse');
               setSelectedIndicator(null);
@@ -264,7 +279,7 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
           />
         ) : (
           <div className="p-8 text-center">
-            <p className="text-gray-600">Balochistan-specific form for indicator {selectedIndicator.code} is not yet available.</p>
+            <p className="text-gray-600">Data entry form for indicator {selectedIndicator.code} is not yet available.</p>
             <p className="text-sm text-gray-500 mt-2">This indicator will be available once the form is created.</p>
           </div>
         )}
@@ -424,6 +439,7 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
                             <IndicatorCard
                               key={indicator.code}
                               indicator={indicator}
+                              hasForm={hasIndicatorForm(indicator.code)}
                               onEnterData={() => {
                                 setSelectedIndicator(indicator);
                                 setViewMode('data_entry');
@@ -448,6 +464,7 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
                     <IndicatorCard
                       key={indicator.code}
                       indicator={indicator}
+                      hasForm={hasIndicatorForm(indicator.code)}
                       onEnterData={() => {
                         setSelectedIndicator(indicator);
                         setViewMode('data_entry');
@@ -495,9 +512,10 @@ interface IndicatorCardProps {
   onEnterData: () => void;
   onCreateForm: () => void;
   onViewDetails: () => void;
+  hasForm: boolean;
 }
 
-const IndicatorCard: React.FC<IndicatorCardProps> = ({ indicator, onEnterData, onCreateForm, onViewDetails }) => {
+const IndicatorCard: React.FC<IndicatorCardProps> = ({ indicator, onEnterData, onCreateForm, onViewDetails, hasForm }) => {
   const getTierColor = (tier: string) => {
     switch (tier) {
       case 'I': return 'bg-green-100 text-green-800';
@@ -522,7 +540,7 @@ const IndicatorCard: React.FC<IndicatorCardProps> = ({ indicator, onEnterData, o
               <Badge variant="secondary" className="text-xs">
                 {indicator.type}
               </Badge>
-              {hasBalochistanForm(indicator.code) && (
+              {hasForm && (
                 <Badge className="text-xs bg-green-100 text-green-800">
                   Form Ready
                 </Badge>
@@ -569,12 +587,12 @@ const IndicatorCard: React.FC<IndicatorCardProps> = ({ indicator, onEnterData, o
         <div className="flex gap-2 pt-2 border-t">
           <Button 
             size="sm" 
-            onClick={hasBalochistanForm(indicator.code) ? onEnterData : onCreateForm} 
+            onClick={hasForm ? onEnterData : onCreateForm} 
             className="flex-1"
-            variant={hasBalochistanForm(indicator.code) ? "default" : "outline"}
+            variant={hasForm ? "default" : "outline"}
           >
             <BarChart3 className="h-3 w-3 mr-1" />
-            {hasBalochistanForm(indicator.code) ? "Enter Data" : "Create Form"}
+            {hasForm ? "Enter Data" : "Create Form"}
           </Button>
           <Button 
             size="sm" 

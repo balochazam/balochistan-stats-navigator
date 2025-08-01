@@ -1184,7 +1184,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/sdg/indicators', requireAuth, async (req, res) => {
     try {
-      const validatedData = insertSdgIndicatorSchema.parse(req.body);
+      const validatedData = insertSdgIndicatorSchema.parse({
+        ...req.body,
+        created_by: (req as any).userId
+      });
       const indicator = await storage.createSdgIndicator(validatedData);
       res.status(201).json(indicator);
     } catch (error) {

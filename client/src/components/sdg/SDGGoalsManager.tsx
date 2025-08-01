@@ -25,7 +25,7 @@ const defaultSDGData = [
     color: "#e5243b", 
     target: 71, 
     description: "End poverty in all its forms everywhere",
-    iconUrl: "https://upload.wikimedia.org/wikipedia/commons/1/10/Sustainable_Development_Goal_1.png"
+    iconUrl: "invalid-url-to-trigger-fallback"
   },
   { 
     id: 2, 
@@ -34,7 +34,7 @@ const defaultSDGData = [
     color: "#dda63a", 
     target: 32, 
     description: "End hunger, achieve food security and improved nutrition",
-    iconUrl: "https://upload.wikimedia.org/wikipedia/commons/5/50/Sustainable_Development_Goal_2.png"
+    iconUrl: "invalid-url-to-trigger-fallback"
   },
   { 
     id: 3, 
@@ -43,7 +43,7 @@ const defaultSDGData = [
     color: "#4c9f38", 
     target: 38, 
     description: "Ensure healthy lives and promote well-being for all at all ages",
-    iconUrl: "https://upload.wikimedia.org/wikipedia/commons/c/c5/Sustainable_Development_Goal_3.png"
+    iconUrl: "invalid-url-to-trigger-fallback"
   },
   { 
     id: 4, 
@@ -52,7 +52,7 @@ const defaultSDGData = [
     color: "#c5192d", 
     target: 78, 
     description: "Ensure inclusive and equitable quality education",
-    iconUrl: "https://upload.wikimedia.org/wikipedia/commons/1/17/Sustainable_Development_Goal_4.png"
+    iconUrl: "invalid-url-to-trigger-fallback"
   },
   { 
     id: 5, 
@@ -61,7 +61,7 @@ const defaultSDGData = [
     color: "#ff3a21", 
     target: 45, 
     description: "Achieve gender equality and empower all women and girls",
-    iconUrl: "https://upload.wikimedia.org/wikipedia/commons/4/4d/Sustainable_Development_Goal_5.png"
+    iconUrl: "invalid-url-to-trigger-fallback"
   },
   { 
     id: 6, 
@@ -70,7 +70,7 @@ const defaultSDGData = [
     color: "#26bde2", 
     target: 62, 
     description: "Ensure availability and sustainable management of water",
-    iconUrl: "https://upload.wikimedia.org/wikipedia/commons/3/3b/Sustainable_Development_Goal_6.png"
+    iconUrl: "invalid-url-to-trigger-fallback"
   },
   { 
     id: 7, 
@@ -79,7 +79,7 @@ const defaultSDGData = [
     color: "#fcc30b", 
     target: 28, 
     description: "Ensure access to affordable, reliable, sustainable energy",
-    iconUrl: "https://upload.wikimedia.org/wikipedia/commons/5/54/Sustainable_Development_Goal_7.png"
+    iconUrl: "invalid-url-to-trigger-fallback"
   },
   { 
     id: 8, 
@@ -88,7 +88,7 @@ const defaultSDGData = [
     color: "#a21942", 
     target: 52, 
     description: "Promote sustained, inclusive economic growth",
-    iconUrl: "https://upload.wikimedia.org/wikipedia/commons/7/70/Sustainable_Development_Goal_8.png"
+    iconUrl: "invalid-url-to-trigger-fallback"
   },
   { 
     id: 9, 
@@ -97,7 +97,7 @@ const defaultSDGData = [
     color: "#fd6925", 
     target: 38, 
     description: "Build resilient infrastructure, promote innovation",
-    iconUrl: "https://upload.wikimedia.org/wikipedia/commons/f/f7/Sustainable_Development_Goal_9.png"
+    iconUrl: "invalid-url-to-trigger-fallback"
   },
   { 
     id: 10, 
@@ -106,7 +106,7 @@ const defaultSDGData = [
     color: "#dd1367", 
     target: 42, 
     description: "Reduce inequality within and among countries",
-    iconUrl: "https://upload.wikimedia.org/wikipedia/commons/1/1d/Sustainable_Development_Goal_10.png"
+    iconUrl: "invalid-url-to-trigger-fallback"
   },
   { 
     id: 11, 
@@ -115,7 +115,7 @@ const defaultSDGData = [
     color: "#fd9d24", 
     target: 35, 
     description: "Make cities and human settlements sustainable",
-    iconUrl: "https://upload.wikimedia.org/wikipedia/commons/d/d6/Sustainable_Development_Goal_11.png"
+    iconUrl: "invalid-url-to-trigger-fallback"
   },
   { 
     id: 12, 
@@ -124,7 +124,7 @@ const defaultSDGData = [
     color: "#bf8b2e", 
     target: 48, 
     description: "Ensure sustainable consumption and production patterns",
-    iconUrl: "https://upload.wikimedia.org/wikipedia/commons/8/82/Sustainable_Development_Goal_12.png"
+    iconUrl: "invalid-url-to-trigger-fallback"
   },
   { 
     id: 13, 
@@ -133,7 +133,7 @@ const defaultSDGData = [
     color: "#3f7e44", 
     target: 25, 
     description: "Take urgent action to combat climate change",
-    iconUrl: "https://upload.wikimedia.org/wikipedia/commons/f/f8/Sustainable_Development_Goal_13.png"
+    iconUrl: "invalid-url-to-trigger-fallback"
   },
   { 
     id: 14, 
@@ -142,7 +142,7 @@ const defaultSDGData = [
     color: "#0a97d9", 
     target: 31, 
     description: "Conserve and sustainably use marine resources",
-    iconUrl: "https://upload.wikimedia.org/wikipedia/commons/3/35/Sustainable_Development_Goal_14.png"
+    iconUrl: "invalid-url-to-trigger-fallback"
   },
   { 
     id: 15, 
@@ -151,7 +151,7 @@ const defaultSDGData = [
     color: "#56c02b", 
     target: 38, 
     description: "Protect and restore terrestrial ecosystems",
-    iconUrl: "https://upload.wikimedia.org/wikipedia/commons/2/2e/Sustainable_Development_Goal_15.png"
+    iconUrl: "invalid-url-to-trigger-fallback"
   },
   { 
     id: 16, 
@@ -160,7 +160,7 @@ const defaultSDGData = [
     color: "#00689d", 
     target: 45, 
     description: "Promote peaceful and inclusive societies",
-    iconUrl: "https://upload.wikimedia.org/wikipedia/commons/b/b8/Sustainable_Development_Goal_16.png"
+    iconUrl: "invalid-url-to-trigger-fallback"
   },
   { 
     id: 17, 
@@ -169,7 +169,7 @@ const defaultSDGData = [
     color: "#19486a", 
     target: 58, 
     description: "Strengthen means of implementation and partnerships",
-    iconUrl: "https://upload.wikimedia.org/wikipedia/commons/e/e8/Sustainable_Development_Goal_17.png"
+    iconUrl: "invalid-url-to-trigger-fallback"
   },
 ];
 
@@ -218,7 +218,7 @@ export const SDGGoalsManager = () => {
       ...goal,
       progress: calculation?.progress_percentage || defaultGoal?.progress || 0,
       target: calculation?.target_value || defaultGoal?.target || 100,
-      iconUrl: defaultGoal?.iconUrl || `https://upload.wikimedia.org/wikipedia/commons/thumb/${goal.id}/10/Sustainable_Development_Goal_${goal.id}.png/256px-Sustainable_Development_Goal_${goal.id}.png`,
+      iconUrl: "invalid-url-to-trigger-fallback",
     };
   }) : defaultSDGData;
 
@@ -535,10 +535,12 @@ export const SDGGoalsManager = () => {
                       onError={(e) => {
                         // Fallback to colored square with number if image fails
                         const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                        const parent = target.parentElement!;
-                        parent.style.backgroundColor = sdg.color;
-                        parent.innerHTML = `<div class="w-full h-full flex items-center justify-center text-white text-xs font-bold">${sdg.id}</div>`;
+                        const parent = target.parentElement;
+                        if (parent) {
+                          target.style.display = 'none';
+                          parent.style.backgroundColor = sdg.color;
+                          parent.innerHTML = `<div class="w-full h-full flex items-center justify-center text-white text-xs font-bold">${sdg.id}</div>`;
+                        }
                       }}
                     />
                   </div>
@@ -586,10 +588,12 @@ export const SDGGoalsManager = () => {
                           onError={(e) => {
                             // Fallback to colored square with number if image fails
                             const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
-                            const parent = target.parentElement!;
-                            parent.style.backgroundColor = sdg.color;
-                            parent.innerHTML = `<div class="w-full h-full flex items-center justify-center text-white font-bold text-lg">${sdg.id}</div>`;
+                            const parent = target.parentElement;
+                            if (parent) {
+                              target.style.display = 'none';
+                              parent.style.backgroundColor = sdg.color;
+                              parent.innerHTML = `<div class="w-full h-full flex items-center justify-center text-white font-bold text-lg">${sdg.id}</div>`;
+                            }
                           }}
                         />
                       </div>

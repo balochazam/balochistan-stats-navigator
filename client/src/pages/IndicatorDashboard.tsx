@@ -191,11 +191,35 @@ const ProgressChart: React.FC<{ data: IndicatorTimeSeries }> = ({ data }) => {
     },
     {
       period: data.latest.year,
-      value: String(data.latest.value).toLowerCase().includes('process') ? null : 
+      value: String(data.latest.value).toLowerCase().includes('process') ? 
+             parseFloat(String(data.progress.value).replace(/[%,]/g, '')) || 0 : 
              parseFloat(String(data.latest.value).replace(/[%,]/g, '')) || 0,
       type: 'Latest'
     }
-  ].filter(item => item.value !== null);
+  ].filter(item => item.value !== null && item.value !== undefined);
+
+  // Ensure we have at least 2 data points for a meaningful chart
+  if (chartData.length < 2) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5" />
+            Progress Trend Analysis
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center h-64 text-gray-500">
+            <div className="text-center">
+              <BarChart3 className="h-12 w-12 mx-auto mb-3 opacity-50" />
+              <p>Insufficient data points for trend analysis</p>
+              <p className="text-sm">Need at least 2 time periods with valid data</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -210,7 +234,7 @@ const ProgressChart: React.FC<{ data: IndicatorTimeSeries }> = ({ data }) => {
           <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="period" />
-            <YAxis />
+            <YAxis domain={['dataMin - 5', 'dataMax + 5']} />
             <Tooltip 
               formatter={(value, name) => [`${value}${data.unit.includes('%') ? '%' : ''}`, name]}
               labelFormatter={(label) => `Period: ${label}`}

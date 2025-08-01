@@ -29,8 +29,70 @@ export const BalochistandDataEntry: React.FC<BalochistandDataEntryProps> = ({
   onCancel
 }) => {
   const [currentSection, setCurrentSection] = useState(0);
+  const [formData, setFormData] = useState<any>({});
   const formStructure = getBalochistandFormStructure(indicatorCode);
-  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm();
+  const { register, handleSubmit, watch, setValue, formState: { errors }, getValues } = useForm();
+
+  // Navigation and submission handlers
+  const handleNext = () => {
+    // Save current section data
+    const currentData = getValues();
+    setFormData((prev: any) => ({ ...prev, ...currentData }));
+    setCurrentSection(currentSection + 1);
+  };
+
+  const handlePrevious = () => {
+    // Save current section data
+    const currentData = getValues();
+    setFormData((prev: any) => ({ ...prev, ...currentData }));
+    setCurrentSection(currentSection - 1);
+  };
+
+  const handleFinalSubmit = async () => {
+    if (!formStructure) return;
+    
+    // Collect all form data from all sections
+    const currentData = getValues();
+    const finalData = { ...formData, ...currentData };
+    
+    console.log('Final submission data:', finalData);
+    
+    // Create indicator value record for backend
+    const indicatorValueData = {
+      indicator_code: indicatorCode,
+      data_year: finalData.section_0_data_year || new Date().getFullYear(),
+      value_data: finalData,
+      data_source: finalData.section_0_survey_source || finalData.section_0_data_source,
+      metadata: {
+        calculation: formStructure.calculation,
+        data_quality_requirements: formStructure.data_quality_requirements
+      }
+    };
+
+    try {
+      // Submit to backend API
+      const response = await fetch('/api/sdg/indicator-values', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(indicatorValueData)
+      });
+
+      if (response.ok) {
+        console.log('Data successfully saved to backend');
+        onSubmit(finalData);
+      } else {
+        console.error('Failed to save data to backend');
+        // Still call onSubmit to allow UI to handle the response
+        onSubmit(finalData);
+      }
+    } catch (error) {
+      console.error('Error submitting data:', error);
+      // Still call onSubmit to allow UI to handle the error
+      onSubmit(finalData);
+    }
+  };
 
   if (!formStructure) {
     return (
@@ -61,7 +123,7 @@ export const BalochistandDataEntry: React.FC<BalochistandDataEntryProps> = ({
             <Label htmlFor={fieldName}>
               {field.label} {field.required && <span className="text-red-500">*</span>}
             </Label>
-            <Select onValueChange={(value) => setValue(fieldName, value)}>
+            <Select onValueChange={(value) => setValue(fieldName, value)} defaultValue={formData[fieldName] || ''}>
               <SelectTrigger>
                 <SelectValue placeholder={`Select ${field.label.toLowerCase()}`} />
               </SelectTrigger>
@@ -132,6 +194,7 @@ export const BalochistandDataEntry: React.FC<BalochistandDataEntryProps> = ({
               {field.label} {field.required && <span className="text-red-500">*</span>}
             </Label>
             <Textarea
+              defaultValue={formData[fieldName] || ''}
               {...register(fieldName, { required: field.required })}
               placeholder={`Enter ${field.label.toLowerCase()}`}
               rows={3}
@@ -154,6 +217,7 @@ export const BalochistandDataEntry: React.FC<BalochistandDataEntryProps> = ({
                 step="0.1"
                 min="0"
                 max="100"
+                defaultValue={formData[fieldName] || ''}
                 {...register(fieldName, { 
                   required: field.required,
                   min: 0,
@@ -177,6 +241,7 @@ export const BalochistandDataEntry: React.FC<BalochistandDataEntryProps> = ({
             <Input
               type="number"
               step={field.validation?.step || "0.01"}
+              defaultValue={formData[fieldName] || ''}
               {...register(fieldName, { 
                 required: field.required,
                 min: field.validation?.min,
@@ -264,7 +329,7 @@ export const BalochistandDataEntry: React.FC<BalochistandDataEntryProps> = ({
           )}
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {currentSectionData.fields.map((field) => renderField(field, currentSection))}
             </div>
@@ -278,7 +343,7 @@ export const BalochistandDataEntry: React.FC<BalochistandDataEntryProps> = ({
                   <Button 
                     type="button" 
                     variant="outline" 
-                    onClick={() => setCurrentSection(currentSection - 1)}
+                    onClick={handlePrevious}
                   >
                     Previous
                   </Button>
@@ -288,18 +353,18 @@ export const BalochistandDataEntry: React.FC<BalochistandDataEntryProps> = ({
                 {!isLastSection ? (
                   <Button 
                     type="button" 
-                    onClick={() => setCurrentSection(currentSection + 1)}
+                    onClick={handleNext}
                   >
                     Next
                   </Button>
                 ) : (
-                  <Button type="submit">
+                  <Button onClick={handleFinalSubmit}>
                     Submit Data
                   </Button>
                 )}
               </div>
             </div>
-          </form>
+          </div>
         </CardContent>
       </Card>
 

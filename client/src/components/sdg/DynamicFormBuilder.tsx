@@ -1,565 +1,916 @@
 import React, { useState } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import { useForm } from 'react-hook-form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Minus, Settings2, Eye, Code, Database } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Switch } from '@/components/ui/switch';
+import { 
+  Plus, 
+  Trash2, 
+  Save, 
+  Eye, 
+  Settings, 
+  Move, 
+  Copy,
+  FileText,
+  Calculator,
+  BarChart3,
+  Calendar,
+  CheckSquare,
+  Circle,
+  Type,
+  Hash,
+  Percent,
+  List,
+  MapPin
+} from 'lucide-react';
+import toast from 'react-hot-toast';
 
-const formStructureSchema = z.object({
-  indicator_id: z.string(),
-  form_type: z.enum(["simple", "ratio", "multi_dimensional", "time_series", "geographic", "demographic"]),
-  title: z.string().min(1, "Title required"),
-  description: z.string().optional(),
-  data_collection_method: z.string(),
-  timeframe_type: z.enum(["annual", "quarterly", "monthly", "one_time"]),
-  dimensions: z.array(z.object({
-    name: z.string(),
-    label: z.string(),
-    type: z.enum(["categorical", "numerical", "percentage", "boolean"]),
-    values: z.array(z.string()).optional(),
-    required: z.boolean(),
-    validation: z.object({
-      min: z.number().optional(),
-      max: z.number().optional(),
-      decimal_places: z.number().optional()
-    }).optional()
-  })).default([]),
-  calculation_rules: z.object({
-    type: z.enum(["sum", "average", "ratio", "weighted_average", "custom"]).optional(),
-    formula: z.string().optional(),
-    aggregation_levels: z.array(z.string()).optional()
-  }).optional(),
-  quality_checks: z.object({
-    completeness_threshold: z.number().min(0).max(1),
-    logical_checks: z.array(z.string()),
-    outlier_detection: z.boolean()
-  }).default({
-    completeness_threshold: 0.8,
-    logical_checks: [],
-    outlier_detection: true
-  })
-});
-
-type FormStructure = z.infer<typeof formStructureSchema>;
-
-interface DynamicFormBuilderProps {
-  indicator: {
-    id: string;
-    indicator_code: string;
-    title: string;
-    indicator_type: string;
+interface FormField {
+  id: string;
+  type: 'text' | 'number' | 'percentage' | 'select' | 'multiselect' | 'radio' | 'checkbox' | 'textarea' | 'date' | 'location';
+  label: string;
+  name: string;
+  required: boolean;
+  placeholder?: string;
+  description?: string;
+  options?: string[];
+  validation?: {
+    min?: number;
+    max?: number;
+    step?: number;
+    pattern?: string;
   };
-  onSave: (structure: FormStructure) => void;
-  onCancel: () => void;
-  existingStructure?: any;
+  conditional?: {
+    dependsOn: string;
+    showWhen: string | string[];
+  };
 }
 
-export function DynamicFormBuilder({ indicator, onSave, onCancel, existingStructure }: DynamicFormBuilderProps) {
+interface FormSection {
+  id: string;
+  title: string;
+  description?: string;
+  fields: FormField[];
+}
+
+interface DynamicForm {
+  id: string;
+  indicatorCode: string;
+  indicatorTitle: string;
+  description: string;
+  sections: FormSection[];
+  metadata: {
+    dataQualityRequirements: string[];
+    calculationMethod: {
+      description: string;
+      formula: string;
+    };
+    dataSources: string[];
+    frequency: string;
+    responsibleDepartment: string;
+  };
+}
+
+interface DynamicFormBuilderProps {
+  indicatorCode?: string;
+  indicatorTitle?: string;
+  onSave?: (form: DynamicForm) => void;
+  onCancel?: () => void;
+  existingForm?: DynamicForm;
+}
+
+const fieldTypeIcons = {
+  text: Type,
+  number: Hash,
+  percentage: Percent,
+  select: List,
+  multiselect: CheckSquare,
+  radio: Circle,
+  checkbox: CheckSquare,
+  textarea: FileText,
+  date: Calendar,
+  location: MapPin
+};
+
+const fieldTypeLabels = {
+  text: 'Text Input',
+  number: 'Number',
+  percentage: 'Percentage',
+  select: 'Dropdown',
+  multiselect: 'Multiple Choice',
+  radio: 'Radio Buttons',
+  checkbox: 'Checkboxes',
+  textarea: 'Text Area',
+  date: 'Date Picker',
+  location: 'Location/GPS'
+};
+
+export const DynamicFormBuilder: React.FC<DynamicFormBuilderProps> = ({
+  indicatorCode = '',
+  indicatorTitle = '',
+  onSave,
+  onCancel,
+  existingForm
+}) => {
+  const [activeTab, setActiveTab] = useState('structure');
+  const [selectedSection, setSelectedSection] = useState<string | null>(null);
+  const [selectedField, setSelectedField] = useState<string | null>(null);
   const [previewMode, setPreviewMode] = useState(false);
-  
-  const form = useForm<FormStructure>({
-    resolver: zodResolver(formStructureSchema),
-    defaultValues: existingStructure || {
-      indicator_id: indicator.id,
-      form_type: "simple",
-      title: `Data Entry Form for ${indicator.indicator_code}`,
-      description: "",
-      data_collection_method: "manual_entry",
-      timeframe_type: "annual",
-      dimensions: [],
-      calculation_rules: {
-        type: "sum"
+
+  const [form, setForm] = useState<DynamicForm>(existingForm || {
+    id: crypto.randomUUID(),
+    indicatorCode,
+    indicatorTitle,
+    description: '',
+    sections: [{
+      id: crypto.randomUUID(),
+      title: 'Basic Information',
+      description: 'Essential data collection section',
+      fields: [{
+        id: crypto.randomUUID(),
+        type: 'date',
+        label: 'Data Year',
+        name: 'data_year',
+        required: true,
+        description: 'Year for which data is being reported'
+      }, {
+        id: crypto.randomUUID(),
+        type: 'select',
+        label: 'Data Source',
+        name: 'data_source',
+        required: true,
+        options: ['MICS', 'PDHS', 'PSLM', 'LFS', 'NNS', 'NDMA', 'PBS', 'Custom Survey'],
+        description: 'Primary source of the data'
+      }]
+    }],
+    metadata: {
+      dataQualityRequirements: ['Data must be verified', 'Source documentation required'],
+      calculationMethod: {
+        description: 'Standard calculation method for this indicator',
+        formula: 'To be defined based on indicator requirements'
       },
-      quality_checks: {
-        completeness_threshold: 0.8,
-        logical_checks: [],
-        outlier_detection: true
-      }
+      dataSources: ['MICS', 'PDHS', 'PSLM'],
+      frequency: 'Annual',
+      responsibleDepartment: ''
     }
   });
 
-  const { fields: dimensions, append, remove } = useFieldArray({
-    control: form.control,
-    name: "dimensions"
-  });
+  const { register, handleSubmit, watch, setValue } = useForm();
 
-  const addDimension = () => {
-    append({
-      name: "",
-      label: "",
-      type: "categorical",
-      values: [],
-      required: true,
-      validation: {}
-    });
+  // Add new section
+  const addSection = () => {
+    const newSection: FormSection = {
+      id: crypto.randomUUID(),
+      title: `Section ${form.sections.length + 1}`,
+      description: '',
+      fields: []
+    };
+    setForm(prev => ({
+      ...prev,
+      sections: [...prev.sections, newSection]
+    }));
+    setSelectedSection(newSection.id);
   };
 
-  const addDimensionValue = (dimensionIndex: number, value: string) => {
-    const currentValues = form.getValues(`dimensions.${dimensionIndex}.values`) || [];
-    form.setValue(`dimensions.${dimensionIndex}.values`, [...currentValues, value]);
+  // Delete section
+  const deleteSection = (sectionId: string) => {
+    if (form.sections.length <= 1) {
+      toast.error('At least one section is required');
+      return;
+    }
+    setForm(prev => ({
+      ...prev,
+      sections: prev.sections.filter(s => s.id !== sectionId)
+    }));
+    if (selectedSection === sectionId) {
+      setSelectedSection(form.sections[0]?.id || null);
+    }
   };
 
-  const removeDimensionValue = (dimensionIndex: number, valueIndex: number) => {
-    const currentValues = form.getValues(`dimensions.${dimensionIndex}.values`) || [];
-    const newValues = currentValues.filter((_, index) => index !== valueIndex);
-    form.setValue(`dimensions.${dimensionIndex}.values`, newValues);
+  // Update section
+  const updateSection = (sectionId: string, updates: Partial<FormSection>) => {
+    setForm(prev => ({
+      ...prev,
+      sections: prev.sections.map(s => 
+        s.id === sectionId ? { ...s, ...updates } : s
+      )
+    }));
   };
 
-  const handleSubmit = (data: FormStructure) => {
-    onSave(data);
+  // Add field to section
+  const addField = (sectionId: string, fieldType: FormField['type']) => {
+    const newField: FormField = {
+      id: crypto.randomUUID(),
+      type: fieldType,
+      label: `New ${fieldTypeLabels[fieldType]}`,
+      name: `field_${Date.now()}`,
+      required: false,
+      placeholder: `Enter ${fieldTypeLabels[fieldType].toLowerCase()}`,
+      description: ''
+    };
+
+    if (fieldType === 'select' || fieldType === 'multiselect' || fieldType === 'radio') {
+      newField.options = ['Option 1', 'Option 2', 'Option 3'];
+    }
+
+    if (fieldType === 'number' || fieldType === 'percentage') {
+      newField.validation = {
+        min: fieldType === 'percentage' ? 0 : undefined,
+        max: fieldType === 'percentage' ? 100 : undefined,
+        step: fieldType === 'percentage' ? 0.1 : 1
+      };
+    }
+
+    setForm(prev => ({
+      ...prev,
+      sections: prev.sections.map(s => 
+        s.id === sectionId 
+          ? { ...s, fields: [...s.fields, newField] }
+          : s
+      )
+    }));
+    setSelectedField(newField.id);
   };
 
-  const renderFormPreview = () => {
-    const formData = form.getValues();
-    
+  // Delete field
+  const deleteField = (sectionId: string, fieldId: string) => {
+    setForm(prev => ({
+      ...prev,
+      sections: prev.sections.map(s => 
+        s.id === sectionId 
+          ? { ...s, fields: s.fields.filter(f => f.id !== fieldId) }
+          : s
+      )
+    }));
+    if (selectedField === fieldId) {
+      setSelectedField(null);
+    }
+  };
+
+  // Update field
+  const updateField = (sectionId: string, fieldId: string, updates: Partial<FormField>) => {
+    setForm(prev => ({
+      ...prev,
+      sections: prev.sections.map(s => 
+        s.id === sectionId 
+          ? { 
+              ...s, 
+              fields: s.fields.map(f => 
+                f.id === fieldId ? { ...f, ...updates } : f
+              )
+            }
+          : s
+      )
+    }));
+  };
+
+  // Duplicate field
+  const duplicateField = (sectionId: string, fieldId: string) => {
+    const section = form.sections.find(s => s.id === sectionId);
+    const field = section?.fields.find(f => f.id === fieldId);
+    if (field) {
+      const duplicatedField = {
+        ...field,
+        id: crypto.randomUUID(),
+        name: `${field.name}_copy`,
+        label: `${field.label} (Copy)`
+      };
+      addFieldToSection(sectionId, duplicatedField);
+    }
+  };
+
+  const addFieldToSection = (sectionId: string, field: FormField) => {
+    setForm(prev => ({
+      ...prev,
+      sections: prev.sections.map(s => 
+        s.id === sectionId 
+          ? { ...s, fields: [...s.fields, field] }
+          : s
+      )
+    }));
+  };
+
+  // Save form
+  const saveForm = () => {
+    if (!form.indicatorCode.trim()) {
+      toast.error('Indicator code is required');
+      return;
+    }
+    if (!form.indicatorTitle.trim()) {
+      toast.error('Indicator title is required');
+      return;
+    }
+    if (form.sections.some(s => s.fields.length === 0)) {
+      toast.error('All sections must have at least one field');
+      return;
+    }
+
+    onSave?.(form);
+    toast.success('Form structure saved successfully!');
+  };
+
+  // Preview form
+  const togglePreview = () => {
+    setPreviewMode(!previewMode);
+  };
+
+  const renderFieldEditor = (sectionId: string, field: FormField) => {
     return (
-      <Card className="mt-4">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Eye className="h-5 w-5" />
-            Form Preview
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="p-4 border rounded-lg bg-gray-50">
-              <h3 className="font-medium">{formData.title}</h3>
-              <p className="text-sm text-gray-600 mt-1">{formData.description}</p>
-            </div>
-            
-            {formData.dimensions.map((dimension, index) => (
-              <div key={index} className="p-3 border rounded-lg">
-                <label className="block text-sm font-medium mb-2">
-                  {dimension.label} {dimension.required && <span className="text-red-500">*</span>}
-                </label>
-                
-                {dimension.type === "categorical" && dimension.values && (
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select option" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {dimension.values.map((value, vIndex) => (
-                        <SelectItem key={vIndex} value={value}>{value}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-                
-                {(dimension.type === "numerical" || dimension.type === "percentage") && (
-                  <Input
-                    type="number"
-                    placeholder={`Enter ${dimension.type}`}
-                    disabled
-                  />
-                )}
-                
-                {dimension.type === "boolean" && (
-                  <div className="flex items-center space-x-2">
-                    <Checkbox disabled />
-                    <label className="text-sm">Yes/No option</label>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    );
-  };
-
-  return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      <Card>
-        <CardHeader>
+      <Card key={field.id} className={`cursor-pointer transition-all ${selectedField === field.id ? 'ring-2 ring-blue-500' : ''}`}>
+        <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Settings2 className="h-5 w-5" />
-                Dynamic Form Builder
-              </CardTitle>
-              <p className="text-sm text-gray-600 mt-1">
-                Design custom data entry forms for {indicator.indicator_code}
-              </p>
+            <div className="flex items-center gap-2">
+              {React.createElement(fieldTypeIcons[field.type], { className: "h-4 w-4" })}
+              <span className="font-medium">{field.label}</span>
+              <Badge variant="outline" className="text-xs">
+                {fieldTypeLabels[field.type]}
+              </Badge>
+              {field.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
             </div>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-1">
               <Button
-                variant={previewMode ? "default" : "outline"}
                 size="sm"
-                onClick={() => setPreviewMode(!previewMode)}
+                variant="ghost"
+                onClick={() => duplicateField(sectionId, field.id)}
               >
-                <Eye className="h-4 w-4 mr-1" />
-                {previewMode ? "Hide" : "Show"} Preview
+                <Copy className="h-3 w-3" />
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => deleteField(sectionId, field.id)}
+              >
+                <Trash2 className="h-3 w-3" />
               </Button>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-              <Tabs defaultValue="basic" className="w-full">
-                <TabsList className="grid w-full grid-cols-4">
-                  <TabsTrigger value="basic">Basic Settings</TabsTrigger>
-                  <TabsTrigger value="dimensions">Data Dimensions</TabsTrigger>
-                  <TabsTrigger value="calculations">Calculations</TabsTrigger>
-                  <TabsTrigger value="quality">Quality Control</TabsTrigger>
-                </TabsList>
+        
+        {selectedField === field.id && (
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Field Label</Label>
+                <Input
+                  value={field.label}
+                  onChange={(e) => updateField(sectionId, field.id, { label: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Field Name</Label>
+                <Input
+                  value={field.name}
+                  onChange={(e) => updateField(sectionId, field.id, { name: e.target.value })}
+                />
+              </div>
+            </div>
+            
+            <div>
+              <Label>Description</Label>
+              <Textarea
+                value={field.description || ''}
+                onChange={(e) => updateField(sectionId, field.id, { description: e.target.value })}
+                placeholder="Field description or help text"
+              />
+            </div>
 
-                <TabsContent value="basic" className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="title"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Form Title</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="Data Entry Form Title" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+            <div>
+              <Label>Placeholder</Label>
+              <Input
+                value={field.placeholder || ''}
+                onChange={(e) => updateField(sectionId, field.id, { placeholder: e.target.value })}
+              />
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Switch
+                checked={field.required}
+                onCheckedChange={(checked) => updateField(sectionId, field.id, { required: checked })}
+              />
+              <Label>Required Field</Label>
+            </div>
+
+            {(field.type === 'select' || field.type === 'multiselect' || field.type === 'radio') && (
+              <div>
+                <Label>Options (one per line)</Label>
+                <Textarea
+                  value={field.options?.join('\n') || ''}
+                  onChange={(e) => updateField(sectionId, field.id, { 
+                    options: e.target.value.split('\n').filter(o => o.trim()) 
+                  })}
+                  placeholder="Option 1&#10;Option 2&#10;Option 3"
+                />
+              </div>
+            )}
+
+            {(field.type === 'number' || field.type === 'percentage') && (
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <Label>Min Value</Label>
+                  <Input
+                    type="number"
+                    value={field.validation?.min || ''}
+                    onChange={(e) => updateField(sectionId, field.id, { 
+                      validation: { 
+                        ...field.validation, 
+                        min: e.target.value ? Number(e.target.value) : undefined 
+                      } 
+                    })}
                   />
-
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl>
-                          <Textarea {...field} placeholder="Form description and instructions" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                </div>
+                <div>
+                  <Label>Max Value</Label>
+                  <Input
+                    type="number"
+                    value={field.validation?.max || ''}
+                    onChange={(e) => updateField(sectionId, field.id, { 
+                      validation: { 
+                        ...field.validation, 
+                        max: e.target.value ? Number(e.target.value) : undefined 
+                      } 
+                    })}
                   />
+                </div>
+                <div>
+                  <Label>Step</Label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    value={field.validation?.step || ''}
+                    onChange={(e) => updateField(sectionId, field.id, { 
+                      validation: { 
+                        ...field.validation, 
+                        step: e.target.value ? Number(e.target.value) : undefined 
+                      } 
+                    })}
+                  />
+                </div>
+              </div>
+            )}
+          </CardContent>
+        )}
+        
+        <div className="px-4 pb-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full"
+            onClick={() => setSelectedField(selectedField === field.id ? null : field.id)}
+          >
+            {selectedField === field.id ? 'Collapse' : 'Edit Field'}
+          </Button>
+        </div>
+      </Card>
+    );
+  };
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="form_type"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Form Type</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="simple">Simple Value Entry</SelectItem>
-                              <SelectItem value="ratio">Ratio Calculation</SelectItem>
-                              <SelectItem value="multi_dimensional">Multi-dimensional Data</SelectItem>
-                              <SelectItem value="time_series">Time Series</SelectItem>
-                              <SelectItem value="geographic">Geographic Breakdown</SelectItem>
-                              <SelectItem value="demographic">Demographic Breakdown</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+  const renderFormPreview = () => {
+    return (
+      <div className="space-y-6">
+        <div className="text-center p-6 bg-gray-50 rounded-lg">
+          <h2 className="text-2xl font-bold">{form.indicatorTitle}</h2>
+          <p className="text-gray-600 mt-2">{form.description}</p>
+          <Badge>{form.indicatorCode}</Badge>
+        </div>
 
-                    <FormField
-                      control={form.control}
-                      name="timeframe_type"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Data Collection Frequency</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="annual">Annual</SelectItem>
-                              <SelectItem value="quarterly">Quarterly</SelectItem>
-                              <SelectItem value="monthly">Monthly</SelectItem>
-                              <SelectItem value="one_time">One-time</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+        {form.sections.map((section, sectionIndex) => (
+          <Card key={section.id}>
+            <CardHeader>
+              <CardTitle>{section.title}</CardTitle>
+              {section.description && (
+                <p className="text-sm text-gray-600">{section.description}</p>
+              )}
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {section.fields.map((field) => (
+                  <div key={field.id} className="space-y-2">
+                    <Label>
+                      {field.label} {field.required && <span className="text-red-500">*</span>}
+                    </Label>
+                    
+                    {field.type === 'text' && (
+                      <Input placeholder={field.placeholder} disabled />
+                    )}
+                    
+                    {field.type === 'number' && (
+                      <Input type="number" placeholder={field.placeholder} disabled />
+                    )}
+                    
+                    {field.type === 'percentage' && (
+                      <div className="relative">
+                        <Input type="number" min="0" max="100" step="0.1" disabled />
+                        <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">%</span>
+                      </div>
+                    )}
+                    
+                    {field.type === 'select' && (
+                      <Select disabled>
+                        <SelectTrigger>
+                          <SelectValue placeholder={field.placeholder} />
+                        </SelectTrigger>
+                      </Select>
+                    )}
+                    
+                    {field.type === 'textarea' && (
+                      <Textarea placeholder={field.placeholder} disabled />
+                    )}
+                    
+                    {field.type === 'date' && (
+                      <Input type="date" disabled />
+                    )}
+                    
+                    {field.description && (
+                      <p className="text-sm text-gray-600">{field.description}</p>
+                    )}
                   </div>
-                </TabsContent>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  };
 
-                <TabsContent value="dimensions" className="space-y-4">
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Dynamic Form Builder</h1>
+          <p className="text-gray-600">Create custom data collection forms for SDG indicators</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={togglePreview}>
+            <Eye className="h-4 w-4 mr-2" />
+            {previewMode ? 'Edit Mode' : 'Preview'}
+          </Button>
+          <Button onClick={saveForm}>
+            <Save className="h-4 w-4 mr-2" />
+            Save Form
+          </Button>
+          {onCancel && (
+            <Button variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {previewMode ? (
+        renderFormPreview()
+      ) : (
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="structure">Form Structure</TabsTrigger>
+            <TabsTrigger value="settings">Settings & Metadata</TabsTrigger>
+            <TabsTrigger value="validation">Validation Rules</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="structure" className="space-y-6">
+            <div className="grid grid-cols-12 gap-6">
+              {/* Sections List */}
+              <div className="col-span-3">
+                <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-medium">Data Dimensions</h3>
-                    <Button type="button" onClick={addDimension} size="sm">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Dimension
+                    <h3 className="font-semibold">Form Sections</h3>
+                    <Button size="sm" onClick={addSection}>
+                      <Plus className="h-4 w-4" />
                     </Button>
                   </div>
+                  
+                  <ScrollArea className="h-[600px]">
+                    <div className="space-y-2">
+                      {form.sections.map((section, index) => (
+                        <Card 
+                          key={section.id} 
+                          className={`cursor-pointer transition-all ${selectedSection === section.id ? 'ring-2 ring-blue-500' : ''}`}
+                          onClick={() => setSelectedSection(section.id)}
+                        >
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="font-medium">{section.title}</p>
+                                <p className="text-sm text-gray-500">{section.fields.length} fields</p>
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  deleteSection(section.id);
+                                }}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+              </div>
 
-                  {dimensions.map((dimension, index) => (
-                    <Card key={dimension.id} className="p-4">
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-medium">Dimension {index + 1}</h4>
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => remove(index)}
-                          >
-                            <Minus className="h-4 w-4" />
-                          </Button>
-                        </div>
+              {/* Section Editor */}
+              <div className="col-span-6">
+                {selectedSection && (
+                  <div className="space-y-4">
+                    {(() => {
+                      const section = form.sections.find(s => s.id === selectedSection);
+                      if (!section) return null;
+                      
+                      return (
+                        <>
+                          <Card>
+                            <CardHeader>
+                              <CardTitle>Section Settings</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                              <div>
+                                <Label>Section Title</Label>
+                                <Input
+                                  value={section.title}
+                                  onChange={(e) => updateSection(section.id, { title: e.target.value })}
+                                />
+                              </div>
+                              <div>
+                                <Label>Section Description</Label>
+                                <Textarea
+                                  value={section.description || ''}
+                                  onChange={(e) => updateSection(section.id, { description: e.target.value })}
+                                />
+                              </div>
+                            </CardContent>
+                          </Card>
 
-                        <div className="grid grid-cols-2 gap-4">
-                          <FormField
-                            control={form.control}
-                            name={`dimensions.${index}.name`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Field Name</FormLabel>
-                                <FormControl>
-                                  <Input {...field} placeholder="e.g., gender, age_group" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name={`dimensions.${index}.label`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Display Label</FormLabel>
-                                <FormControl>
-                                  <Input {...field} placeholder="e.g., Gender, Age Group" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-
-                        <div className="grid grid-cols-3 gap-4">
-                          <FormField
-                            control={form.control}
-                            name={`dimensions.${index}.type`}
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Data Type</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                  <FormControl>
-                                    <SelectTrigger>
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                  </FormControl>
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                              <h4 className="font-semibold">Section Fields</h4>
+                              <div className="flex items-center gap-2">
+                                <Select onValueChange={(fieldType) => addField(section.id, fieldType as FormField['type'])}>
+                                  <SelectTrigger className="w-48">
+                                    <SelectValue placeholder="Add Field Type" />
+                                  </SelectTrigger>
                                   <SelectContent>
-                                    <SelectItem value="categorical">Categorical (dropdown)</SelectItem>
-                                    <SelectItem value="numerical">Numerical</SelectItem>
-                                    <SelectItem value="percentage">Percentage</SelectItem>
-                                    <SelectItem value="boolean">Yes/No</SelectItem>
+                                    {Object.entries(fieldTypeLabels).map(([type, label]) => (
+                                      <SelectItem key={type} value={type}>
+                                        <div className="flex items-center gap-2">
+                                          {React.createElement(fieldTypeIcons[type as FormField['type']], { className: "h-4 w-4" })}
+                                          {label}
+                                        </div>
+                                      </SelectItem>
+                                    ))}
                                   </SelectContent>
                                 </Select>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-
-                          <FormField
-                            control={form.control}
-                            name={`dimensions.${index}.required`}
-                            render={({ field }) => (
-                              <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                  />
-                                </FormControl>
-                                <FormLabel>Required Field</FormLabel>
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-
-                        {form.watch(`dimensions.${index}.type`) === "categorical" && (
-                          <div>
-                            <FormLabel>Options</FormLabel>
-                            <div className="space-y-2">
-                              {form.watch(`dimensions.${index}.values`)?.map((value, vIndex) => (
-                                <div key={vIndex} className="flex items-center gap-2">
-                                  <Input value={value} readOnly />
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => removeDimensionValue(index, vIndex)}
-                                  >
-                                    <Minus className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              ))}
-                              <div className="flex items-center gap-2">
-                                <Input
-                                  placeholder="Add option"
-                                  onKeyPress={(e) => {
-                                    if (e.key === 'Enter') {
-                                      e.preventDefault();
-                                      const value = (e.target as HTMLInputElement).value;
-                                      if (value.trim()) {
-                                        addDimensionValue(index, value.trim());
-                                        (e.target as HTMLInputElement).value = '';
-                                      }
-                                    }
-                                  }}
-                                />
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    const input = (e.currentTarget.previousElementSibling as HTMLInputElement);
-                                    const value = input.value;
-                                    if (value.trim()) {
-                                      addDimensionValue(index, value.trim());
-                                      input.value = '';
-                                    }
-                                  }}
-                                >
-                                  <Plus className="h-4 w-4" />
-                                </Button>
                               </div>
                             </div>
+
+                            <ScrollArea className="h-[500px]">
+                              <div className="space-y-4">
+                                {section.fields.map((field) => renderFieldEditor(section.id, field))}
+                                {section.fields.length === 0 && (
+                                  <div className="text-center p-8 text-gray-500">
+                                    No fields added yet. Select a field type to get started.
+                                  </div>
+                                )}
+                              </div>
+                            </ScrollArea>
                           </div>
-                        )}
-                      </div>
-                    </Card>
-                  ))}
-
-                  {dimensions.length === 0 && (
-                    <Alert>
-                      <Database className="h-4 w-4" />
-                      <AlertDescription>
-                        Add data dimensions to create structured data entry fields. Each dimension represents a data point that users will fill in.
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="calculations" className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="calculation_rules.type"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Calculation Type</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="sum">Sum of values</SelectItem>
-                            <SelectItem value="average">Average</SelectItem>
-                            <SelectItem value="ratio">Ratio calculation</SelectItem>
-                            <SelectItem value="weighted_average">Weighted average</SelectItem>
-                            <SelectItem value="custom">Custom formula</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {form.watch("calculation_rules.type") === "custom" && (
-                    <FormField
-                      control={form.control}
-                      name="calculation_rules.formula"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Custom Formula</FormLabel>
-                          <FormControl>
-                            <Textarea {...field} placeholder="e.g., SUM(field1) / SUM(field2) * 100" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
-                </TabsContent>
-
-                <TabsContent value="quality" className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="quality_checks.completeness_threshold"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Completeness Threshold (%)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            min="0"
-                            max="100"
-                            {...field}
-                            onChange={(e) => field.onChange(parseFloat(e.target.value) / 100)}
-                            value={(field.value * 100).toString()}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="quality_checks.outlier_detection"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                        <FormLabel>Enable outlier detection</FormLabel>
-                      </FormItem>
-                    )}
-                  />
-                </TabsContent>
-              </Tabs>
-
-              <div className="flex justify-end space-x-3 pt-6 border-t">
-                <Button type="button" variant="outline" onClick={onCancel}>
-                  Cancel
-                </Button>
-                <Button type="submit">
-                  Save Form Structure
-                </Button>
+                        </>
+                      );
+                    })()}
+                  </div>
+                )}
+                
+                {!selectedSection && (
+                  <div className="text-center p-8 text-gray-500">
+                    Select a section to start editing
+                  </div>
+                )}
               </div>
-            </form>
-          </Form>
 
-          {previewMode && renderFormPreview()}
-        </CardContent>
-      </Card>
+              {/* Field Properties */}
+              <div className="col-span-3">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Form Information</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label>Indicator Code</Label>
+                      <Input
+                        value={form.indicatorCode}
+                        onChange={(e) => setForm(prev => ({ ...prev, indicatorCode: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <Label>Indicator Title</Label>
+                      <Input
+                        value={form.indicatorTitle}
+                        onChange={(e) => setForm(prev => ({ ...prev, indicatorTitle: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <Label>Form Description</Label>
+                      <Textarea
+                        value={form.description}
+                        onChange={(e) => setForm(prev => ({ ...prev, description: e.target.value }))}
+                      />
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div className="text-sm text-gray-600">
+                      <p><strong>Sections:</strong> {form.sections.length}</p>
+                      <p><strong>Total Fields:</strong> {form.sections.reduce((acc, section) => acc + section.fields.length, 0)}</p>
+                      <p><strong>Required Fields:</strong> {form.sections.reduce((acc, section) => acc + section.fields.filter(f => f.required).length, 0)}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="settings" className="space-y-6">
+            <div className="grid grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Data Quality Requirements</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Textarea
+                    placeholder="Enter requirements (one per line)"
+                    value={form.metadata.dataQualityRequirements.join('\n')}
+                    onChange={(e) => setForm(prev => ({
+                      ...prev,
+                      metadata: {
+                        ...prev.metadata,
+                        dataQualityRequirements: e.target.value.split('\n').filter(r => r.trim())
+                      }
+                    }))}
+                    rows={6}
+                  />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Calculation Method</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label>Description</Label>
+                    <Textarea
+                      value={form.metadata.calculationMethod.description}
+                      onChange={(e) => setForm(prev => ({
+                        ...prev,
+                        metadata: {
+                          ...prev.metadata,
+                          calculationMethod: {
+                            ...prev.metadata.calculationMethod,
+                            description: e.target.value
+                          }
+                        }
+                      }))}
+                    />
+                  </div>
+                  <div>
+                    <Label>Formula</Label>
+                    <Input
+                      value={form.metadata.calculationMethod.formula}
+                      onChange={(e) => setForm(prev => ({
+                        ...prev,
+                        metadata: {
+                          ...prev.metadata,
+                          calculationMethod: {
+                            ...prev.metadata.calculationMethod,
+                            formula: e.target.value
+                          }
+                        }
+                      }))}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Data Sources</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Textarea
+                    placeholder="Enter data sources (one per line)"
+                    value={form.metadata.dataSources.join('\n')}
+                    onChange={(e) => setForm(prev => ({
+                      ...prev,
+                      metadata: {
+                        ...prev.metadata,
+                        dataSources: e.target.value.split('\n').filter(s => s.trim())
+                      }
+                    }))}
+                    rows={4}
+                  />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Collection Settings</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label>Collection Frequency</Label>
+                    <Select
+                      value={form.metadata.frequency}
+                      onValueChange={(value) => setForm(prev => ({
+                        ...prev,
+                        metadata: { ...prev.metadata, frequency: value }
+                      }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Monthly">Monthly</SelectItem>
+                        <SelectItem value="Quarterly">Quarterly</SelectItem>
+                        <SelectItem value="Semi-Annual">Semi-Annual</SelectItem>
+                        <SelectItem value="Annual">Annual</SelectItem>
+                        <SelectItem value="Bi-Annual">Bi-Annual</SelectItem>
+                        <SelectItem value="As Needed">As Needed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Responsible Department</Label>
+                    <Input
+                      value={form.metadata.responsibleDepartment}
+                      onChange={(e) => setForm(prev => ({
+                        ...prev,
+                        metadata: { ...prev.metadata, responsibleDepartment: e.target.value }
+                      }))}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="validation" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Form Validation Summary</CardTitle>
+                <p className="text-sm text-gray-600">
+                  Review validation rules and field requirements
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  {form.sections.map((section) => (
+                    <div key={section.id}>
+                      <h4 className="font-semibold mb-3">{section.title}</h4>
+                      <div className="space-y-2">
+                        {section.fields.map((field) => (
+                          <div key={field.id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                            <div className="flex items-center gap-3">
+                              {React.createElement(fieldTypeIcons[field.type], { className: "h-4 w-4" })}
+                              <span>{field.label}</span>
+                              <Badge variant="outline">{fieldTypeLabels[field.type]}</Badge>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {field.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
+                              {field.validation?.min !== undefined && (
+                                <Badge variant="outline" className="text-xs">Min: {field.validation.min}</Badge>
+                              )}
+                              {field.validation?.max !== undefined && (
+                                <Badge variant="outline" className="text-xs">Max: {field.validation.max}</Badge>
+                              )}
+                              {field.options && (
+                                <Badge variant="outline" className="text-xs">{field.options.length} options</Badge>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   );
-}
+};

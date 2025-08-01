@@ -18,6 +18,10 @@ Preferred communication style: Simple, everyday language.
 - **Forms**: React Hook Form with Zod validation
 - **UI/UX**: Public-first design with a beautiful landing page, authentic UN colors for SDG elements, and integration of the official Balochistan Bureau of Statistics logo. The interface emphasizes comprehensive guidance and teaching elements for form creation.
 
+### UI Consolidation (August 2025)
+- **SDG Interface Consolidation**: Merged SDG Dashboard functionality into SDG Goals Management component to eliminate duplication and provide unified experience
+- **Dashboard-Style Management**: SDG Goals Management now features dashboard-style visualizations with progress charts, statistics cards, and grid layouts matching the original SDG Dashboard design
+
 ### Backend Architecture
 - **Runtime**: Node.js with Express framework
 - **Database**: PostgreSQL (via Supabase)

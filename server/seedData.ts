@@ -39,37 +39,32 @@ const sdgTargetsData = [
   { target_number: "16.9", sdg_goal_id: 16, title: "Legal identity for all", description: "By 2030, provide legal identity for all, including birth registration" },
 ];
 
-// Function to create indicators after targets are inserted
-const createSdgIndicatorsData = async (adminId: string) => {
-  // Get target IDs from database
-  const targets = await db.select().from(sdg_targets);
-  const targetMap = new Map(targets.map(t => [t.target_number, t.id]));
-  
-  return [
-    {
-      sdg_target_id: targetMap.get("1.2")!,
-      indicator_code: "1.2.2",
-      title: "Proportion of men, women and children of all ages living in poverty in all its dimensions according to national definitions",
-      description: "Multi-dimensional Poverty Index (MPI) measuring poverty across health, education and living standards",
-      indicator_type: "percentage" as const,
-      unit: "percentage",
-      methodology: "Multi-dimensional Poverty Index computation based on MICS and PSLM data",
-      data_collection_frequency: "Every 3-5 years",
-      responsible_departments: ["Planning Commission", "PBS", "UNICEF"],
-      created_by: adminId
-    },
-    {
-      sdg_target_id: targetMap.get("1.3")!,
-      indicator_code: "1.3.1",
-      title: "Proportion of population covered by social protection floors/systems",
-      description: "Percentage of population receiving social protection benefits including BISP and other transfers",
-      indicator_type: "percentage" as const, 
-      unit: "percentage",
-      methodology: "Based on PDHS and MICS household surveys on social protection coverage",
-      data_collection_frequency: "Every 3-5 years",
-      responsible_departments: ["Ministry of Social Protection", "BISP", "PBS"],
-      created_by: adminId
-    },
+// SDG Indicators data - static definition
+const sdgIndicatorsData = [
+  {
+    id: "1.2.2",
+    sdg_target_id: "1.2",
+    indicator_code: "1.2.2",
+    title: "Proportion of men, women and children of all ages living in poverty in all its dimensions according to national definitions",
+    description: "Multi-dimensional Poverty Index (MPI) measuring poverty across health, education and living standards",
+    indicator_type: "percentage" as const,
+    unit: "percentage",
+    methodology: "Multi-dimensional Poverty Index computation based on MICS and PSLM data",
+    data_collection_frequency: "Every 3-5 years",
+    responsible_departments: ["Planning Commission", "PBS", "UNICEF"]
+  },
+  {
+    id: "1.3.1",
+    sdg_target_id: "1.3",
+    indicator_code: "1.3.1",
+    title: "Proportion of population covered by social protection floors/systems",
+    description: "Percentage of population receiving social protection benefits including BISP and other transfers",
+    indicator_type: "percentage" as const, 
+    unit: "percentage",
+    methodology: "Based on PDHS and MICS household surveys on social protection coverage",
+    data_collection_frequency: "Every 3-5 years",
+    responsible_departments: ["Ministry of Social Protection", "BISP", "PBS"]
+  },
   {
     id: "1.4.1",
     sdg_target_id: "1.4",
@@ -929,7 +924,7 @@ export async function seedSDGData() {
       try {
         await db.insert(sdg_targets).values(target).onConflictDoNothing();
       } catch (error) {
-        console.log(`Target ${target.id} already exists or error:`, error);
+        console.log(`Target ${target.target_number} already exists or error:`, error);
       }
     }
 
@@ -939,7 +934,7 @@ export async function seedSDGData() {
       try {
         await db.insert(sdg_data_sources).values(source).onConflictDoNothing();
       } catch (error) {
-        console.log(`Data source ${source.id} already exists or error:`, error);
+        console.log(`Data source ${source.name} already exists or error:`, error);
       }
     }
 
@@ -947,7 +942,7 @@ export async function seedSDGData() {
     console.log('Inserting SDG Indicators...');
     for (const indicator of sdgIndicatorsData) {
       try {
-        await db.insert(sdg_indicators).values(indicator).onConflictDoNothing();
+        await db.insert(sdg_indicators).values([indicator]).onConflictDoNothing();
       } catch (error) {
         console.log(`Indicator ${indicator.id} already exists or error:`, error);
       }

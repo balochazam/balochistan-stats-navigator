@@ -22,7 +22,27 @@ import { TechnologyTransfer } from "./pages/admin/TechnologyTransfer";
 import { SDGDashboard } from "./pages/SDGDashboard";
 import { SDGManagement } from "./pages/admin/SDGManagement";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      queryFn: async ({ queryKey }) => {
+        const [url] = queryKey as [string];
+        const response = await fetch(url, {
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        return response.json();
+      },
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

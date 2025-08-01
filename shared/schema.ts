@@ -5,6 +5,8 @@ import { relations } from "drizzle-orm";
 
 // Define enums
 export const userRoleEnum = pgEnum("user_role", ["admin", "data_entry_user"]);
+export const sdgIndicatorTypeEnum = pgEnum("sdg_indicator_type", ["percentage", "rate", "count", "budget", "multi_dimensional", "survey_based"]);
+export const dataSourceTypeEnum = pgEnum("data_source_type", ["MICS", "PDHS", "PSLM", "NNS", "NDMA", "PBS", "Custom"]);
 
 // Departments table
 export const departments = pgTable("departments", {
@@ -367,6 +369,149 @@ export type InsertFormSubmission = z.infer<typeof insertFormSubmissionSchema>;
 
 export type ScheduleFormCompletion = typeof schedule_form_completions.$inferSelect;
 export type InsertScheduleFormCompletion = z.infer<typeof insertScheduleFormCompletionSchema>;
+
+// SDG Goals table (17 UN Sustainable Development Goals)
+export const sdg_goals = pgTable("sdg_goals", {
+  id: integer("id").primaryKey(), // 1-17 for the 17 SDGs
+  title: text("title").notNull(),
+  description: text("description"),
+  color: text("color").notNull(), // Official UN SDG colors
+  icon_path: text("icon_path"),
+  created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+});
+
+// SDG Targets table (sub-goals under each SDG)
+export const sdg_targets = pgTable("sdg_targets", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  sdg_goal_id: integer("sdg_goal_id").notNull().references(() => sdg_goals.id),
+  target_number: text("target_number").notNull(), // e.g., "1.1", "1.2", etc.
+  title: text("title").notNull(),
+  description: text("description"),
+  created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+});
+
+// SDG Indicators table (specific measurable indicators)
+export const sdg_indicators = pgTable("sdg_indicators", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  sdg_target_id: uuid("sdg_target_id").notNull().references(() => sdg_targets.id),
+  indicator_code: text("indicator_code").notNull().unique(), // e.g., "1.2.2"
+  title: text("title").notNull(),
+  description: text("description"),
+  indicator_type: sdgIndicatorTypeEnum("indicator_type").notNull(),
+  unit: text("unit"), // e.g., "percentage", "per 100,000", "PKR million"
+  methodology: text("methodology"), // How the indicator is measured
+  data_collection_frequency: text("data_collection_frequency"), // Annual, quarterly, etc.
+  responsible_departments: jsonb("responsible_departments"), // Array of department IDs
+  is_active: boolean("is_active").notNull().default(true),
+  created_by: uuid("created_by").notNull().references(() => profiles.id),
+  created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+});
+
+// SDG Data Sources table
+export const sdg_data_sources = pgTable("sdg_data_sources", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  full_name: text("full_name"),
+  source_type: dataSourceTypeEnum("source_type").notNull(),
+  description: text("description"),
+  website_url: text("website_url"),
+  contact_info: jsonb("contact_info"),
+  is_active: boolean("is_active").notNull().default(true),
+  created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
+});
+
+// SDG Indicator Values table (historical data points)
+export const sdg_indicator_values = pgTable("sdg_indicator_values", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  indicator_id: uuid("indicator_id").notNull().references(() => sdg_indicators.id),
+  data_source_id: uuid("data_source_id").references(() => sdg_data_sources.id),
+  year: integer("year").notNull(),
+  value: text("value").notNull(), // Stored as text to handle different formats
+  value_numeric: integer("value_numeric"), // For calculations when applicable
+  breakdown_data: jsonb("breakdown_data"), // Urban/rural, male/female, age groups, etc.
+  baseline_indicator: boolean("baseline_indicator").default(false),
+  progress_indicator: boolean("progress_indicator").default(false),
+  notes: text("notes"),
+  reference_document: text("reference_document"),
+  data_quality_score: integer("data_quality_score"), // 1-5 scale
+  department_id: uuid("department_id").references(() => departments.id),
+  submitted_by: uuid("submitted_by").notNull().references(() => profiles.id),
+  verified_by: uuid("verified_by").references(() => profiles.id),
+  verified_at: timestamp("verified_at", { withTimezone: true }),
+  created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+});
+
+// SDG Progress Calculations table (computed progress metrics)
+export const sdg_progress_calculations = pgTable("sdg_progress_calculations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  sdg_goal_id: integer("sdg_goal_id").notNull().references(() => sdg_goals.id),
+  indicator_id: uuid("indicator_id").references(() => sdg_indicators.id),
+  progress_percentage: integer("progress_percentage"), // 0-100
+  trend_direction: text("trend_direction"), // "improving", "declining", "stable"
+  last_calculation_date: timestamp("last_calculation_date", { withTimezone: true }),
+  calculation_method: text("calculation_method"),
+  notes: text("notes"),
+  created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+});
+
+// Insert schemas for SDG tables
+export const insertSdgGoalSchema = createInsertSchema(sdg_goals).omit({
+  created_at: true,
+  updated_at: true,
+});
+
+export const insertSdgTargetSchema = createInsertSchema(sdg_targets).omit({
+  id: true,
+  created_at: true,
+  updated_at: true,
+});
+
+export const insertSdgIndicatorSchema = createInsertSchema(sdg_indicators).omit({
+  id: true,
+  created_at: true,
+  updated_at: true,
+});
+
+export const insertSdgDataSourceSchema = createInsertSchema(sdg_data_sources).omit({
+  id: true,
+  created_at: true,
+});
+
+export const insertSdgIndicatorValueSchema = createInsertSchema(sdg_indicator_values).omit({
+  id: true,
+  created_at: true,
+  updated_at: true,
+});
+
+export const insertSdgProgressCalculationSchema = createInsertSchema(sdg_progress_calculations).omit({
+  id: true,
+  created_at: true,
+  updated_at: true,
+});
+
+// SDG Types
+export type SdgGoal = typeof sdg_goals.$inferSelect;
+export type InsertSdgGoal = z.infer<typeof insertSdgGoalSchema>;
+
+export type SdgTarget = typeof sdg_targets.$inferSelect;
+export type InsertSdgTarget = z.infer<typeof insertSdgTargetSchema>;
+
+export type SdgIndicator = typeof sdg_indicators.$inferSelect;
+export type InsertSdgIndicator = z.infer<typeof insertSdgIndicatorSchema>;
+
+export type SdgDataSource = typeof sdg_data_sources.$inferSelect;
+export type InsertSdgDataSource = z.infer<typeof insertSdgDataSourceSchema>;
+
+export type SdgIndicatorValue = typeof sdg_indicator_values.$inferSelect;
+export type InsertSdgIndicatorValue = z.infer<typeof insertSdgIndicatorValueSchema>;
+
+export type SdgProgressCalculation = typeof sdg_progress_calculations.$inferSelect;
+export type InsertSdgProgressCalculation = z.infer<typeof insertSdgProgressCalculationSchema>;
 
 // Legacy types for compatibility
 export type User = Profile;

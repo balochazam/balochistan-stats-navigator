@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertProfileSchema, insertDepartmentSchema, insertDataBankSchema, insertDataBankEntrySchema, insertFormSchema, insertFormFieldSchema, insertFieldGroupSchema, insertScheduleSchema, insertScheduleFormSchema, insertFormSubmissionSchema, insertScheduleFormCompletionSchema } from "@shared/schema";
+import { insertProfileSchema, insertDepartmentSchema, insertDataBankSchema, insertDataBankEntrySchema, insertFormSchema, insertFormFieldSchema, insertFieldGroupSchema, insertScheduleSchema, insertScheduleFormSchema, insertFormSubmissionSchema, insertScheduleFormCompletionSchema, insertSdgGoalSchema, insertSdgTargetSchema, insertSdgIndicatorSchema, insertSdgDataSourceSchema, insertSdgIndicatorValueSchema, insertSdgProgressCalculationSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Simple authentication routes for demo purposes
@@ -1111,6 +1111,138 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching submissions:', error);
       res.status(500).json({ error: 'Failed to fetch submissions' });
+    }
+  });
+
+  // SDG API Routes
+  app.get('/api/sdg/goals', requireAuth, async (req, res) => {
+    try {
+      const goals = await storage.getSdgGoals();
+      res.json(goals);
+    } catch (error) {
+      console.error('Error fetching SDG goals:', error);
+      res.status(500).json({ error: 'Failed to fetch SDG goals' });
+    }
+  });
+
+  app.post('/api/sdg/goals', requireAuth, async (req, res) => {
+    try {
+      const validatedData = insertSdgGoalSchema.parse(req.body);
+      const goal = await storage.createSdgGoal(validatedData);
+      res.status(201).json(goal);
+    } catch (error) {
+      console.error('Error creating SDG goal:', error);
+      res.status(400).json({ error: 'Invalid SDG goal data' });
+    }
+  });
+
+  app.get('/api/sdg/targets', requireAuth, async (req, res) => {
+    try {
+      const goalId = req.query.goalId ? parseInt(req.query.goalId as string) : undefined;
+      const targets = await storage.getSdgTargets(goalId);
+      res.json(targets);
+    } catch (error) {
+      console.error('Error fetching SDG targets:', error);
+      res.status(500).json({ error: 'Failed to fetch SDG targets' });
+    }
+  });
+
+  app.post('/api/sdg/targets', requireAuth, async (req, res) => {
+    try {
+      const validatedData = insertSdgTargetSchema.parse(req.body);
+      const target = await storage.createSdgTarget(validatedData);
+      res.status(201).json(target);
+    } catch (error) {
+      console.error('Error creating SDG target:', error);
+      res.status(400).json({ error: 'Invalid SDG target data' });
+    }
+  });
+
+  app.get('/api/sdg/indicators', requireAuth, async (req, res) => {
+    try {
+      const targetId = req.query.targetId as string;
+      const indicators = await storage.getSdgIndicators(targetId);
+      res.json(indicators);
+    } catch (error) {
+      console.error('Error fetching SDG indicators:', error);
+      res.status(500).json({ error: 'Failed to fetch SDG indicators' });
+    }
+  });
+
+  app.get('/api/sdg/indicators/:id', requireAuth, async (req, res) => {
+    try {
+      const indicator = await storage.getSdgIndicator(req.params.id);
+      if (!indicator) {
+        return res.status(404).json({ error: 'SDG indicator not found' });
+      }
+      res.json(indicator);
+    } catch (error) {
+      console.error('Error fetching SDG indicator:', error);
+      res.status(500).json({ error: 'Failed to fetch SDG indicator' });
+    }
+  });
+
+  app.post('/api/sdg/indicators', requireAuth, async (req, res) => {
+    try {
+      const validatedData = insertSdgIndicatorSchema.parse(req.body);
+      const indicator = await storage.createSdgIndicator(validatedData);
+      res.status(201).json(indicator);
+    } catch (error) {
+      console.error('Error creating SDG indicator:', error);
+      res.status(400).json({ error: 'Invalid SDG indicator data' });
+    }
+  });
+
+  app.get('/api/sdg/data-sources', requireAuth, async (req, res) => {
+    try {
+      const sources = await storage.getSdgDataSources();
+      res.json(sources);
+    } catch (error) {
+      console.error('Error fetching SDG data sources:', error);
+      res.status(500).json({ error: 'Failed to fetch SDG data sources' });
+    }
+  });
+
+  app.post('/api/sdg/data-sources', requireAuth, async (req, res) => {
+    try {
+      const validatedData = insertSdgDataSourceSchema.parse(req.body);
+      const source = await storage.createSdgDataSource(validatedData);
+      res.status(201).json(source);
+    } catch (error) {
+      console.error('Error creating SDG data source:', error);
+      res.status(400).json({ error: 'Invalid SDG data source data' });
+    }
+  });
+
+  app.get('/api/sdg/indicator-values/:indicatorId', requireAuth, async (req, res) => {
+    try {
+      const values = await storage.getSdgIndicatorValues(req.params.indicatorId);
+      res.json(values);
+    } catch (error) {
+      console.error('Error fetching SDG indicator values:', error);
+      res.status(500).json({ error: 'Failed to fetch SDG indicator values' });
+    }
+  });
+
+  app.post('/api/sdg/indicator-values', requireAuth, async (req, res) => {
+    try {
+      const validatedData = insertSdgIndicatorValueSchema.parse(req.body);
+      const value = await storage.createSdgIndicatorValue(validatedData);
+      res.status(201).json(value);
+    } catch (error) {
+      console.error('Error creating SDG indicator value:', error);
+      res.status(400).json({ error: 'Invalid SDG indicator value data' });
+    }
+  });
+
+  app.get('/api/sdg/progress-calculations', requireAuth, async (req, res) => {
+    try {
+      const goalId = req.query.goalId ? parseInt(req.query.goalId as string) : undefined;
+      const calculations = await storage.getSdgProgressCalculations(goalId);
+      res.json(calculations);
+    } catch (error) {
+      console.error('Error fetching SDG progress calculations:', error);
+      res.status(500).json({ error: 'Failed to fetch SDG progress calculations' });
     }
   });
 

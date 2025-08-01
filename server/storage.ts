@@ -12,6 +12,12 @@ import {
   schedule_forms,
   form_submissions,
   schedule_form_completions,
+  sdg_goals,
+  sdg_targets,
+  sdg_indicators,
+  sdg_data_sources,
+  sdg_indicator_values,
+  sdg_progress_calculations,
   type Profile,
   type InsertProfile,
   type Department,
@@ -34,6 +40,18 @@ import {
   type InsertFormSubmission,
   type ScheduleFormCompletion,
   type InsertScheduleFormCompletion,
+  type SdgGoal,
+  type InsertSdgGoal,
+  type SdgTarget,
+  type InsertSdgTarget,
+  type SdgIndicator,
+  type InsertSdgIndicator,
+  type SdgDataSource,
+  type InsertSdgDataSource,
+  type SdgIndicatorValue,
+  type InsertSdgIndicatorValue,
+  type SdgProgressCalculation,
+  type InsertSdgProgressCalculation,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -103,6 +121,34 @@ export interface IStorage {
   getScheduleFormCompletions(scheduleFormId: string): Promise<ScheduleFormCompletion[]>;
   createScheduleFormCompletion(completion: InsertScheduleFormCompletion): Promise<ScheduleFormCompletion>;
   deleteScheduleFormCompletion(scheduleFormId: string, userId: string): Promise<boolean>;
+
+  // SDG methods
+  getSdgGoals(): Promise<SdgGoal[]>;
+  createSdgGoal(goal: InsertSdgGoal): Promise<SdgGoal>;
+  updateSdgGoal(id: number, updates: Partial<SdgGoal>): Promise<SdgGoal | undefined>;
+
+  getSdgTargets(goalId?: number): Promise<SdgTarget[]>;
+  createSdgTarget(target: InsertSdgTarget): Promise<SdgTarget>;
+  updateSdgTarget(id: string, updates: Partial<SdgTarget>): Promise<SdgTarget | undefined>;
+  deleteSdgTarget(id: string): Promise<boolean>;
+
+  getSdgIndicators(targetId?: string): Promise<SdgIndicator[]>;
+  getSdgIndicator(id: string): Promise<SdgIndicator | undefined>;
+  createSdgIndicator(indicator: InsertSdgIndicator): Promise<SdgIndicator>;
+  updateSdgIndicator(id: string, updates: Partial<SdgIndicator>): Promise<SdgIndicator | undefined>;
+  deleteSdgIndicator(id: string): Promise<boolean>;
+
+  getSdgDataSources(): Promise<SdgDataSource[]>;
+  createSdgDataSource(source: InsertSdgDataSource): Promise<SdgDataSource>;
+  updateSdgDataSource(id: string, updates: Partial<SdgDataSource>): Promise<SdgDataSource | undefined>;
+
+  getSdgIndicatorValues(indicatorId: string): Promise<SdgIndicatorValue[]>;
+  createSdgIndicatorValue(value: InsertSdgIndicatorValue): Promise<SdgIndicatorValue>;
+  updateSdgIndicatorValue(id: string, updates: Partial<SdgIndicatorValue>): Promise<SdgIndicatorValue | undefined>;
+
+  getSdgProgressCalculations(goalId?: number): Promise<SdgProgressCalculation[]>;
+  createSdgProgressCalculation(calculation: InsertSdgProgressCalculation): Promise<SdgProgressCalculation>;
+  updateSdgProgressCalculation(id: string, updates: Partial<SdgProgressCalculation>): Promise<SdgProgressCalculation | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -433,6 +479,120 @@ export class DatabaseStorage implements IStorage {
         eq(schedule_form_completions.user_id, userId)
       ));
     return (result.rowCount ?? 0) > 0;
+  }
+
+  // SDG methods implementation
+  async getSdgGoals(): Promise<SdgGoal[]> {
+    return await db.select().from(sdg_goals).orderBy(asc(sdg_goals.id));
+  }
+
+  async createSdgGoal(goal: InsertSdgGoal): Promise<SdgGoal> {
+    const result = await db.insert(sdg_goals).values(goal).returning();
+    return result[0];
+  }
+
+  async updateSdgGoal(id: number, updates: Partial<SdgGoal>): Promise<SdgGoal | undefined> {
+    const result = await db.update(sdg_goals).set(updates).where(eq(sdg_goals.id, id)).returning();
+    return result[0];
+  }
+
+  async getSdgTargets(goalId?: number): Promise<SdgTarget[]> {
+    let query = db.select().from(sdg_targets);
+    if (goalId) {
+      query = query.where(eq(sdg_targets.sdg_goal_id, goalId));
+    }
+    return await query.orderBy(asc(sdg_targets.target_number));
+  }
+
+  async createSdgTarget(target: InsertSdgTarget): Promise<SdgTarget> {
+    const result = await db.insert(sdg_targets).values(target).returning();
+    return result[0];
+  }
+
+  async updateSdgTarget(id: string, updates: Partial<SdgTarget>): Promise<SdgTarget | undefined> {
+    const result = await db.update(sdg_targets).set(updates).where(eq(sdg_targets.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteSdgTarget(id: string): Promise<boolean> {
+    const result = await db.delete(sdg_targets).where(eq(sdg_targets.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async getSdgIndicators(targetId?: string): Promise<SdgIndicator[]> {
+    let query = db.select().from(sdg_indicators).where(eq(sdg_indicators.is_active, true));
+    if (targetId) {
+      query = query.where(and(eq(sdg_indicators.sdg_target_id, targetId), eq(sdg_indicators.is_active, true)));
+    }
+    return await query.orderBy(asc(sdg_indicators.indicator_code));
+  }
+
+  async getSdgIndicator(id: string): Promise<SdgIndicator | undefined> {
+    const result = await db.select().from(sdg_indicators).where(eq(sdg_indicators.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createSdgIndicator(indicator: InsertSdgIndicator): Promise<SdgIndicator> {
+    const result = await db.insert(sdg_indicators).values(indicator).returning();
+    return result[0];
+  }
+
+  async updateSdgIndicator(id: string, updates: Partial<SdgIndicator>): Promise<SdgIndicator | undefined> {
+    const result = await db.update(sdg_indicators).set(updates).where(eq(sdg_indicators.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteSdgIndicator(id: string): Promise<boolean> {
+    const result = await db.update(sdg_indicators).set({ is_active: false }).where(eq(sdg_indicators.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async getSdgDataSources(): Promise<SdgDataSource[]> {
+    return await db.select().from(sdg_data_sources).where(eq(sdg_data_sources.is_active, true)).orderBy(asc(sdg_data_sources.name));
+  }
+
+  async createSdgDataSource(source: InsertSdgDataSource): Promise<SdgDataSource> {
+    const result = await db.insert(sdg_data_sources).values(source).returning();
+    return result[0];
+  }
+
+  async updateSdgDataSource(id: string, updates: Partial<SdgDataSource>): Promise<SdgDataSource | undefined> {
+    const result = await db.update(sdg_data_sources).set(updates).where(eq(sdg_data_sources.id, id)).returning();
+    return result[0];
+  }
+
+  async getSdgIndicatorValues(indicatorId: string): Promise<SdgIndicatorValue[]> {
+    return await db.select().from(sdg_indicator_values)
+      .where(eq(sdg_indicator_values.indicator_id, indicatorId))
+      .orderBy(desc(sdg_indicator_values.year));
+  }
+
+  async createSdgIndicatorValue(value: InsertSdgIndicatorValue): Promise<SdgIndicatorValue> {
+    const result = await db.insert(sdg_indicator_values).values(value).returning();
+    return result[0];
+  }
+
+  async updateSdgIndicatorValue(id: string, updates: Partial<SdgIndicatorValue>): Promise<SdgIndicatorValue | undefined> {
+    const result = await db.update(sdg_indicator_values).set(updates).where(eq(sdg_indicator_values.id, id)).returning();
+    return result[0];
+  }
+
+  async getSdgProgressCalculations(goalId?: number): Promise<SdgProgressCalculation[]> {
+    let query = db.select().from(sdg_progress_calculations);
+    if (goalId) {
+      query = query.where(eq(sdg_progress_calculations.sdg_goal_id, goalId));
+    }
+    return await query.orderBy(desc(sdg_progress_calculations.last_calculation_date));
+  }
+
+  async createSdgProgressCalculation(calculation: InsertSdgProgressCalculation): Promise<SdgProgressCalculation> {
+    const result = await db.insert(sdg_progress_calculations).values(calculation).returning();
+    return result[0];
+  }
+
+  async updateSdgProgressCalculation(id: string, updates: Partial<SdgProgressCalculation>): Promise<SdgProgressCalculation | undefined> {
+    const result = await db.update(sdg_progress_calculations).set(updates).where(eq(sdg_progress_calculations.id, id)).returning();
+    return result[0];
   }
 }
 

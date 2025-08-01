@@ -41,10 +41,10 @@ export const balochistandAllForms: BalochistanIndicatorForm[] = [
       {
         title: "Data Source and Period",
         fields: [
-          { name: 'data_phase', label: 'Data Phase', type: 'select', required: true,
-            options: ['Baseline (2014-15)', 'Progress (2019-20)', 'Latest Value (In Process)'] },
           { name: 'survey_source', label: 'Survey Source', type: 'select', required: true,
-            options: ['MPI Report 2014-15', 'MICS 2019-20', 'Federal MPI Computation'] }
+            options: ['MPI Report 2014-15', 'MICS 2019-20', 'Federal MPI Computation'] },
+          { name: 'data_year', label: 'Data Year', type: 'number', required: true,
+            validation: { min: 2000, max: 2030 } }
         ]
       },
       {
@@ -67,10 +67,10 @@ export const balochistandAllForms: BalochistanIndicatorForm[] = [
       {
         title: "Data Source and Period",
         fields: [
-          { name: 'data_phase', label: 'Data Phase', type: 'select', required: true,
-            options: ['Baseline (Not Available)', 'Progress (PDHS 2017-18)', 'Latest Value (MICS 2019-20)'] },
           { name: 'survey_source', label: 'Survey Source', type: 'select', required: true,
-            options: ['PDHS 2017-18', 'MICS 2019-20', 'Not Available'] }
+            options: ['PDHS 2017-18', 'MICS 2019-20', 'Not Available'] },
+          { name: 'data_year', label: 'Data Year', type: 'number', required: true,
+            validation: { min: 2000, max: 2030 } }
         ]
       },
       {
@@ -94,10 +94,10 @@ export const balochistandAllForms: BalochistanIndicatorForm[] = [
       {
         title: "Data Source and Period",
         fields: [
-          { name: 'data_phase', label: 'Data Phase', type: 'select', required: true,
-            options: ['Baseline (PSLM 2014-15)', 'Progress (PSLM 2018-19)', 'Latest Value (MICS 2019-20)'] },
           { name: 'survey_source', label: 'Survey Source', type: 'select', required: true,
-            options: ['PSLM 2014-15', 'PSLM 2018-19', 'MICS 2019-20'] }
+            options: ['PSLM 2014-15', 'PSLM 2018-19', 'MICS 2019-20'] },
+          { name: 'data_year', label: 'Data Year', type: 'number', required: true,
+            validation: { min: 2000, max: 2030 } }
         ]
       },
       {
@@ -134,10 +134,10 @@ export const balochistandAllForms: BalochistanIndicatorForm[] = [
       {
         title: "Data Source and Period",
         fields: [
-          { name: 'data_phase', label: 'Data Phase', type: 'select', required: true,
-            options: ['Baseline (NDMA 2015)', 'Progress (NDMA 2018)', 'Latest Value (NDMA 2021)'] },
           { name: 'data_source', label: 'Data Source', type: 'select', required: true,
-            options: ['NDMA Annual Report 2015', 'NDMA Annual Report 2018', 'NDMA Annual Report 2021'] }
+            options: ['NDMA Annual Report 2015', 'NDMA Annual Report 2018', 'NDMA Annual Report 2021'] },
+          { name: 'data_year', label: 'Data Year', type: 'number', required: true,
+            validation: { min: 2000, max: 2030 } }
         ]
       },
       {
@@ -160,10 +160,10 @@ export const balochistandAllForms: BalochistanIndicatorForm[] = [
       {
         title: "Data Source and Period",
         fields: [
-          { name: 'data_phase', label: 'Data Phase', type: 'select', required: true,
-            options: ['Baseline (2014-15)', 'Progress (2018-19)', 'Latest Value (2022-23)'] },
           { name: 'data_source', label: 'Data Source', type: 'select', required: true,
-            options: ['Budget Statements 2014-15', 'Budget Statements 2018-19', 'Revised Budget 2022-23'] }
+            options: ['Budget Statements 2014-15', 'Budget Statements 2018-19', 'Revised Budget 2022-23'] },
+          { name: 'data_year', label: 'Data Year', type: 'number', required: true,
+            validation: { min: 2000, max: 2030 } }
         ]
       },
       {
@@ -187,10 +187,10 @@ export const balochistandAllForms: BalochistanIndicatorForm[] = [
       {
         title: "Data Source and Period",
         fields: [
-          { name: 'data_phase', label: 'Data Phase', type: 'select', required: true,
-            options: ['Baseline (NNS 2011)', 'Progress (PDHS 2017-18)', 'Latest Value (MICS 2019-20)'] },
           { name: 'survey_source', label: 'Survey Source', type: 'select', required: true,
-            options: ['NNS 2011', 'PDHS 2017-18', 'MICS 2019-20'] }
+            options: ['NNS 2011', 'PDHS 2017-18', 'MICS 2019-20'] },
+          { name: 'data_year', label: 'Data Year', type: 'number', required: true,
+            validation: { min: 2000, max: 2030 } }
         ]
       },
       {
@@ -213,10 +213,10 @@ export const balochistandAllForms: BalochistanIndicatorForm[] = [
       {
         title: "Data Source and Period",
         fields: [
-          { name: 'data_phase', label: 'Data Phase', type: 'select', required: true,
-            options: ['Baseline (NNS 2011)', 'Progress (PDHS 2017-18)', 'Latest Value (MICS 2019-20)'] },
           { name: 'survey_source', label: 'Survey Source', type: 'select', required: true,
-            options: ['NNS 2011', 'PDHS 2017-18', 'MICS 2019-20'] }
+            options: ['NNS 2011', 'PDHS 2017-18', 'MICS 2019-20'] },
+          { name: 'data_year', label: 'Data Year', type: 'number', required: true,
+            validation: { min: 2000, max: 2030 } }
         ]
       },
       {
@@ -240,10 +240,10 @@ export const balochistandAllForms: BalochistanIndicatorForm[] = [
       {
         title: "Data Source and Period",
         fields: [
-          { name: 'data_phase', label: 'Data Phase', type: 'select', required: true,
-            options: ['Baseline (PDHS 2006-07)', 'Progress (MMR Survey 2019)', 'Latest Value (Not Available)'] },
           { name: 'survey_source', label: 'Survey Source', type: 'select', required: true,
-            options: ['PDHS 2006-07', 'Pakistan MMR Survey 2019', 'Not Available'] }
+            options: ['PDHS 2006-07', 'Pakistan MMR Survey 2019', 'Not Available'] },
+          { name: 'data_year', label: 'Data Year', type: 'number', required: true,
+            validation: { min: 2000, max: 2030 } }
         ]
       },
       {
@@ -266,10 +266,10 @@ export const balochistandAllForms: BalochistanIndicatorForm[] = [
       {
         title: "Data Source and Period",
         fields: [
-          { name: 'data_phase', label: 'Data Phase', type: 'select', required: true,
-            options: ['Baseline (PDHS 2012-13)', 'Progress (PSLM 2018-19)', 'Latest Value (MICS 2019-20)'] },
           { name: 'survey_source', label: 'Survey Source', type: 'select', required: true,
-            options: ['PDHS 2012-13', 'PSLM 2018-19', 'MICS 2019-20'] }
+            options: ['PDHS 2012-13', 'PSLM 2018-19', 'MICS 2019-20'] },
+          { name: 'data_year', label: 'Data Year', type: 'number', required: true,
+            validation: { min: 2000, max: 2030 } }
         ]
       },
       {
@@ -292,10 +292,10 @@ export const balochistandAllForms: BalochistanIndicatorForm[] = [
       {
         title: "Data Source and Period",
         fields: [
-          { name: 'data_phase', label: 'Data Phase', type: 'select', required: true,
-            options: ['Baseline (PSLM 2013-14)', 'Progress (PSLM 2019-20)', 'Latest Value (LFS 2020-21)'] },
           { name: 'survey_source', label: 'Survey Source', type: 'select', required: true,
-            options: ['PSLM 2013-14', 'PSLM 2019-20', 'LFS 2020-21'] }
+            options: ['PSLM 2013-14', 'PSLM 2019-20', 'LFS 2020-21'] },
+          { name: 'data_year', label: 'Data Year', type: 'number', required: true,
+            validation: { min: 2000, max: 2030 } }
         ]
       },
       {
@@ -318,10 +318,10 @@ export const balochistandAllForms: BalochistanIndicatorForm[] = [
       {
         title: "Data Source and Period",
         fields: [
-          { name: 'data_phase', label: 'Data Phase', type: 'select', required: true,
-            options: ['Baseline (LFS 2014-15)', 'Progress (LFS 2018-19)', 'Latest Value (LFS 2020-21)'] },
           { name: 'survey_source', label: 'Survey Source', type: 'select', required: true,
-            options: ['LFS 2014-15', 'LFS 2018-19', 'LFS 2020-21'] }
+            options: ['LFS 2014-15', 'LFS 2018-19', 'LFS 2020-21'] },
+          { name: 'data_year', label: 'Data Year', type: 'number', required: true,
+            validation: { min: 2000, max: 2030 } }
         ]
       },
       {
@@ -344,10 +344,10 @@ export const balochistandAllForms: BalochistanIndicatorForm[] = [
       {
         title: "Data Source and Period",
         fields: [
-          { name: 'data_phase', label: 'Data Phase', type: 'select', required: true,
-            options: ['Baseline (LFS 2014-15)', 'Progress (LFS 2018-19)', 'Latest Value (LFS 2020-21)'] },
           { name: 'survey_source', label: 'Survey Source', type: 'select', required: true,
-            options: ['LFS 2014-15', 'LFS 2018-19', 'LFS 2020-21'] }
+            options: ['LFS 2014-15', 'LFS 2018-19', 'LFS 2020-21'] },
+          { name: 'data_year', label: 'Data Year', type: 'number', required: true,
+            validation: { min: 2000, max: 2030 } }
         ]
       },
       {
@@ -376,10 +376,10 @@ export const balochistandAllForms: BalochistanIndicatorForm[] = [
       {
         title: "Data Source and Period",
         fields: [
-          { name: 'data_phase', label: 'Data Phase', type: 'select', required: true,
-            options: ['Baseline (Dev Stats 2014-15)', 'Progress (Dev Stats 2018-19)', 'Latest Value (Agri Stats 2021-22)'] },
           { name: 'data_source', label: 'Data Source', type: 'select', required: true,
-            options: ['Balochistan Development Statistics 2014-15', 'Balochistan Development Statistics 2018-19', 'Balochistan Agriculture Statistics 2021-22'] }
+            options: ['Balochistan Development Statistics 2014-15', 'Balochistan Development Statistics 2018-19', 'Balochistan Agriculture Statistics 2021-22'] },
+          { name: 'data_year', label: 'Data Year', type: 'number', required: true,
+            validation: { min: 2000, max: 2030 } }
         ]
       },
       {
@@ -400,10 +400,10 @@ export const balochistandAllForms: BalochistanIndicatorForm[] = [
       {
         title: "Data Source and Period",
         fields: [
-          { name: 'data_phase', label: 'Data Phase', type: 'select', required: true,
-            options: ['Baseline (PDHS 2012-13)', 'Progress (PDHS 2017-18)', 'Latest Value (MICS 2019-20)'] },
           { name: 'survey_source', label: 'Survey Source', type: 'select', required: true,
-            options: ['PDHS 2012-13', 'PDHS 2017-18', 'MICS 2019-20'] }
+            options: ['PDHS 2012-13', 'PDHS 2017-18', 'MICS 2019-20'] },
+          { name: 'data_year', label: 'Data Year', type: 'number', required: true,
+            validation: { min: 2000, max: 2030 } }
         ]
       },
       {

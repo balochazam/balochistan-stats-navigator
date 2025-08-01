@@ -299,12 +299,8 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
               <Badge variant="outline" className="text-xs">
                 {filteredIndicators.length} indicators
               </Badge>
-              {isLoading ? (
+              {isLoading && (
                 <Badge variant="outline" className="text-xs">Loading...</Badge>
-              ) : (
-                <Badge variant="secondary" className="text-xs">
-                  17 Goals • Database Connected
-                </Badge>
               )}
             </div>
           </div>

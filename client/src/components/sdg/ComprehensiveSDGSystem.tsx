@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -93,6 +93,7 @@ interface ComprehensiveSDGSystemProps {
 
 export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ onBack }) => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [selectedGoal, setSelectedGoal] = useState<number | null>(null);
   const [selectedTarget, setSelectedTarget] = useState<string | null>(null);
   const [selectedIndicator, setSelectedIndicator] = useState<IndicatorStructure | null>(null);
@@ -122,9 +123,29 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
   const hasIndicatorForm = (indicatorCode: string): boolean => {
     // Check both Balochistan static forms and database forms
     const hasStaticForm = hasBalochistanForm(indicatorCode);
-    const hasDatabaseForm = forms.some((form: any) => 
-      form.name && form.name.includes(indicatorCode)
-    );
+    const hasDatabaseForm = forms.some((form: any) => {
+      if (!form.name) return false;
+      // Check if form name contains the indicator code or if description contains it
+      const nameMatch = form.name.toLowerCase().includes(indicatorCode.toLowerCase());
+      const descMatch = form.description && form.description.toLowerCase().includes(indicatorCode.toLowerCase());
+      return nameMatch || descMatch;
+    });
+    
+    // Debug logging for indicators 1.1.1, 1.2.1, and 1.2.2 specifically
+    if (indicatorCode === '1.1.1' || indicatorCode === '1.2.1' || indicatorCode === '1.2.2') {
+      console.log(`DETAILED DEBUG for ${indicatorCode}:`, {
+        hasStaticForm,
+        hasDatabaseForm,
+        totalForms: forms.length,
+        allFormNames: forms.map((f: any) => f.name),
+        allFormDescriptions: forms.map((f: any) => f.description),
+        formsFound: forms.filter((form: any) => 
+          (form.name && form.name.toLowerCase().includes(indicatorCode.toLowerCase())) ||
+          (form.description && form.description.toLowerCase().includes(indicatorCode.toLowerCase()))
+        )
+      });
+    }
+    
     return hasStaticForm || hasDatabaseForm;
   };
 
@@ -494,7 +515,8 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
           onOpenChange={setFormBuilderOpen}
           onSave={(form) => {
             console.log('Form saved:', form);
-            // Here you would typically save to backend
+            // Invalidate forms cache to refresh the list
+            queryClient.invalidateQueries({ queryKey: ['/api/forms'] });
             setFormBuilderOpen(false);
             setFormBuilderIndicator(null);
           }}

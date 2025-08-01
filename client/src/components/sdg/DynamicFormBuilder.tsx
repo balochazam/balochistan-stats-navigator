@@ -27,6 +27,9 @@ import {
   Circle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useToast } from '@/hooks/use-toast';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { simpleApiClient } from '@/lib/simpleApi';
 
 interface FormField {
   id: string;
@@ -119,6 +122,38 @@ export const DynamicFormBuilder: React.FC<DynamicFormBuilderProps> = ({
 }) => {
   const [selectedField, setSelectedField] = useState<string | null>(null);
   const [previewMode, setPreviewMode] = useState(false);
+  const { toast: toastUI } = useToast();
+  const queryClient = useQueryClient();
+
+  // Mutation to save form to database
+  const saveFormMutation = useMutation({
+    mutationFn: async (formData: DynamicForm) => {
+      // Convert the DynamicForm to the database format
+      const dbForm = {
+        name: `${formData.indicatorCode} - ${formData.indicatorTitle}`,
+        description: formData.description,
+        is_active: true
+      };
+      return simpleApiClient.post('/api/forms', dbForm);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/forms'] });
+      toastUI({
+        title: "Success",
+        description: "Form created successfully!",
+      });
+      onSave?.(form);
+      onOpenChange(false);
+    },
+    onError: (error) => {
+      console.error('Error saving form:', error);
+      toastUI({
+        title: "Error",
+        description: "Failed to save form. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
 
   const [form, setForm] = useState<DynamicForm>(() => 
     existingForm || {
@@ -458,9 +493,13 @@ export const DynamicFormBuilder: React.FC<DynamicFormBuilderProps> = ({
                 <Eye className="h-4 w-4 mr-2" />
                 {previewMode ? 'Edit' : 'Preview'}
               </Button>
-              <Button size="sm" onClick={saveForm}>
+              <Button 
+                size="sm" 
+                onClick={() => saveFormMutation.mutate(form)}
+                disabled={saveFormMutation.isPending}
+              >
                 <Save className="h-4 w-4 mr-2" />
-                Save Form
+                {saveFormMutation.isPending ? 'Saving...' : 'Save Form'}
               </Button>
             </div>
           </DialogTitle>

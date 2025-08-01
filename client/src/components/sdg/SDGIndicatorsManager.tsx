@@ -11,10 +11,11 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Database, Search, Filter, Target, Settings } from 'lucide-react';
+import { Plus, Database, Search, Filter, Target, Settings, BarChart3 } from 'lucide-react';
 import { simpleApiClient } from '@/lib/simpleApi';
 import { z } from 'zod';
 import { AdvancedIndicatorForm } from './AdvancedIndicatorForm';
+import { RealSDGDataEntryManager } from './RealSDGDataEntryManager';
 
 const indicatorSchema = z.object({
   sdg_goal_id: z.string().min(1, "Goal is required"),
@@ -56,6 +57,7 @@ export const SDGIndicatorsManager = () => {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [useAdvancedForm, setUseAdvancedForm] = useState(false);
+  const [viewMode, setViewMode] = useState<'management' | 'data_entry'>('management');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
 
@@ -149,6 +151,23 @@ export const SDGIndicatorsManager = () => {
     );
   }
 
+  if (viewMode === 'data_entry') {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="outline"
+            onClick={() => setViewMode('management')}
+          >
+            ← Back to Management
+          </Button>
+          <h2 className="text-lg font-semibold">SDG Data Entry System</h2>
+        </div>
+        <RealSDGDataEntryManager />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <Card>
@@ -163,13 +182,21 @@ export const SDGIndicatorsManager = () => {
                 Create and manage specific measurable indicators for SDG tracking
               </p>
             </div>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Indicator
-                </Button>
-              </DialogTrigger>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setViewMode('data_entry')}
+              >
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Data Entry System
+              </Button>
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Indicator
+                  </Button>
+                </DialogTrigger>
               <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <div className="flex items-center justify-between">
@@ -417,7 +444,8 @@ export const SDGIndicatorsManager = () => {
                   </Form>
                 )}
               </DialogContent>
-            </Dialog>
+              </Dialog>
+            </div>
           </div>
         </CardHeader>
         <CardContent>

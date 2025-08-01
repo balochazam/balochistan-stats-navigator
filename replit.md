@@ -32,6 +32,7 @@ Preferred communication style: Simple, everyday language.
 ### Database Design
 - **Core Entities**: Users, Profiles, Departments, Data Banks, Forms, Schedules, Form Submissions.
 - **SDG Implementation**: Dedicated schema including `goals`, `targets`, `indicators`, `data sources`, `indicator values`, and `progress calculations`. All populated with real Balochistan data (17 UN SDG goals, 13 targets, 14 indicators, 10 data sources, 16+ historical data values with urban/rural breakdowns).
+- **Enhanced Indicator Schema**: Extended with `data_structure`, `validation_rules`, `aggregation_methods`, `disaggregation_categories`, and `data_quality_requirements` fields to support complex multi-dimensional indicators with 14+ comprehensive indicator types.
 
 ### Key Components & Features
 - **Authentication & Authorization**: Supabase Auth, admin-only user creation, two-tier role system (admin, data_entry_user), RLS, department-based access control.
@@ -40,6 +41,7 @@ Preferred communication style: Simple, everyday language.
 - **Data Collection**: Dynamic form rendering, real-time submission tracking, progress monitoring, and department-based organization.
 - **Reporting System**: Schedule publishing, tabular data visualization, CSV/PDF export with hierarchical table structure, comprehensive filtering (search, status, date, category, department), and completion status validation.
 - **SDG Dashboard**: Comprehensive system with Goals Manager, Indicators Manager, specialized data entry forms for various indicator types, Progress Tracker with visualization, and an interactive dashboard.
+- **Real SDG Data Entry System**: Advanced multi-dimensional data collection forms based on authentic UN SDG indicator structures, dynamic form builder for complex indicators, support for ratio calculations, demographic breakdowns, and geographic disaggregation following international standards.
 - **Technology Transfer Page**: Admin-only section providing technical documentation, architecture, database schema, API endpoints, development workflow, and maintenance guidelines.
 
 ## External Dependencies

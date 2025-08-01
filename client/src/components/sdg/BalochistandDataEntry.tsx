@@ -57,19 +57,36 @@ export const BalochistandDataEntry: React.FC<BalochistandDataEntryProps> = ({
     
     console.log('Final submission data:', finalData);
     
-    // Create indicator value record for backend
-    const indicatorValueData = {
-      indicator_code: indicatorCode,
-      data_year: finalData.section_0_data_year || new Date().getFullYear(),
-      value_data: finalData,
-      data_source: finalData.section_0_survey_source || finalData.section_0_data_source,
-      metadata: {
-        calculation: formStructure.calculation,
-        data_quality_requirements: formStructure.data_quality_requirements
-      }
-    };
-
+    // First, get the indicator ID from the backend using the indicator code
     try {
+      const indicatorsResponse = await fetch('/api/sdg/indicators');
+      const indicators = await indicatorsResponse.json();
+      const indicator = indicators.find((ind: any) => ind.indicator_code === indicatorCode);
+      
+      if (!indicator) {
+        alert('Error: Indicator not found in system. Please contact administrator.');
+        return;
+      }
+
+      // Get current user ID
+      const userResponse = await fetch('/api/auth/user');
+      const userData = await userResponse.json();
+      
+      if (!userData.user) {
+        alert('Error: Please log in again to submit data.');
+        return;
+      }
+
+      // Create indicator value record matching the backend schema
+      const indicatorValueData = {
+        indicator_id: indicator.id,
+        year: parseInt(finalData.section_0_data_year) || new Date().getFullYear(),
+        value: JSON.stringify(finalData), // Store all form data as JSON string
+        breakdown_data: finalData,
+        notes: `Data submitted via Balochistan form for ${indicatorCode}`,
+        submitted_by: userData.user.id
+      };
+
       // Submit to backend API
       const response = await fetch('/api/sdg/indicator-values', {
         method: 'POST',
@@ -81,14 +98,18 @@ export const BalochistandDataEntry: React.FC<BalochistandDataEntryProps> = ({
 
       if (response.ok) {
         console.log('Data successfully saved to backend');
+        alert('✅ Data submitted successfully! Your indicator data has been saved.');
         onSubmit(finalData);
       } else {
-        console.error('Failed to save data to backend');
+        const errorData = await response.json();
+        console.error('Failed to save data to backend:', errorData);
+        alert('❌ Failed to submit data. Please try again or contact administrator.');
         // Still call onSubmit to allow UI to handle the response
         onSubmit(finalData);
       }
     } catch (error) {
       console.error('Error submitting data:', error);
+      alert('❌ Network error occurred. Please check your connection and try again.');
       // Still call onSubmit to allow UI to handle the error
       onSubmit(finalData);
     }

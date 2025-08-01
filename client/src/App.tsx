@@ -20,6 +20,7 @@ import { DataCollection } from "./pages/DataCollection";
 import { Reports } from "./pages/Reports";
 import { TechnologyTransfer } from "./pages/admin/TechnologyTransfer";
 import { SDGManagement } from "./pages/admin/SDGManagement";
+import { SDGGoalDetail } from "./pages/sdg/SDGGoalDetail";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -68,6 +69,7 @@ const App = () => (
             <Route path="/admin/forms" element={<FormManagement />} />
             <Route path="/admin/schedules" element={<ScheduleManagement />} />
             <Route path="/admin/sdg-management" element={<SDGManagement />} />
+            <Route path="/sdg/:goalId" element={<SDGGoalDetail />} />
             <Route path="/admin/technology-transfer" element={<TechnologyTransfer />} />
             <Route path="/reports" element={<Reports />} />
             

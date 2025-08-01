@@ -16,6 +16,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { simpleApiClient } from '@/lib/simpleApi';
 import { z } from 'zod';
 import { getSDGIcon } from '@/assets/sdg-icons';
+import { useNavigate } from 'react-router-dom';
 
 // SDG Dashboard data with progress tracking and official UN icon URLs
 const defaultSDGData = [
@@ -184,6 +185,7 @@ const sdgGoalSchema = z.object({
 export const SDGGoalsManager = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<any>(null);
 
@@ -487,7 +489,16 @@ export const SDGGoalsManager = () => {
             {/* Main Chart */}
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={sdgData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <BarChart 
+                  data={sdgData} 
+                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                  onClick={(data) => {
+                    if (data && data.activePayload && data.activePayload[0] && data.activePayload[0].payload) {
+                      const sdgId = data.activePayload[0].payload.id;
+                      navigate(`/sdg/${sdgId}`);
+                    }
+                  }}
+                >
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis 
                     dataKey="id" 
@@ -505,13 +516,14 @@ export const SDGGoalsManager = () => {
                       `${value}%`, 
                       `SDG ${props.payload.id}: ${props.payload.title}`
                     ]}
-                    labelFormatter={(label) => `SDG ${label}`}
+                    labelFormatter={(label) => `SDG ${label} - Click to view details`}
                   />
                   <Bar 
                     dataKey="progress" 
                     stroke="#fff"
                     strokeWidth={1}
                     radius={[4, 4, 0, 0]}
+                    cursor="pointer"
                   >
                     {sdgData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
@@ -526,8 +538,9 @@ export const SDGGoalsManager = () => {
               {sdgData.map((sdg) => (
                 <div key={sdg.id} className="flex flex-col items-center">
                   <div 
-                    className="w-12 h-12 rounded overflow-hidden mb-1 border border-gray-200"
-                    title={`SDG ${sdg.id}: ${sdg.title}`}
+                    className="w-12 h-12 rounded overflow-hidden mb-1 border border-gray-200 cursor-pointer hover:scale-105 transition-transform"
+                    title={`SDG ${sdg.id}: ${sdg.title} - Click to view details`}
+                    onClick={() => navigate(`/sdg/${sdg.id}`)}
                   >
                     <img 
                       src={sdg.iconUrl}
@@ -579,7 +592,12 @@ export const SDGGoalsManager = () => {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {sdgData.map((sdg: any) => (
-                <Card key={sdg.id} className="border-2" style={{ borderColor: sdg.color }}>
+                <Card 
+                  key={sdg.id} 
+                  className="border-2 cursor-pointer hover:shadow-lg transition-shadow" 
+                  style={{ borderColor: sdg.color }}
+                  onClick={() => navigate(`/sdg/${sdg.id}`)}
+                >
                   <CardContent className="p-4">
                     <div className="flex items-center gap-3 mb-3">
                       <div className="w-12 h-12 rounded-lg overflow-hidden border border-gray-200">
@@ -606,7 +624,10 @@ export const SDGGoalsManager = () => {
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => handleEdit(sdg)}
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent card click
+                          handleEdit(sdg);
+                        }}
                       >
                         <Edit2 className="h-4 w-4" />
                       </Button>

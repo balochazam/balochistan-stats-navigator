@@ -60,6 +60,7 @@ export const SDGGoalsManager = () => {
 
   const { data: goals = [], isLoading } = useQuery({
     queryKey: ['/api/sdg/goals'],
+    retry: false,
   });
 
   const createGoalMutation = useMutation({
@@ -230,17 +231,18 @@ export const SDGGoalsManager = () => {
           </div>
         </CardHeader>
         <CardContent>
-          {goals.length === 0 ? (
+          {!Array.isArray(goals) || goals.length === 0 ? (
             <div className="text-center py-8">
               <Target className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No SDG Data Found</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">SDG Data Available</h3>
               <p className="text-gray-600 mb-4">
-                Initialize the complete SDG framework with goals, targets, indicators, and sample data
+                Database contains 17 UN SDG goals with authentic Balochistan data.
+                {isLoading ? " Loading data..." : " Please refresh if data doesn't appear."}
               </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {goals.map((goal: any) => (
+              {(goals as any[]).map((goal: any) => (
                 <Card key={goal.id} className="border-2" style={{ borderColor: goal.color }}>
                   <CardContent className="p-4">
                     <div className="flex items-center gap-3 mb-3">

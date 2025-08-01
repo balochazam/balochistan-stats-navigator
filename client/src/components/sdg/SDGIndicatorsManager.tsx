@@ -16,6 +16,7 @@ import { simpleApiClient } from '@/lib/simpleApi';
 import { z } from 'zod';
 import { AdvancedIndicatorForm } from './AdvancedIndicatorForm';
 import { RealSDGDataEntryManager } from './RealSDGDataEntryManager';
+import { ComprehensiveSDGSystem } from './ComprehensiveSDGSystem';
 
 const indicatorSchema = z.object({
   sdg_goal_id: z.string().min(1, "Goal is required"),
@@ -57,7 +58,7 @@ export const SDGIndicatorsManager = () => {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [useAdvancedForm, setUseAdvancedForm] = useState(false);
-  const [viewMode, setViewMode] = useState<'management' | 'data_entry'>('management');
+  const [viewMode, setViewMode] = useState<'management' | 'data_entry' | 'comprehensive'>('management');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
 
@@ -151,6 +152,14 @@ export const SDGIndicatorsManager = () => {
     );
   }
 
+  if (viewMode === 'comprehensive') {
+    return (
+      <ComprehensiveSDGSystem 
+        onBack={() => setViewMode('management')}
+      />
+    );
+  }
+
   if (viewMode === 'data_entry') {
     return (
       <div className="space-y-4">
@@ -184,11 +193,18 @@ export const SDGIndicatorsManager = () => {
             </div>
             <div className="flex gap-2">
               <Button
+                variant="default"
+                onClick={() => setViewMode('comprehensive')}
+              >
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Complete SDG System
+              </Button>
+              <Button
                 variant="outline"
                 onClick={() => setViewMode('data_entry')}
               >
-                <BarChart3 className="h-4 w-4 mr-2" />
-                Data Entry System
+                <Database className="h-4 w-4 mr-2" />
+                Basic Data Entry
               </Button>
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>

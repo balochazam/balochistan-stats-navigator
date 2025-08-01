@@ -5,7 +5,22 @@ import { relations } from "drizzle-orm";
 
 // Define enums
 export const userRoleEnum = pgEnum("user_role", ["admin", "data_entry_user"]);
-export const sdgIndicatorTypeEnum = pgEnum("sdg_indicator_type", ["percentage", "rate", "count", "budget", "multi_dimensional", "survey_based"]);
+export const sdgIndicatorTypeEnum = pgEnum("sdg_indicator_type", [
+  "percentage", 
+  "rate", 
+  "count", 
+  "index", 
+  "ratio", 
+  "currency", 
+  "multi_dimensional",
+  "budget",
+  "binary",
+  "composite_index",
+  "time_series",
+  "geographic_breakdown",
+  "demographic_breakdown",
+  "survey_based"
+]);
 export const dataSourceTypeEnum = pgEnum("data_source_type", ["MICS", "PDHS", "PSLM", "NNS", "NDMA", "PBS", "Custom"]);
 
 // Departments table
@@ -404,6 +419,12 @@ export const sdg_indicators = pgTable("sdg_indicators", {
   methodology: text("methodology"), // How the indicator is measured
   data_collection_frequency: text("data_collection_frequency"), // Annual, quarterly, etc.
   responsible_departments: jsonb("responsible_departments"), // Array of department IDs
+  // Enhanced fields for complex indicators
+  data_structure: jsonb("data_structure"), // Schema for multi-dimensional data
+  validation_rules: jsonb("validation_rules"), // Field validation requirements
+  aggregation_methods: jsonb("aggregation_methods"), // How to aggregate data
+  disaggregation_categories: jsonb("disaggregation_categories"), // Breakdown categories (gender, age, location)
+  data_quality_requirements: jsonb("data_quality_requirements"), // Quality standards and checks
   is_active: boolean("is_active").notNull().default(true),
   created_by: uuid("created_by").notNull().references(() => profiles.id),
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),

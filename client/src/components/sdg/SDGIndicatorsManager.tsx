@@ -11,9 +11,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Database, Search, Filter, Target } from 'lucide-react';
+import { Plus, Database, Search, Filter, Target, Settings } from 'lucide-react';
 import { simpleApiClient } from '@/lib/simpleApi';
 import { z } from 'zod';
+import { AdvancedIndicatorForm } from './AdvancedIndicatorForm';
 
 const indicatorSchema = z.object({
   sdg_goal_id: z.string().min(1, "Goal is required"),
@@ -21,7 +22,11 @@ const indicatorSchema = z.object({
   indicator_code: z.string().min(1, "Indicator code is required"),
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
-  indicator_type: z.enum(["percentage", "rate", "count", "budget", "multi_dimensional", "survey_based"]),
+  indicator_type: z.enum([
+    "percentage", "rate", "count", "index", "ratio", "currency", 
+    "multi_dimensional", "budget", "binary", "composite_index",
+    "time_series", "geographic_breakdown", "demographic_breakdown", "survey_based"
+  ]),
   unit: z.string().optional(),
   methodology: z.string().optional(),
   data_collection_frequency: z.string().optional(),
@@ -33,8 +38,16 @@ const indicatorTypes = [
   { value: "percentage", label: "Percentage", description: "Values expressed as percentages (e.g., 71.2%)" },
   { value: "rate", label: "Rate", description: "Rates per population (e.g., per 100,000 people)" },
   { value: "count", label: "Count", description: "Absolute numbers (e.g., deaths, incidents)" },
+  { value: "index", label: "Index", description: "Composite indices or normalized scores" },
+  { value: "ratio", label: "Ratio", description: "Ratios between different values" },
+  { value: "currency", label: "Currency", description: "Monetary values and financial amounts" },
   { value: "budget", label: "Budget/Financial", description: "Financial allocations and spending" },
   { value: "multi_dimensional", label: "Multi-dimensional", description: "Complex indicators with multiple breakdowns" },
+  { value: "binary", label: "Binary/Yes-No", description: "Binary or categorical indicators" },
+  { value: "composite_index", label: "Composite Index", description: "Multi-component calculated indices" },
+  { value: "time_series", label: "Time Series", description: "Temporal data tracking over time" },
+  { value: "geographic_breakdown", label: "Geographic Breakdown", description: "Data by location/region" },
+  { value: "demographic_breakdown", label: "Demographic Breakdown", description: "Data by demographics" },
   { value: "survey_based", label: "Survey-based", description: "Data from MICS, PDHS, PSLM surveys" },
 ];
 
@@ -42,6 +55,7 @@ export const SDGIndicatorsManager = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [useAdvancedForm, setUseAdvancedForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
 
@@ -156,11 +170,50 @@ export const SDGIndicatorsManager = () => {
                   Add Indicator
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl">
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>Create SDG Indicator</DialogTitle>
+                  <div className="flex items-center justify-between">
+                    <DialogTitle>Create SDG Indicator</DialogTitle>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant={!useAdvancedForm ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setUseAdvancedForm(false)}
+                      >
+                        Basic Form
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={useAdvancedForm ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setUseAdvancedForm(true)}
+                      >
+                        <Settings className="h-4 w-4 mr-1" />
+                        Advanced Form
+                      </Button>
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    {useAdvancedForm 
+                      ? "Create complex indicators with dynamic fields, validation, and multi-dimensional data structures"
+                      : "Create basic indicators with standard fields"
+                    }
+                  </p>
                 </DialogHeader>
-                <Form {...form}>
+
+                {useAdvancedForm ? (
+                  <AdvancedIndicatorForm
+                    goals={goals}
+                    targets={targets}
+                    departments={departments}
+                    onSubmit={(data) => {
+                      createIndicatorMutation.mutate(data);
+                    }}
+                    onCancel={() => setIsDialogOpen(false)}
+                  />
+                ) : (
+                  <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                     {/* SDG Goal and Target Selection */}
                     <div className="grid grid-cols-2 gap-4">
@@ -361,7 +414,8 @@ export const SDGIndicatorsManager = () => {
                       </Button>
                     </div>
                   </form>
-                </Form>
+                  </Form>
+                )}
               </DialogContent>
             </Dialog>
           </div>

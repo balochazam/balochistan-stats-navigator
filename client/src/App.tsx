@@ -20,6 +20,7 @@ import { DataCollection } from "./pages/DataCollection";
 import { Reports } from "./pages/Reports";
 import { TechnologyTransfer } from "./pages/admin/TechnologyTransfer";
 import { SDGManagement } from "./pages/admin/SDGManagement";
+import { IndicatorDashboardWrapper } from "./pages/IndicatorDashboardWrapper";
 import { Toaster as HotToaster } from 'react-hot-toast';
 
 
@@ -97,6 +98,7 @@ const App = () => (
             <Route path="/admin/forms" element={<FormManagement />} />
             <Route path="/admin/schedules" element={<ScheduleManagement />} />
             <Route path="/admin/sdg-management" element={<SDGManagement />} />
+            <Route path="/indicator/:indicatorCode" element={<IndicatorDashboardWrapper />} />
 
             <Route path="/admin/technology-transfer" element={<TechnologyTransfer />} />
             <Route path="/reports" element={<Reports />} />

@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useLocation } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,7 +13,7 @@ import { Search, Target, Database, BarChart3, Globe, Users, Calendar, Filter } f
 import { Goal1SpecificDataEntry } from './Goal1SpecificDataEntry';
 import { BalochistandDataEntry } from './BalochistandDataEntry';
 import { DynamicFormBuilder } from './DynamicFormBuilder';
-import { IndicatorDetailsView } from './IndicatorDetailsView';
+
 import { hasBalochistanForm } from '@/data/balochistandAllForms';
 import { getAvailableIndicatorCodes } from '@shared/balochistandIndicatorData';
 
@@ -91,6 +92,7 @@ interface ComprehensiveSDGSystemProps {
 }
 
 export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ onBack }) => {
+  const [, setLocation] = useLocation();
   const [selectedGoal, setSelectedGoal] = useState<number | null>(null);
   const [selectedTarget, setSelectedTarget] = useState<string | null>(null);
   const [selectedIndicator, setSelectedIndicator] = useState<IndicatorStructure | null>(null);
@@ -100,8 +102,6 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
   const [viewMode, setViewMode] = useState<'browse' | 'data_entry'>('browse');
   const [formBuilderOpen, setFormBuilderOpen] = useState(false);
   const [formBuilderIndicator, setFormBuilderIndicator] = useState<IndicatorStructure | null>(null);
-  const [detailsViewOpen, setDetailsViewOpen] = useState(false);
-  const [detailsIndicator, setDetailsIndicator] = useState<IndicatorStructure | null>(null);
 
   // Fetch real indicators from database
   const { data: indicators = [], isLoading } = useQuery({
@@ -115,7 +115,7 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
 
   // Convert database indicators to our format
   const convertToIndicatorStructure = (dbIndicator: DatabaseIndicator): IndicatorStructure => {
-    const target = targets.find((t: any) => t.id === dbIndicator.sdg_target_id);
+    const target = (targets as any[]).find((t: any) => t.id === dbIndicator.sdg_target_id);
     const dataStructure = dbIndicator.data_structure || {};
     
     return {
@@ -191,33 +191,33 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
     }
   };
 
-  const processedIndicators = indicators.map(convertToIndicatorStructure);
+  const processedIndicators = (indicators as DatabaseIndicator[]).map(convertToIndicatorStructure);
 
   // Filter indicators based on search and filters
   const filteredIndicators = useMemo(() => {
     let indicators = processedIndicators;
     
     if (selectedGoal) {
-      indicators = indicators.filter(ind => ind.goal_id === selectedGoal);
+      indicators = indicators.filter((ind: IndicatorStructure) => ind.goal_id === selectedGoal);
     }
     
     if (selectedTarget) {
-      indicators = indicators.filter(ind => ind.target_code === selectedTarget);
+      indicators = indicators.filter((ind: IndicatorStructure) => ind.target_code === selectedTarget);
     }
     
     if (searchTerm) {
-      indicators = indicators.filter(ind => 
+      indicators = indicators.filter((ind: IndicatorStructure) => 
         ind.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         ind.code.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
     
     if (filterTier !== 'all') {
-      indicators = indicators.filter(ind => ind.tier === filterTier);
+      indicators = indicators.filter((ind: IndicatorStructure) => ind.tier === filterTier);
     }
     
     if (filterType !== 'all') {
-      indicators = indicators.filter(ind => ind.type === filterType);
+      indicators = indicators.filter((ind: IndicatorStructure) => ind.type === filterType);
     }
     
     return indicators;
@@ -225,8 +225,8 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
 
   // Get unique targets for selected goal
   const getTargetsForGoal = (goalId: number) => {
-    const goalIndicators = processedIndicators.filter(ind => ind.goal_id === goalId);
-    return [...new Set(goalIndicators.map(ind => ind.target_code))].sort();
+    const goalIndicators = processedIndicators.filter((ind: IndicatorStructure) => ind.goal_id === goalId);
+    return [...new Set(goalIndicators.map((ind: IndicatorStructure) => ind.target_code))].sort();
   };
 
   if (viewMode === 'data_entry' && selectedIndicator) {
@@ -410,7 +410,7 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
               {selectedGoal ? (
                 <div className="space-y-4">
                   {getTargetsForGoal(selectedGoal).map((targetCode) => {
-                    const targetIndicators = filteredIndicators.filter(ind => ind.target_code === targetCode);
+                    const targetIndicators = filteredIndicators.filter((ind: IndicatorStructure) => ind.target_code === targetCode);
                     return (
                       <Card key={targetCode} className="p-4">
                         <div className="flex items-center gap-3 mb-3">
@@ -420,7 +420,7 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
                           </span>
                         </div>
                         <div className="space-y-3">
-                          {targetIndicators.map((indicator) => (
+                          {targetIndicators.map((indicator: IndicatorStructure) => (
                             <IndicatorCard
                               key={indicator.code}
                               indicator={indicator}
@@ -433,8 +433,7 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
                                 setFormBuilderOpen(true);
                               }}
                               onViewDetails={() => {
-                                setDetailsIndicator(indicator);
-                                setDetailsViewOpen(true);
+                                setLocation(`/indicator/${indicator.code}`);
                               }}
                             />
                           ))}
@@ -445,7 +444,7 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {filteredIndicators.map((indicator) => (
+                  {filteredIndicators.map((indicator: IndicatorStructure) => (
                     <IndicatorCard
                       key={indicator.code}
                       indicator={indicator}
@@ -458,8 +457,7 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
                         setFormBuilderOpen(true);
                       }}
                       onViewDetails={() => {
-                        setDetailsIndicator(indicator);
-                        setDetailsViewOpen(true);
+                        setLocation(`/indicator/${indicator.code}`);
                       }}
                     />
                   ))}
@@ -486,15 +484,7 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
         />
       )}
 
-      {/* Indicator Details View */}
-      {detailsIndicator && (
-        <IndicatorDetailsView
-          indicatorCode={detailsIndicator.code}
-          indicatorTitle={detailsIndicator.title}
-          open={detailsViewOpen}
-          onOpenChange={setDetailsViewOpen}
-        />
-      )}
+
     </div>
   );
 };

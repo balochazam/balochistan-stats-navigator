@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search, Target, Database, BarChart3, Globe, Users, Calendar, Filter } from 'lucide-react';
 import { AuthenticSDGDataEntryForm } from './AuthenticSDGDataEntryForm';
+import { Goal1SpecificDataEntry } from './Goal1SpecificDataEntry';
+import { getIndicatorFormStructure } from '@/data/goal1IndicatorForms';
 
 // Types for database data
 interface DatabaseIndicator {
@@ -128,7 +130,8 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
       },
       form_structure: {
         fields: generateFieldsForIndicator(dbIndicator),
-        calculation: dbIndicator.indicator_type === 'ratio' ? { formula: 'Numerator ÷ Denominator' } : undefined
+        calculation: dbIndicator.indicator_type === 'ratio' ? { formula: 'Numerator ÷ Denominator' } : undefined,
+        authentic_structure: getIndicatorFormStructure(dbIndicator.indicator_code)
       }
     };
   };
@@ -236,19 +239,36 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
             <p className="text-sm text-gray-600">{selectedIndicator.title}</p>
           </div>
         </div>
-        <AuthenticSDGDataEntryForm
-          indicator={selectedIndicator}
-          onSubmit={(data) => {
-            console.log('Data submitted:', data);
-            // TODO: Save to backend
-            setViewMode('browse');
-            setSelectedIndicator(null);
-          }}
-          onCancel={() => {
-            setViewMode('browse');
-            setSelectedIndicator(null);
-          }}
-        />
+        {selectedIndicator.goal_id === 1 ? (
+          <Goal1SpecificDataEntry
+            indicatorCode={selectedIndicator.code}
+            indicatorTitle={selectedIndicator.title}
+            onSubmit={(data) => {
+              console.log('Goal 1 specific data submitted:', data);
+              // TODO: Save to backend
+              setViewMode('browse');
+              setSelectedIndicator(null);
+            }}
+            onCancel={() => {
+              setViewMode('browse');
+              setSelectedIndicator(null);
+            }}
+          />
+        ) : (
+          <AuthenticSDGDataEntryForm
+            indicator={selectedIndicator}
+            onSubmit={(data) => {
+              console.log('Data submitted:', data);
+              // TODO: Save to backend
+              setViewMode('browse');
+              setSelectedIndicator(null);
+            }}
+            onCancel={() => {
+              setViewMode('browse');
+              setSelectedIndicator(null);
+            }}
+          />
+        )}
       </div>
     );
   }

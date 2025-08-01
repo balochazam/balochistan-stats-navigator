@@ -13,6 +13,7 @@ import { Search, Target, Database, BarChart3, Globe, Users, Calendar, Filter } f
 import { Goal1SpecificDataEntry } from './Goal1SpecificDataEntry';
 import { BalochistandDataEntry } from './BalochistandDataEntry';
 import { DynamicFormBuilder } from './DynamicFormBuilder';
+import { DynamicDataEntry } from './DynamicDataEntry';
 
 import { hasBalochistanForm } from '@/data/balochistandAllForms';
 import { getAvailableIndicatorCodes } from '@shared/balochistandIndicatorData';
@@ -283,27 +284,59 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
             <p className="text-sm text-gray-600">{selectedIndicator.title}</p>
           </div>
         </div>
-        {hasIndicatorForm(selectedIndicator.code) ? (
-          <BalochistandDataEntry
-            indicatorCode={selectedIndicator.code}
-            indicatorTitle={selectedIndicator.title}
-            onSubmit={(data) => {
-              console.log('Indicator data submitted:', data);
-              // TODO: Save to backend
-              setViewMode('browse');
-              setSelectedIndicator(null);
-            }}
-            onCancel={() => {
-              setViewMode('browse');
-              setSelectedIndicator(null);
-            }}
-          />
-        ) : (
-          <div className="p-8 text-center">
-            <p className="text-gray-600">Data entry form for indicator {selectedIndicator.code} is not yet available.</p>
-            <p className="text-sm text-gray-500 mt-2">This indicator will be available once the form is created.</p>
-          </div>
-        )}
+        {(() => {
+          const hasStaticForm = hasBalochistanForm(selectedIndicator.code);
+          const hasDBForm = forms.some((form: any) => 
+            form.name && form.name.toLowerCase().includes(selectedIndicator.code.toLowerCase())
+          );
+          
+          if (hasStaticForm) {
+            // Use the existing Balochistan data entry for static forms
+            return (
+              <BalochistandDataEntry
+                indicatorCode={selectedIndicator.code}
+                indicatorTitle={selectedIndicator.title}
+                onSubmit={(data) => {
+                  console.log('Indicator data submitted:', data);
+                  setViewMode('browse');
+                  setSelectedIndicator(null);
+                }}
+                onCancel={() => {
+                  setViewMode('browse');
+                  setSelectedIndicator(null);
+                }}
+              />
+            );
+          } else if (hasDBForm) {
+            // Use dynamic form renderer for database forms
+            const dbForm = forms.find((form: any) => 
+              form.name && form.name.toLowerCase().includes(selectedIndicator.code.toLowerCase())
+            );
+            return (
+              <DynamicDataEntry
+                indicatorCode={selectedIndicator.code}
+                indicatorTitle={selectedIndicator.title}
+                formId={dbForm?.id}
+                onSubmit={(data) => {
+                  console.log('Dynamic form data submitted:', data);
+                  setViewMode('browse');
+                  setSelectedIndicator(null);
+                }}
+                onCancel={() => {
+                  setViewMode('browse');
+                  setSelectedIndicator(null);
+                }}
+              />
+            );
+          } else {
+            return (
+              <div className="p-8 text-center">
+                <p className="text-gray-600">Data entry form for indicator {selectedIndicator.code} is not yet available.</p>
+                <p className="text-sm text-gray-500 mt-2">This indicator will be available once the form is created.</p>
+              </div>
+            );
+          }
+        })()}
       </div>
     );
   }

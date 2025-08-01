@@ -11,6 +11,7 @@ This is a full-stack data collection management system with a public-first appro
 - **Dynamic Form Builder System**: Comprehensive visual form creation tool with drag-and-drop interface, supporting 10+ field types, validation rules, conditional logic, and real-time preview
 - **Enhanced User Experience**: Toast notifications centered with beautiful styling, streamlined navigation with SDG Management prominently positioned, form submission with proper feedback
 - **Simplified Dynamic Form Builder**: Clean modal-based form creator integrated directly into indicator cards, triggered by "Create Form" button for indicators without existing forms
+- **Dynamic Indicator Details View**: Comprehensive data visualization system showing authentic Balochistan SDG data with baseline, progress, and latest values, including trend analysis and breakdowns by urban/rural/gender demographics
 - **Ready for Goal-by-Goal Finalization**: Systematic approach to finalize data collection forms for each remaining goal
 
 ## User Preferences

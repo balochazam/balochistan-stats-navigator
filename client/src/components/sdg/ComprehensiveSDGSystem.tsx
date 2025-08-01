@@ -12,7 +12,9 @@ import { Search, Target, Database, BarChart3, Globe, Users, Calendar, Filter } f
 import { Goal1SpecificDataEntry } from './Goal1SpecificDataEntry';
 import { BalochistandDataEntry } from './BalochistandDataEntry';
 import { DynamicFormBuilder } from './DynamicFormBuilder';
+import { IndicatorDetailsView } from './IndicatorDetailsView';
 import { hasBalochistanForm } from '@/data/balochistandAllForms';
+import { getAvailableIndicatorCodes } from '@shared/balochistandIndicatorData';
 
 // Types for database data
 interface DatabaseIndicator {
@@ -98,6 +100,8 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
   const [viewMode, setViewMode] = useState<'browse' | 'data_entry'>('browse');
   const [formBuilderOpen, setFormBuilderOpen] = useState(false);
   const [formBuilderIndicator, setFormBuilderIndicator] = useState<IndicatorStructure | null>(null);
+  const [detailsViewOpen, setDetailsViewOpen] = useState(false);
+  const [detailsIndicator, setDetailsIndicator] = useState<IndicatorStructure | null>(null);
 
   // Fetch real indicators from database
   const { data: indicators = [], isLoading } = useQuery({
@@ -428,6 +432,10 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
                                 setFormBuilderIndicator(indicator);
                                 setFormBuilderOpen(true);
                               }}
+                              onViewDetails={() => {
+                                setDetailsIndicator(indicator);
+                                setDetailsViewOpen(true);
+                              }}
                             />
                           ))}
                         </div>
@@ -448,6 +456,10 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
                       onCreateForm={() => {
                         setFormBuilderIndicator(indicator);
                         setFormBuilderOpen(true);
+                      }}
+                      onViewDetails={() => {
+                        setDetailsIndicator(indicator);
+                        setDetailsViewOpen(true);
                       }}
                     />
                   ))}
@@ -473,6 +485,16 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
           }}
         />
       )}
+
+      {/* Indicator Details View */}
+      {detailsIndicator && (
+        <IndicatorDetailsView
+          indicatorCode={detailsIndicator.code}
+          indicatorTitle={detailsIndicator.title}
+          open={detailsViewOpen}
+          onOpenChange={setDetailsViewOpen}
+        />
+      )}
     </div>
   );
 };
@@ -482,9 +504,10 @@ interface IndicatorCardProps {
   indicator: IndicatorStructure;
   onEnterData: () => void;
   onCreateForm: () => void;
+  onViewDetails: () => void;
 }
 
-const IndicatorCard: React.FC<IndicatorCardProps> = ({ indicator, onEnterData, onCreateForm }) => {
+const IndicatorCard: React.FC<IndicatorCardProps> = ({ indicator, onEnterData, onCreateForm, onViewDetails }) => {
   const getTierColor = (tier: string) => {
     switch (tier) {
       case 'I': return 'bg-green-100 text-green-800';
@@ -512,6 +535,11 @@ const IndicatorCard: React.FC<IndicatorCardProps> = ({ indicator, onEnterData, o
               {hasBalochistanForm(indicator.code) && (
                 <Badge className="text-xs bg-green-100 text-green-800">
                   Form Ready
+                </Badge>
+              )}
+              {getAvailableIndicatorCodes().includes(indicator.code) && (
+                <Badge className="text-xs bg-blue-100 text-blue-800">
+                  Data Available
                 </Badge>
               )}
             </div>
@@ -558,7 +586,12 @@ const IndicatorCard: React.FC<IndicatorCardProps> = ({ indicator, onEnterData, o
             <BarChart3 className="h-3 w-3 mr-1" />
             {hasBalochistanForm(indicator.code) ? "Enter Data" : "Create Form"}
           </Button>
-          <Button size="sm" variant="outline">
+          <Button 
+            size="sm" 
+            variant="outline"
+            onClick={onViewDetails}
+            disabled={!getAvailableIndicatorCodes().includes(indicator.code)}
+          >
             <Target className="h-3 w-3 mr-1" />
             View Details
           </Button>

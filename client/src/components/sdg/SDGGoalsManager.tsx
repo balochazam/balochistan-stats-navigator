@@ -15,6 +15,7 @@ import { Plus, Edit2, Target, TrendingUp, Database, AlertCircle } from 'lucide-r
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { simpleApiClient } from '@/lib/simpleApi';
 import { z } from 'zod';
+import { getSDGIcon } from '@/assets/sdg-icons';
 
 // SDG Dashboard data with progress tracking and official UN icon URLs
 const defaultSDGData = [
@@ -25,7 +26,7 @@ const defaultSDGData = [
     color: "#e5243b", 
     target: 71, 
     description: "End poverty in all its forms everywhere",
-    iconUrl: "invalid-url-to-trigger-fallback"
+    iconUrl: getSDGIcon(1)
   },
   { 
     id: 2, 
@@ -34,7 +35,7 @@ const defaultSDGData = [
     color: "#dda63a", 
     target: 32, 
     description: "End hunger, achieve food security and improved nutrition",
-    iconUrl: "invalid-url-to-trigger-fallback"
+    iconUrl: getSDGIcon(2)
   },
   { 
     id: 3, 
@@ -43,7 +44,7 @@ const defaultSDGData = [
     color: "#4c9f38", 
     target: 38, 
     description: "Ensure healthy lives and promote well-being for all at all ages",
-    iconUrl: "invalid-url-to-trigger-fallback"
+    iconUrl: getSDGIcon(3)
   },
   { 
     id: 4, 
@@ -52,7 +53,7 @@ const defaultSDGData = [
     color: "#c5192d", 
     target: 78, 
     description: "Ensure inclusive and equitable quality education",
-    iconUrl: "invalid-url-to-trigger-fallback"
+    iconUrl: getSDGIcon(4)
   },
   { 
     id: 5, 
@@ -61,7 +62,7 @@ const defaultSDGData = [
     color: "#ff3a21", 
     target: 45, 
     description: "Achieve gender equality and empower all women and girls",
-    iconUrl: "invalid-url-to-trigger-fallback"
+    iconUrl: getSDGIcon(5)
   },
   { 
     id: 6, 
@@ -70,7 +71,7 @@ const defaultSDGData = [
     color: "#26bde2", 
     target: 62, 
     description: "Ensure availability and sustainable management of water",
-    iconUrl: "invalid-url-to-trigger-fallback"
+    iconUrl: getSDGIcon(6)
   },
   { 
     id: 7, 
@@ -79,7 +80,7 @@ const defaultSDGData = [
     color: "#fcc30b", 
     target: 28, 
     description: "Ensure access to affordable, reliable, sustainable energy",
-    iconUrl: "invalid-url-to-trigger-fallback"
+    iconUrl: getSDGIcon(7)
   },
   { 
     id: 8, 
@@ -88,7 +89,7 @@ const defaultSDGData = [
     color: "#a21942", 
     target: 52, 
     description: "Promote sustained, inclusive economic growth",
-    iconUrl: "invalid-url-to-trigger-fallback"
+    iconUrl: getSDGIcon(8)
   },
   { 
     id: 9, 
@@ -97,7 +98,7 @@ const defaultSDGData = [
     color: "#fd6925", 
     target: 38, 
     description: "Build resilient infrastructure, promote innovation",
-    iconUrl: "invalid-url-to-trigger-fallback"
+    iconUrl: getSDGIcon(9)
   },
   { 
     id: 10, 
@@ -106,7 +107,7 @@ const defaultSDGData = [
     color: "#dd1367", 
     target: 42, 
     description: "Reduce inequality within and among countries",
-    iconUrl: "invalid-url-to-trigger-fallback"
+    iconUrl: getSDGIcon(10)
   },
   { 
     id: 11, 
@@ -115,7 +116,7 @@ const defaultSDGData = [
     color: "#fd9d24", 
     target: 35, 
     description: "Make cities and human settlements sustainable",
-    iconUrl: "invalid-url-to-trigger-fallback"
+    iconUrl: getSDGIcon(11)
   },
   { 
     id: 12, 
@@ -124,7 +125,7 @@ const defaultSDGData = [
     color: "#bf8b2e", 
     target: 48, 
     description: "Ensure sustainable consumption and production patterns",
-    iconUrl: "invalid-url-to-trigger-fallback"
+    iconUrl: getSDGIcon(12)
   },
   { 
     id: 13, 
@@ -133,7 +134,7 @@ const defaultSDGData = [
     color: "#3f7e44", 
     target: 25, 
     description: "Take urgent action to combat climate change",
-    iconUrl: "invalid-url-to-trigger-fallback"
+    iconUrl: getSDGIcon(13)
   },
   { 
     id: 14, 
@@ -142,7 +143,7 @@ const defaultSDGData = [
     color: "#0a97d9", 
     target: 31, 
     description: "Conserve and sustainably use marine resources",
-    iconUrl: "invalid-url-to-trigger-fallback"
+    iconUrl: getSDGIcon(14)
   },
   { 
     id: 15, 
@@ -151,7 +152,7 @@ const defaultSDGData = [
     color: "#56c02b", 
     target: 38, 
     description: "Protect and restore terrestrial ecosystems",
-    iconUrl: "invalid-url-to-trigger-fallback"
+    iconUrl: getSDGIcon(15)
   },
   { 
     id: 16, 
@@ -160,7 +161,7 @@ const defaultSDGData = [
     color: "#00689d", 
     target: 45, 
     description: "Promote peaceful and inclusive societies",
-    iconUrl: "invalid-url-to-trigger-fallback"
+    iconUrl: getSDGIcon(16)
   },
   { 
     id: 17, 
@@ -169,7 +170,7 @@ const defaultSDGData = [
     color: "#19486a", 
     target: 58, 
     description: "Strengthen means of implementation and partnerships",
-    iconUrl: "invalid-url-to-trigger-fallback"
+    iconUrl: getSDGIcon(17)
   },
 ];
 
@@ -218,7 +219,7 @@ export const SDGGoalsManager = () => {
       ...goal,
       progress: calculation?.progress_percentage || defaultGoal?.progress || 0,
       target: calculation?.target_value || defaultGoal?.target || 100,
-      iconUrl: "invalid-url-to-trigger-fallback",
+      iconUrl: getSDGIcon(goal.id),
     };
   }) : defaultSDGData;
 
@@ -539,6 +540,7 @@ export const SDGGoalsManager = () => {
                         if (parent) {
                           target.style.display = 'none';
                           parent.style.backgroundColor = sdg.color;
+                          parent.className = parent.className.replace('border border-gray-200', '');
                           parent.innerHTML = `<div class="w-full h-full flex items-center justify-center text-white text-xs font-bold">${sdg.id}</div>`;
                         }
                       }}
@@ -592,6 +594,7 @@ export const SDGGoalsManager = () => {
                             if (parent) {
                               target.style.display = 'none';
                               parent.style.backgroundColor = sdg.color;
+                              parent.className = parent.className.replace('border border-gray-200', '');
                               parent.innerHTML = `<div class="w-full h-full flex items-center justify-center text-white font-bold text-lg">${sdg.id}</div>`;
                             }
                           }}

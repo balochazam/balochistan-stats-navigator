@@ -86,18 +86,19 @@ export const SDGGoalsManager = () => {
 
   const initializeDefaultGoals = async () => {
     try {
-      for (const goal of defaultSDGGoals) {
-        await simpleApiClient.post('/api/sdg/goals', goal);
-      }
+      await simpleApiClient.post('/api/sdg/seed-data', {});
       queryClient.invalidateQueries({ queryKey: ['/api/sdg/goals'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/sdg/targets'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/sdg/indicators'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/sdg/data-sources'] });
       toast({
         title: "Success",
-        description: "All 17 SDG goals have been initialized",
+        description: "All SDG data has been initialized with sample indicators and data",
       });
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to initialize SDG goals",
+        description: "Failed to initialize SDG data",
         variant: "destructive",
       });
     }
@@ -135,7 +136,7 @@ export const SDGGoalsManager = () => {
               {goals.length === 0 && (
                 <Button onClick={initializeDefaultGoals} variant="outline">
                   <Plus className="h-4 w-4 mr-2" />
-                  Initialize All 17 SDGs
+                  Initialize SDG Data
                 </Button>
               )}
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -235,9 +236,9 @@ export const SDGGoalsManager = () => {
           {goals.length === 0 ? (
             <div className="text-center py-8">
               <Target className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No SDG Goals Found</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No SDG Data Found</h3>
               <p className="text-gray-600 mb-4">
-                Initialize the 17 UN Sustainable Development Goals to get started
+                Initialize the complete SDG framework with goals, targets, indicators, and sample data
               </p>
             </div>
           ) : (

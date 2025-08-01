@@ -1246,6 +1246,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // SDG Data Seeding Route (admin only)
+  app.post('/api/sdg/seed-data', requireAuth, async (req: any, res) => {
+    try {
+      // Check if user is admin
+      const userProfile = await storage.getProfile(req.session.userId);
+      if (!userProfile || userProfile.role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+
+      const { seedSDGData } = await import('./seedData');
+      const result = await seedSDGData();
+      
+      if (result.success) {
+        res.json({ message: 'SDG data seeded successfully' });
+      } else {
+        res.status(500).json({ error: 'Failed to seed SDG data', details: result.error });
+      }
+    } catch (error) {
+      console.error('Error in seed data route:', error);
+      res.status(500).json({ error: 'Failed to seed SDG data' });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

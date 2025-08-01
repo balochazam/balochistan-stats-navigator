@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useLocation } from 'wouter';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -92,7 +92,7 @@ interface ComprehensiveSDGSystemProps {
 }
 
 export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ onBack }) => {
-  const [, setLocation] = useLocation();
+  const navigate = useNavigate();
   const [selectedGoal, setSelectedGoal] = useState<number | null>(null);
   const [selectedTarget, setSelectedTarget] = useState<string | null>(null);
   const [selectedIndicator, setSelectedIndicator] = useState<IndicatorStructure | null>(null);
@@ -433,7 +433,7 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
                                 setFormBuilderOpen(true);
                               }}
                               onViewDetails={() => {
-                                setLocation(`/indicator/${indicator.code}`);
+                                navigate(`/indicator/${indicator.code}`);
                               }}
                             />
                           ))}
@@ -457,7 +457,7 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
                         setFormBuilderOpen(true);
                       }}
                       onViewDetails={() => {
-                        setLocation(`/indicator/${indicator.code}`);
+                        navigate(`/indicator/${indicator.code}`);
                       }}
                     />
                   ))}

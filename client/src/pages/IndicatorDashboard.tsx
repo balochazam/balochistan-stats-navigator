@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useLocation } from 'wouter';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -176,7 +176,7 @@ const TimelinePath: React.FC<{ data: IndicatorTimeSeries }> = ({ data }) => {
 };
 
 export const IndicatorDashboard: React.FC<IndicatorDashboardProps> = ({ indicatorCode }) => {
-  const [, setLocation] = useLocation();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
   
   const indicatorData = getIndicatorData(indicatorCode);
@@ -251,7 +251,7 @@ export const IndicatorDashboard: React.FC<IndicatorDashboardProps> = ({ indicato
         <div className="max-w-4xl mx-auto">
           <Button 
             variant="ghost" 
-            onClick={() => setLocation('/admin/sdg-management')}
+            onClick={() => navigate('/admin/sdg-management')}
             className="mb-6"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -286,7 +286,7 @@ export const IndicatorDashboard: React.FC<IndicatorDashboardProps> = ({ indicato
             <div className="flex items-center gap-4">
               <Button 
                 variant="ghost" 
-                onClick={() => setLocation('/admin/sdg-management')}
+                onClick={() => navigate('/admin/sdg-management')}
                 className="flex items-center gap-2"
               >
                 <ArrowLeft className="h-4 w-4" />

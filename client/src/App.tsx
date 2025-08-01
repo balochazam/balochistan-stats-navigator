@@ -81,14 +81,9 @@ const App = () => (
         />
         <BrowserRouter>
           <Routes>
-            {/* Public Routes */}
             <Route path="/" element={<PublicLanding />} />
             <Route path="/public/reports/:scheduleId" element={<PublicReportView />} />
-            
-            {/* Admin Authentication */}
             <Route path="/auth" element={<AdminLoginPage />} />
-            
-            {/* Protected Admin Routes */}
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/data-collection" element={<DataCollection />} />
@@ -99,10 +94,8 @@ const App = () => (
             <Route path="/admin/schedules" element={<ScheduleManagement />} />
             <Route path="/admin/sdg-management" element={<SDGManagement />} />
             <Route path="/indicator/:indicatorCode" element={<IndicatorDashboardWrapper />} />
-
             <Route path="/admin/technology-transfer" element={<TechnologyTransfer />} />
             <Route path="/reports" element={<Reports />} />
-            
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

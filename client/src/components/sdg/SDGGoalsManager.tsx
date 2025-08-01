@@ -16,7 +16,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { simpleApiClient } from '@/lib/simpleApi';
 import { z } from 'zod';
 import { getSDGIcon } from '@/assets/sdg-icons';
-import { useNavigate } from 'react-router-dom';
+
 
 // SDG Dashboard data with progress tracking and official UN icon URLs
 const defaultSDGData = [
@@ -185,7 +185,7 @@ const sdgGoalSchema = z.object({
 export const SDGGoalsManager = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<any>(null);
 
@@ -492,12 +492,7 @@ export const SDGGoalsManager = () => {
                 <BarChart 
                   data={sdgData} 
                   margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                  onClick={(data) => {
-                    if (data && data.activePayload && data.activePayload[0] && data.activePayload[0].payload) {
-                      const sdgId = data.activePayload[0].payload.id;
-                      navigate(`/sdg/${sdgId}`);
-                    }
-                  }}
+
                 >
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis 
@@ -516,7 +511,7 @@ export const SDGGoalsManager = () => {
                       `${value}%`, 
                       `SDG ${props.payload.id}: ${props.payload.title}`
                     ]}
-                    labelFormatter={(label) => `SDG ${label} - Click to view details`}
+                    labelFormatter={(label) => `SDG ${label}`}
                   />
                   <Bar 
                     dataKey="progress" 
@@ -581,7 +576,7 @@ export const SDGGoalsManager = () => {
             Individual SDG Progress & Management
           </CardTitle>
           <p className="text-sm text-gray-600">
-            Detailed view and management of each Sustainable Development Goal
+            Overview and management of each Sustainable Development Goal
           </p>
         </CardHeader>
         <CardContent>
@@ -594,9 +589,8 @@ export const SDGGoalsManager = () => {
               {sdgData.map((sdg: any) => (
                 <Card 
                   key={sdg.id} 
-                  className="border-2 cursor-pointer hover:shadow-lg transition-shadow" 
+                  className="border-2" 
                   style={{ borderColor: sdg.color }}
-                  onClick={() => navigate(`/sdg/${sdg.id}`)}
                 >
                   <CardContent className="p-4">
                     <div className="flex items-center gap-3 mb-3">
@@ -624,10 +618,7 @@ export const SDGGoalsManager = () => {
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={(e) => {
-                          e.stopPropagation(); // Prevent card click
-                          handleEdit(sdg);
-                        }}
+                        onClick={() => handleEdit(sdg)}
                       >
                         <Edit2 className="h-4 w-4" />
                       </Button>

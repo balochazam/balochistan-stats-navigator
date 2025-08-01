@@ -507,6 +507,19 @@ export const insertSdgIndicatorValueSchema = createInsertSchema(sdg_indicator_va
   id: true,
   created_at: true,
   updated_at: true,
+}).extend({
+  // Make some fields optional to handle various form submissions
+  data_source_id: z.string().optional(),
+  value_numeric: z.number().optional(),
+  breakdown_data: z.any().optional(),
+  baseline_indicator: z.boolean().optional(),
+  progress_indicator: z.boolean().optional(),
+  notes: z.string().optional(),
+  reference_document: z.string().optional(),
+  data_quality_score: z.number().optional(),
+  department_id: z.string().optional(),
+  verified_by: z.string().optional(),
+  verified_at: z.date().optional()
 });
 
 export const insertSdgProgressCalculationSchema = createInsertSchema(sdg_progress_calculations).omit({

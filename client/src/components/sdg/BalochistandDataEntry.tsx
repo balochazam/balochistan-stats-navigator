@@ -14,6 +14,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { AlertCircle, Calculator, Database, FileText } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { getBalochistandFormStructure, type BalochistanIndicatorForm, type BalochistanFormField } from '@/data/balochistandAllForms';
+import toast from 'react-hot-toast';
 
 interface BalochistandDataEntryProps {
   indicatorCode: string;
@@ -64,7 +65,7 @@ export const BalochistandDataEntry: React.FC<BalochistandDataEntryProps> = ({
       const indicator = indicators.find((ind: any) => ind.indicator_code === indicatorCode);
       
       if (!indicator) {
-        alert('Error: Indicator not found in system. Please contact administrator.');
+        toast.error('Error: Indicator not found in system. Please contact administrator.');
         return;
       }
 
@@ -73,7 +74,7 @@ export const BalochistandDataEntry: React.FC<BalochistandDataEntryProps> = ({
       const userData = await userResponse.json();
       
       if (!userData.user) {
-        alert('Error: Please log in again to submit data.');
+        toast.error('Error: Please log in again to submit data.');
         return;
       }
 
@@ -98,18 +99,18 @@ export const BalochistandDataEntry: React.FC<BalochistandDataEntryProps> = ({
 
       if (response.ok) {
         console.log('Data successfully saved to backend');
-        alert('✅ Data submitted successfully! Your indicator data has been saved.');
+        toast.success('Data submitted successfully! Your indicator data has been saved.');
         onSubmit(finalData);
       } else {
         const errorData = await response.json();
         console.error('Failed to save data to backend:', errorData);
-        alert('❌ Failed to submit data. Please try again or contact administrator.');
+        toast.error('Failed to submit data. Please try again or contact administrator.');
         // Still call onSubmit to allow UI to handle the response
         onSubmit(finalData);
       }
     } catch (error) {
       console.error('Error submitting data:', error);
-      alert('❌ Network error occurred. Please check your connection and try again.');
+      toast.error('Network error occurred. Please check your connection and try again.');
       // Still call onSubmit to allow UI to handle the error
       onSubmit(finalData);
     }

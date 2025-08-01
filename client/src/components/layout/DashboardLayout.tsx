@@ -57,16 +57,10 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       roles: ['admin', 'department_head', 'data_entry_user']
     },
     {
-      title: 'SDG Dashboard',
+      title: 'SDG Management',
       icon: Target,
-      path: '/sdg-dashboard',
+      path: '/admin/sdg-management',
       roles: ['admin', 'department_head', 'data_entry_user']
-    },
-    {
-      title: 'Data Collection',
-      icon: ClipboardList,
-      path: '/data-collection',
-      roles: ['data_entry_user', 'department_user']
     },
     {
       title: 'User Management',
@@ -96,12 +90,6 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       title: 'Schedule Management',
       icon: Calendar,
       path: '/admin/schedules',
-      roles: ['admin']
-    },
-    {
-      title: 'SDG Management',
-      icon: Target,
-      path: '/admin/sdg-management',
       roles: ['admin']
     },
     {

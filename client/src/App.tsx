@@ -20,6 +20,7 @@ import { DataCollection } from "./pages/DataCollection";
 import { Reports } from "./pages/Reports";
 import { TechnologyTransfer } from "./pages/admin/TechnologyTransfer";
 import { SDGManagement } from "./pages/admin/SDGManagement";
+import { Toaster as HotToaster } from 'react-hot-toast';
 
 
 const queryClient = new QueryClient({
@@ -50,6 +51,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <HotToaster />
         <BrowserRouter>
           <Routes>
             {/* Public Routes */}

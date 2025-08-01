@@ -133,12 +133,9 @@ export const SDGGoalsManager = () => {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              {goals.length === 0 && (
-                <Button onClick={initializeDefaultGoals} variant="outline">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Initialize SDG Data
-                </Button>
-              )}
+              <div className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+                ✅ Database populated with authentic data
+              </div>
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
                   <Button>

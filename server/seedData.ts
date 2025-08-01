@@ -24,47 +24,52 @@ const sdgGoalsData = [
 
 // Comprehensive SDG targets based on actual indicators with data
 const sdgTargetsData = [
-  { id: "1.2", sdg_goal_id: 1, title: "Reduce poverty by half", description: "By 2030, reduce at least by half the proportion of men, women and children of all ages living in poverty in all its dimensions according to national definitions" },
-  { id: "1.3", sdg_goal_id: 1, title: "Social protection systems", description: "Implement nationally appropriate social protection systems and measures for all, including floors, and by 2030 achieve substantial coverage of the poor and the vulnerable" },
-  { id: "1.4", sdg_goal_id: 1, title: "Equal access to basic services", description: "By 2030, ensure that all men and women, in particular the poor and the vulnerable, have equal rights to economic resources, as well as access to basic services" },
-  { id: "1.5", sdg_goal_id: 1, title: "Resilience to disasters", description: "By 2030, build the resilience of the poor and those in vulnerable situations and reduce their exposure and vulnerability to climate-related extreme events" },
-  { id: "1.a", sdg_goal_id: 1, title: "Resource mobilization", description: "Ensure significant mobilization of resources from a variety of sources, including through enhanced development cooperation, in order to provide adequate and predictable means for developing countries" },
-  { id: "2.2", sdg_goal_id: 2, title: "End malnutrition", description: "By 2030, end all forms of malnutrition, including achieving, by 2025, the internationally agreed targets on stunting and wasting in children under 5 years of age" },
-  { id: "3.1", sdg_goal_id: 3, title: "Reduce maternal mortality", description: "By 2030, reduce the global maternal mortality ratio to less than 70 per 100,000 live births" },
-  { id: "3.2", sdg_goal_id: 3, title: "End preventable deaths of children", description: "By 2030, end preventable deaths of newborns and children under 5 years of age" },
-  { id: "4.6", sdg_goal_id: 4, title: "Adult literacy and numeracy", description: "By 2030, ensure that all youth and a substantial proportion of adults, both men and women, achieve literacy and numeracy" },
-  { id: "8.5", sdg_goal_id: 8, title: "Full employment and decent work", description: "By 2030, achieve full and productive employment and decent work for all women and men, including for young people and persons with disabilities" },
-  { id: "8.6", sdg_goal_id: 8, title: "Reduce youth NEET", description: "By 2020, substantially reduce the proportion of youth not in employment, education or training" },
-  { id: "15.1", sdg_goal_id: 15, title: "Conserve terrestrial ecosystems", description: "By 2020, ensure the conservation, restoration and sustainable use of terrestrial and inland freshwater ecosystems" },
-  { id: "16.9", sdg_goal_id: 16, title: "Legal identity for all", description: "By 2030, provide legal identity for all, including birth registration" },
+  { target_number: "1.2", sdg_goal_id: 1, title: "Reduce poverty by half", description: "By 2030, reduce at least by half the proportion of men, women and children of all ages living in poverty in all its dimensions according to national definitions" },
+  { target_number: "1.3", sdg_goal_id: 1, title: "Social protection systems", description: "Implement nationally appropriate social protection systems and measures for all, including floors, and by 2030 achieve substantial coverage of the poor and the vulnerable" },
+  { target_number: "1.4", sdg_goal_id: 1, title: "Equal access to basic services", description: "By 2030, ensure that all men and women, in particular the poor and the vulnerable, have equal rights to economic resources, as well as access to basic services" },
+  { target_number: "1.5", sdg_goal_id: 1, title: "Resilience to disasters", description: "By 2030, build the resilience of the poor and those in vulnerable situations and reduce their exposure and vulnerability to climate-related extreme events" },
+  { target_number: "1.a", sdg_goal_id: 1, title: "Resource mobilization", description: "Ensure significant mobilization of resources from a variety of sources, including through enhanced development cooperation, in order to provide adequate and predictable means for developing countries" },
+  { target_number: "2.2", sdg_goal_id: 2, title: "End malnutrition", description: "By 2030, end all forms of malnutrition, including achieving, by 2025, the internationally agreed targets on stunting and wasting in children under 5 years of age" },
+  { target_number: "3.1", sdg_goal_id: 3, title: "Reduce maternal mortality", description: "By 2030, reduce the global maternal mortality ratio to less than 70 per 100,000 live births" },
+  { target_number: "3.2", sdg_goal_id: 3, title: "End preventable deaths of children", description: "By 2030, end preventable deaths of newborns and children under 5 years of age" },
+  { target_number: "4.6", sdg_goal_id: 4, title: "Adult literacy and numeracy", description: "By 2030, ensure that all youth and a substantial proportion of adults, both men and women, achieve literacy and numeracy" },
+  { target_number: "8.5", sdg_goal_id: 8, title: "Full employment and decent work", description: "By 2030, achieve full and productive employment and decent work for all women and men, including for young people and persons with disabilities" },
+  { target_number: "8.6", sdg_goal_id: 8, title: "Reduce youth NEET", description: "By 2020, substantially reduce the proportion of youth not in employment, education or training" },
+  { target_number: "15.1", sdg_goal_id: 15, title: "Conserve terrestrial ecosystems", description: "By 2020, ensure the conservation, restoration and sustainable use of terrestrial and inland freshwater ecosystems" },
+  { target_number: "16.9", sdg_goal_id: 16, title: "Legal identity for all", description: "By 2030, provide legal identity for all, including birth registration" },
 ];
 
-// All SDG indicators based on your actual data document
-const sdgIndicatorsData = [
-  {
-    id: "1.2.2",
-    sdg_target_id: "1.2",
-    indicator_code: "1.2.2",
-    title: "Proportion of men, women and children of all ages living in poverty in all its dimensions according to national definitions",
-    description: "Multi-dimensional Poverty Index (MPI) measuring poverty across health, education and living standards",
-    indicator_type: "percentage",
-    unit: "percentage",
-    methodology: "Multi-dimensional Poverty Index computation based on MICS and PSLM data",
-    data_collection_frequency: "Every 3-5 years",
-    responsible_departments: ["Planning Commission", "PBS", "UNICEF"]
-  },
-  {
-    id: "1.3.1",
-    sdg_target_id: "1.3",
-    indicator_code: "1.3.1",
-    title: "Proportion of population covered by social protection floors/systems",
-    description: "Percentage of population receiving social protection benefits including BISP and other transfers",
-    indicator_type: "percentage", 
-    unit: "percentage",
-    methodology: "Based on PDHS and MICS household surveys on social protection coverage",
-    data_collection_frequency: "Every 3-5 years",
-    responsible_departments: ["Ministry of Social Protection", "BISP", "PBS"]
-  },
+// Function to create indicators after targets are inserted
+const createSdgIndicatorsData = async (adminId: string) => {
+  // Get target IDs from database
+  const targets = await db.select().from(sdg_targets);
+  const targetMap = new Map(targets.map(t => [t.target_number, t.id]));
+  
+  return [
+    {
+      sdg_target_id: targetMap.get("1.2")!,
+      indicator_code: "1.2.2",
+      title: "Proportion of men, women and children of all ages living in poverty in all its dimensions according to national definitions",
+      description: "Multi-dimensional Poverty Index (MPI) measuring poverty across health, education and living standards",
+      indicator_type: "percentage" as const,
+      unit: "percentage",
+      methodology: "Multi-dimensional Poverty Index computation based on MICS and PSLM data",
+      data_collection_frequency: "Every 3-5 years",
+      responsible_departments: ["Planning Commission", "PBS", "UNICEF"],
+      created_by: adminId
+    },
+    {
+      sdg_target_id: targetMap.get("1.3")!,
+      indicator_code: "1.3.1",
+      title: "Proportion of population covered by social protection floors/systems",
+      description: "Percentage of population receiving social protection benefits including BISP and other transfers",
+      indicator_type: "percentage" as const, 
+      unit: "percentage",
+      methodology: "Based on PDHS and MICS household surveys on social protection coverage",
+      data_collection_frequency: "Every 3-5 years",
+      responsible_departments: ["Ministry of Social Protection", "BISP", "PBS"],
+      created_by: adminId
+    },
   {
     id: "1.4.1",
     sdg_target_id: "1.4",
@@ -214,94 +219,64 @@ const sdgIndicatorsData = [
 // All data sources mentioned in your document
 const sdgDataSourcesData = [
   {
-    id: "MPI2014",
     name: "MPI Report 2014-15",
     full_name: "Multi-dimensional Poverty Index Report 2014-15", 
-    description: "Baseline MPI computation for poverty measurement",
-    organization: "Planning Commission Pakistan",
-    frequency: "Irregular",
-    last_survey_year: 2015
+    source_type: "Custom" as const,
+    description: "Baseline MPI computation for poverty measurement"
   },
   {
-    id: "MICS",
     name: "MICS",
     full_name: "Multiple Indicator Cluster Survey", 
-    description: "UNICEF-supported household survey program",
-    organization: "UNICEF Pakistan",
-    frequency: "Every 3-5 years",
-    last_survey_year: 2020
+    source_type: "MICS" as const,
+    description: "UNICEF-supported household survey program"
   },
   {
-    id: "PDHS", 
     name: "PDHS",
     full_name: "Pakistan Demographic and Health Survey",
-    description: "National demographic and health survey",
-    organization: "National Institute of Population Studies (NIPS)",
-    frequency: "Every 5-7 years", 
-    last_survey_year: 2018
+    source_type: "PDHS" as const,
+    description: "National demographic and health survey"
   },
   {
-    id: "PSLM",
     name: "PSLM", 
     full_name: "Pakistan Social and Living Standards Measurement",
-    description: "National socio-economic survey",
-    organization: "Pakistan Bureau of Statistics",
-    frequency: "Every 2-3 years",
-    last_survey_year: 2020
+    source_type: "PSLM" as const,
+    description: "National socio-economic survey"
   },
   {
-    id: "NNS",
     name: "NNS",
     full_name: "National Nutrition Survey", 
-    description: "Comprehensive nutrition and health survey",
-    organization: "Aga Khan University",
-    frequency: "Every 5-10 years",
-    last_survey_year: 2018
+    source_type: "NNS" as const,
+    description: "Comprehensive nutrition and health survey"
   },
   {
-    id: "NDMA",
     name: "NDMA Reports",
     full_name: "National Disaster Management Authority Annual Reports",
-    description: "Disaster impact and response data",
-    organization: "National Disaster Management Authority",
-    frequency: "Annual",
-    last_survey_year: 2021
+    source_type: "NDMA" as const,
+    description: "Disaster impact and response data"
   },
   {
-    id: "BUDGET",
     name: "Budget Statements",
     full_name: "Provincial Budget Statements and PRSP Reports",
-    description: "Government spending and budget allocation data",
-    organization: "Ministry of Finance Balochistan",
-    frequency: "Annual",
-    last_survey_year: 2023
+    source_type: "PBS" as const,
+    description: "Government spending and budget allocation data"
   },
   {
-    id: "MMR",
     name: "Pakistan MMR Survey",
     full_name: "Pakistan Maternal Mortality Rate Survey",
-    description: "Specialized survey on maternal mortality",
-    organization: "Ministry of Health Pakistan",
-    frequency: "Irregular",
-    last_survey_year: 2019
+    source_type: "Custom" as const,
+    description: "Specialized survey on maternal mortality"
   },
   {
-    id: "LFS",
     name: "LFS",
     full_name: "Labour Force Survey",
-    description: "Quarterly employment and labour statistics",
-    organization: "Pakistan Bureau of Statistics",
-    frequency: "Quarterly",
-    last_survey_year: 2021
+    source_type: "PBS" as const,
+    description: "Quarterly employment and labour statistics"
   },
   {
-    id: "FORESTRY",
     name: "Balochistan Development Statistics",
     full_name: "Balochistan Development Statistics and Agriculture Statistics",
-    description: "Provincial development and agriculture data including forestry",
-    organization: "Government of Balochistan",
-    frequency: "Annual",
-    last_survey_year: 2022
+    source_type: "Custom" as const,
+    description: "Provincial development and agriculture data including forestry"
   }
 ];
 

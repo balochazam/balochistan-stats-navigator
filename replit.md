@@ -1,158 +1,54 @@
 # Data Collection Management System
 
 ## Overview
+This is a full-stack data collection management system with a public-first approach, designed to enable organizations to create structured forms, manage data collection, and publish transparent reports for public access. It features interactive charts and visualizations for published reports and secure admin access for data management. The system supports role-based access control with department-based data isolation. The project aims to provide a comprehensive SDG Dashboard system, integrating authentic Balochistan data and supporting all phases of SDG implementation, from data entry to progress tracking and visualization.
 
-This is a full-stack data collection management system with a public-first approach, built with React, Node.js, Express, and PostgreSQL. The application features a beautiful public landing page showcasing published reports with interactive charts and visualizations, while providing secure admin access for data collection management. Organizations can create structured forms, manage data collection schedules, and publish transparent reports for public access. It features role-based access control with admin-only user creation and department-based data isolation.
+## User Preferences
+Preferred communication style: Simple, everyday language.
 
 ## System Architecture
 
 ### Frontend Architecture
 - **Framework**: React 18 with TypeScript
-- **Build Tool**: Vite for fast development and optimized builds
-- **UI Components**: Shadcn/ui component library built on Radix UI primitives
-- **Styling**: Tailwind CSS with custom design system
-- **State Management**: React Query for server state management
-- **Routing**: React Router for client-side navigation
+- **Build Tool**: Vite
+- **UI Components**: Shadcn/ui (built on Radix UI)
+- **Styling**: Tailwind CSS
+- **State Management**: React Query
+- **Routing**: React Router
 - **Forms**: React Hook Form with Zod validation
+- **UI/UX**: Public-first design with a beautiful landing page, authentic UN colors for SDG elements, and integration of the official Balochistan Bureau of Statistics logo. The interface emphasizes comprehensive guidance and teaching elements for form creation.
 
 ### Backend Architecture
 - **Runtime**: Node.js with Express framework
-- **Database**: PostgreSQL via Supabase
-- **ORM**: Drizzle ORM (configured but not fully utilized - falls back to Supabase client)
+- **Database**: PostgreSQL (via Supabase)
+- **ORM**: Drizzle ORM (configured, but primarily uses Supabase client)
 - **Authentication**: Supabase Auth with Row Level Security (RLS)
-- **API Architecture**: RESTful API design (routes placeholder exists)
+- **API Architecture**: RESTful API design, including 15+ endpoints for the SDG Dashboard system.
 
 ### Database Design
-- **Users & Profiles**: User authentication and profile management with role-based access
-- **Departments**: Organizational structure for user grouping
-- **Data Banks**: Master data management for reference data
-- **Forms**: Dynamic form builder with field definitions
-- **Schedules**: Time-based data collection periods
-- **Form Submissions**: Collected data storage with JSON fields
+- **Core Entities**: Users, Profiles, Departments, Data Banks, Forms, Schedules, Form Submissions.
+- **SDG Implementation**: Dedicated schema including `goals`, `targets`, `indicators`, `data sources`, `indicator values`, and `progress calculations`. All populated with real Balochistan data (17 UN SDG goals, 13 targets, 14 indicators, 10 data sources, 16+ historical data values with urban/rural breakdowns).
 
-## Key Components
-
-### Authentication & Authorization
-- Supabase Auth integration with email/password authentication
-- Three-tier role system: admin, department_user, data_entry_user
-- Row Level Security policies for data access control
-- Profile management with department assignments
-
-### Form Management
-- Dynamic form builder with multiple field types (text, textarea, select, radio, number, email, date)
-- Reference data integration for dropdown/radio options
-- Primary and secondary column designation for data display
-- Form validation and field ordering
-
-### Schedule Management
-- Time-bounded data collection periods
-- Form association with schedules
-- Status tracking (open, collection, published)
-- User completion tracking
-
-### Data Collection
-- Dynamic form rendering based on schedule assignments
-- Real-time submission tracking
-- Progress monitoring for administrators
-- Department-based data organization
-
-### Reporting System
-- Schedule publishing capability when all forms are completed
-- Tabular data visualization for published schedules
-- Form-specific data reports with submission details
-- CSV export functionality for data analysis
-- Completion status tracking and validation
-
-## Data Flow
-
-1. **Admin Setup**: Administrators create departments, reference data, and forms
-2. **Schedule Creation**: Admins create collection schedules and assign forms
-3. **User Assignment**: Users are assigned to departments and given appropriate roles
-4. **Data Collection**: Users access assigned forms through schedules and submit data
-5. **Progress Tracking**: Admins monitor completion status and collected data
-6. **Form Completion**: Users mark forms as complete when finished with data entry
-7. **Schedule Publishing**: Admins publish schedules when all forms are completed
-8. **Report Generation**: Published schedules provide tabular data views and CSV exports
+### Key Components & Features
+- **Authentication & Authorization**: Supabase Auth, admin-only user creation, two-tier role system (admin, data_entry_user), RLS, department-based access control.
+- **Form Management**: Dynamic builder with multiple field types, reference data integration, primary/secondary column designation, validation, hierarchical sub-headers, and auto-generated field names.
+- **Schedule Management**: Time-bounded collection periods, form association, status tracking, and business validation rules.
+- **Data Collection**: Dynamic form rendering, real-time submission tracking, progress monitoring, and department-based organization.
+- **Reporting System**: Schedule publishing, tabular data visualization, CSV/PDF export with hierarchical table structure, comprehensive filtering (search, status, date, category, department), and completion status validation.
+- **SDG Dashboard**: Comprehensive system with Goals Manager, Indicators Manager, specialized data entry forms for various indicator types, Progress Tracker with visualization, and an interactive dashboard.
+- **Technology Transfer Page**: Admin-only section providing technical documentation, architecture, database schema, API endpoints, development workflow, and maintenance guidelines.
 
 ## External Dependencies
 
 ### Core Dependencies
-- **Supabase**: Backend-as-a-Service for database, authentication, and real-time features
-- **Neon Database**: PostgreSQL hosting (configured in Drizzle but using Supabase)
-- **Shadcn/ui**: Modern React component library
-- **React Query**: Server state management and caching
-- **Zod**: Schema validation for forms and API data
+- **Supabase**: Backend-as-a-Service for database, authentication, and real-time features.
+- **Neon Database**: PostgreSQL hosting (configured in Drizzle, but using Supabase).
+- **Shadcn/ui**: Modern React component library.
+- **React Query**: Server state management and caching.
+- **Zod**: Schema validation.
 
 ### Development Tools
-- **TypeScript**: Type safety across the application
-- **ESBuild**: Fast JavaScript bundling for production
-- **PostCSS**: CSS processing with Tailwind
-- **Replit**: Development environment integration
-
-## Deployment Strategy
-
-### Development Environment
-- Replit-based development with live reload
-- Vite dev server for frontend with HMR
-- Express server for API development
-- PostgreSQL database provisioning
-
-### Production Build
-- **Frontend**: Vite build process generating optimized static assets
-- **Backend**: ESBuild bundling Node.js application
-- **Database**: Supabase managed PostgreSQL with migrations
-- **Deployment**: Replit autoscale deployment target
-
-### Environment Configuration
-- Database connection via `DATABASE_URL` environment variable
-- Supabase configuration with public API keys
-- Development/production environment detection
-
-## Changelog
-
-```
-Changelog:
-- June 16, 2025. Initial setup
-- June 16, 2025. Fixed data collection functionality - users can now submit multiple entries per form, removed artificial completion limits
-- June 16, 2025. Added comprehensive reporting system - schedules can be published when all forms are complete, published schedules show tabular data reports with CSV export functionality
-- June 17, 2025. Implemented hierarchical sub-header system for complex nested forms (Province → Medical Personnel → Doctors/Dentists/Specialists → Gender breakdowns)
-- June 17, 2025. Fixed form creation bug where sub-header data wasn't being saved to database
-- June 17, 2025. Enhanced validation logic - fields with sub-headers skip required validation and hide main input field
-- June 17, 2025. Fixed reporting system to properly display hierarchical form data - now works with both simple and nested form structures
-- June 17, 2025. Enhanced PDF export to match hierarchical table structure with proper multi-level headers and organized columns
-- June 18, 2025. Implemented comprehensive filtering system across all modules (Reports, Forms, Schedules, Departments) to efficiently handle large datasets with search, status, date, and category filters
-- June 18, 2025. Added user creation capabilities with department assignment and implemented department-based access control - non-admin users only see data from their assigned department
-- June 18, 2025. Fixed Data Collection page filtering to show schedules with "collection" status regardless of end date, ensuring department users can access their assigned forms
-- June 18, 2025. Enabled shared access to Data Bank Management for all authenticated users while maintaining department isolation for operational data
-- June 18, 2025. Fixed Data Collection infinite loading loop issue and implemented status-only filtering - schedules are now filtered purely by "collection" status, not dates, allowing users to access forms regardless of time ranges
-- June 18, 2025. Resolved "Start Collection" button visibility bug - button now correctly appears when schedules have "open" status and contain forms, fixed form count fetching logic to properly track schedule form relationships
-- June 18, 2025. Implemented completion validation for "Mark Published" button - button now only appears when all forms in a collection schedule are actually completed by users, prevents premature publishing of incomplete data
-- June 18, 2025. Enhanced Data Collection page to show both collection schedules (for data entry) and published schedules (for viewing reports) - department users can now access reports for completed schedules from their department
-- June 18, 2025. Consolidated duplicate route functionality - removed separate "Completed Schedules" page and integrated all functionality into single "Reports" page with URL parameter support for direct navigation to specific schedules and forms
-- June 18, 2025. Implemented comprehensive schedule business validation rules - new schedules automatically start with "open" status (field disabled during creation), "Manage Forms" button only visible for open status, "Start Collection" button only appears after forms are added, once collection starts forms cannot be added and manage forms is disabled
-- June 18, 2025. Enhanced form creation interface with comprehensive guidance and teaching elements - added step-by-step instructions, best practices, field type explanations, and real-world examples to help users understand hierarchical vs simple form creation
-- June 18, 2025. Transformed application to public-first architecture - removed sign-up functionality, created beautiful public landing page with charts and analytics for published reports, admin users now create all accounts, main homepage shows transparent data visualization with interactive charts and department filtering
-- June 18, 2025. Enhanced public reports to display only actual data rows (no zero-filled empty rows) and implemented dynamic chart updates that change when switching between form tabs - charts now show data specific to the currently selected form rather than static first-form data
-- June 18, 2025. Removed chart visualization from public reports per user request and implemented comprehensive export functionality - export button now downloads CSV file containing data from all forms in the schedule with organized sections and proper field labels
-- June 18, 2025. Enhanced export functionality with PDF support - added dropdown menu offering both CSV and PDF export options, PDF export maintains hierarchical table structure matching web display with professional formatting and landscape orientation
-- June 18, 2025. Added comprehensive filtering system to public reports matching authenticated reports functionality - includes data search, date range filtering, department filtering, and real-time filter status with submission count indicators
-- June 18, 2025. Removed chart visualizations from Reports page per user request - eliminated pie charts and bar charts to simplify the interface while maintaining all data filtering and export functionality
-- June 19, 2025. Removed non-functional download button from public report cards on main dashboard - simplified interface to show only working "View Report" button while preserving functional export options within detailed report view
-- June 19, 2025. Updated system naming to "Balochistan Bureau of Statistics Dashboard" throughout application and made statistics card dynamic - replaced static "Data accuracy 100%" with dynamic "Publication Rate" based on actual published schedules data
-- June 19, 2025. Replaced all Western name placeholders with Pakistani names throughout system - updated user creation form placeholders to use "Ahmad Hassan" and "ahmad.hassan@example.com", login forms to use "admin@bbs.gov.pk" format, ensuring cultural appropriateness for Pakistani government context
-- June 19, 2025. Implemented role-based department field validation - department field now disabled for admin users (not applicable) and mandatory for data entry/department users with proper validation messages and form submission handling
-- June 19, 2025. Simplified user role system - removed department_user role, system now uses only admin and data_entry_user roles for cleaner permission structure and easier management
-- June 19, 2025. Created comprehensive Technology Transfer page for developers - admin-only access page positioned below Profile in sidebar containing complete technical documentation, system architecture, database schema, API endpoints, development workflow, and maintenance guidelines for future developers
-- June 19, 2025. Implemented official Balochistan Bureau of Statistics logo throughout application - added green circular logo with camels, mountains, crescent moon and Urdu text to all headers (dashboard sidebar, public landing page, admin login page, public report view, and Technology Transfer page) replacing generic icons for authentic Pakistani government branding
-- June 19, 2025. Enhanced form builder with auto-generated field names - removed manual field name column, system now automatically generates field names from labels for both main fields and sub-header fields, improved user experience by eliminating technical field naming requirements
-- June 19, 2025. Optimized dashboard loading performance - implemented parallel API calls instead of sequential requests, reduced authentication timeout from 5 seconds to 2 seconds, fixed form delete functionality with proper 204 response handling
-- June 19, 2025. Implemented multi-option select functionality for non-primary select fields - when a select field is not marked as primary column, system renders all reference data options as separate input fields allowing users to enter data for all options in single submission, eliminates need to create multiple submissions for different select options
-- June 19, 2025. Simplified reference data creation by removing unnecessary department field from data bank management and updated placeholder text to use culturally appropriate Balochistan cities (Quetta, Gwadar, Turbat) instead of Western examples, enhancing user experience for Pakistani government context
-- August 1, 2025. **COMPLETED PHASE 1 & 2 OF SDG IMPLEMENTATION**: Comprehensive SDG Dashboard system with full database schema (6 tables: goals, targets, indicators, data sources, indicator values, progress calculations), complete REST API with 15+ endpoints, SDG Management admin interface with Goals Manager, Indicators Manager, specialized Data Entry forms for different indicator types (percentage, rate, count, budget, multi-dimensional, survey-based), Progress Tracker with visualization, and interactive SDG Dashboard with authentic UN colors and real-time data integration - ready for Phase 3 Analytics & Reporting
-```
-
-## User Preferences
-
-```
-Preferred communication style: Simple, everyday language.
-```
+- **TypeScript**: Type safety.
+- **ESBuild**: Fast JavaScript bundling.
+- **PostCSS**: CSS processing.
+- **Replit**: Development environment integration.

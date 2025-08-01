@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search, Target, Database, BarChart3, Globe, Users, Calendar, Filter } from 'lucide-react';
-import { AuthenticSDGDataEntryForm } from './AuthenticSDGDataEntryForm';
+// import { AuthenticSDGDataEntryForm } from './AuthenticSDGDataEntryForm';
 import { Goal1SpecificDataEntry } from './Goal1SpecificDataEntry';
 import { BalochistandDataEntry } from './BalochistandDataEntry';
 import { getIndicatorFormStructure } from '@/data/goal1IndicatorForms';
@@ -132,7 +132,7 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
       form_structure: {
         fields: generateFieldsForIndicator(dbIndicator),
         calculation: dbIndicator.indicator_type === 'ratio' ? { formula: 'Numerator ÷ Denominator' } : undefined,
-        authentic_structure: getIndicatorFormStructure(dbIndicator.indicator_code)
+        // authentic_structure: getIndicatorFormStructure(dbIndicator.indicator_code)
       }
     };
   };
@@ -256,19 +256,10 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
             }}
           />
         ) : (
-          <AuthenticSDGDataEntryForm
-            indicator={selectedIndicator}
-            onSubmit={(data) => {
-              console.log('Data submitted:', data);
-              // TODO: Save to backend
-              setViewMode('browse');
-              setSelectedIndicator(null);
-            }}
-            onCancel={() => {
-              setViewMode('browse');
-              setSelectedIndicator(null);
-            }}
-          />
+          <div className="p-8 text-center">
+            <p className="text-gray-600">Balochistan-specific forms are currently available for Goal 1 indicators only.</p>
+            <p className="text-sm text-gray-500 mt-2">Other goals will use Balochistan format once development is complete.</p>
+          </div>
         )}
       </div>
     );

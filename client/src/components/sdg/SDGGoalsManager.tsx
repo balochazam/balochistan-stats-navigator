@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -165,6 +166,7 @@ const defaultSDGData = [
 ];
 
 export const SDGGoalsManager = () => {
+  const navigate = useNavigate();
 
   const { data: goals = [], isLoading, error } = useQuery({
     queryKey: ['/api/sdg/goals'],

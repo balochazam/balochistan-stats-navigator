@@ -218,12 +218,7 @@ export const SDGGoalsManager = () => {
               API Unavailable
             </Badge>
           )}
-          {!error && goalsArray.length > 0 && (
-            <Badge className="py-2 px-4 bg-green-50 text-green-700 border-green-200">
-              <Database className="h-4 w-4 mr-2" />
-              Real Data Connected
-            </Badge>
-          )}
+          
           <Badge variant="outline" className="text-lg py-2 px-4">
             <Target className="h-5 w-5 mr-2" />
             17 Goals Active

@@ -8,32 +8,28 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Textarea } from '@/components/ui/textarea';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Checkbox } from '@/components/ui/checkbox';
 import { AlertCircle, Calculator, Database, FileText } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { getIndicatorFormStructure, type IndicatorFormStructure, type FormField } from '@/data/goal1IndicatorForms';
 import { getBalochistandFormStructure, type BalochistanIndicatorForm, type BalochistanFormField } from '@/data/balochistandGoal1Forms';
 
-interface Goal1SpecificDataEntryProps {
+interface BalochistandDataEntryProps {
   indicatorCode: string;
   indicatorTitle: string;
   onSubmit: (data: any) => void;
   onCancel: () => void;
 }
 
-export const Goal1SpecificDataEntry: React.FC<Goal1SpecificDataEntryProps> = ({
+export const BalochistandDataEntry: React.FC<BalochistandDataEntryProps> = ({
   indicatorCode,
   indicatorTitle,
   onSubmit,
   onCancel
 }) => {
   const [currentSection, setCurrentSection] = useState(0);
-  const [useBalochistanForm, setUseBalochistanForm] = useState(true);
-  
-  // Try Balochistan form first, then fall back to UN form
-  const balochistandForm = getBalochistandFormStructure(indicatorCode);
-  const unForm = getIndicatorFormStructure(indicatorCode);
-  const formStructure = useBalochistanForm ? balochistandForm : unForm;
-  
+  const formStructure = getBalochistandFormStructure(indicatorCode);
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm();
 
   if (!formStructure) {
@@ -43,8 +39,8 @@ export const Goal1SpecificDataEntry: React.FC<Goal1SpecificDataEntryProps> = ({
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Specific form structure for indicator {indicatorCode} is being developed. 
-              Available forms: {balochistandForm ? 'Balochistan ✓' : 'Balochistan ✗'} {unForm ? 'UN ✓' : 'UN ✗'}
+              Balochistan-specific form for indicator {indicatorCode} is being developed. 
+              Please check back later or contact system administrator.
             </AlertDescription>
           </Alert>
           <div className="mt-4 space-x-2">
@@ -55,7 +51,7 @@ export const Goal1SpecificDataEntry: React.FC<Goal1SpecificDataEntryProps> = ({
     );
   }
 
-  const renderField = (field: FormField | BalochistanFormField, sectionIndex: number) => {
+  const renderField = (field: BalochistanFormField, sectionIndex: number) => {
     const fieldName = `section_${sectionIndex}_${field.name}`;
     
     switch (field.type) {
@@ -84,21 +80,62 @@ export const Goal1SpecificDataEntry: React.FC<Goal1SpecificDataEntryProps> = ({
       case 'multiselect':
         return (
           <div key={fieldName} className="space-y-2">
-            <Label htmlFor={fieldName}>
+            <Label>
               {field.label} {field.required && <span className="text-red-500">*</span>}
             </Label>
             <div className="grid grid-cols-2 gap-2">
               {field.options?.map((option) => (
-                <label key={option} className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    {...register(`${fieldName}.${option}`)}
-                    className="rounded"
+                <div key={option} className="flex items-center space-x-2">
+                  <Checkbox 
+                    id={`${fieldName}_${option}`}
+                    onCheckedChange={(checked) => {
+                      const currentValue = watch(fieldName) || {};
+                      setValue(fieldName, { ...currentValue, [option]: checked });
+                    }}
                   />
-                  <span className="text-sm">{option}</span>
-                </label>
+                  <Label htmlFor={`${fieldName}_${option}`} className="text-sm">
+                    {option}
+                  </Label>
+                </div>
               ))}
             </div>
+            {field.description && (
+              <p className="text-sm text-gray-600">{field.description}</p>
+            )}
+          </div>
+        );
+
+      case 'radio':
+        return (
+          <div key={fieldName} className="space-y-2">
+            <Label>
+              {field.label} {field.required && <span className="text-red-500">*</span>}
+            </Label>
+            <RadioGroup onValueChange={(value) => setValue(fieldName, value)}>
+              {field.options?.map((option) => (
+                <div key={option} className="flex items-center space-x-2">
+                  <RadioGroupItem value={option} id={`${fieldName}_${option}`} />
+                  <Label htmlFor={`${fieldName}_${option}`}>{option}</Label>
+                </div>
+              ))}
+            </RadioGroup>
+            {field.description && (
+              <p className="text-sm text-gray-600">{field.description}</p>
+            )}
+          </div>
+        );
+
+      case 'textarea':
+        return (
+          <div key={fieldName} className="space-y-2">
+            <Label htmlFor={fieldName}>
+              {field.label} {field.required && <span className="text-red-500">*</span>}
+            </Label>
+            <Textarea
+              {...register(fieldName, { required: field.required })}
+              placeholder={`Enter ${field.label.toLowerCase()}`}
+              rows={3}
+            />
             {field.description && (
               <p className="text-sm text-gray-600">{field.description}</p>
             )}
@@ -114,47 +151,19 @@ export const Goal1SpecificDataEntry: React.FC<Goal1SpecificDataEntryProps> = ({
             <div className="relative">
               <Input
                 type="number"
-                step="0.01"
-                min={field.validation?.min || 0}
-                max={field.validation?.max || 100}
+                step="0.1"
+                min="0"
+                max="100"
                 {...register(fieldName, { 
                   required: field.required,
-                  min: field.validation?.min,
-                  max: field.validation?.max
+                  min: 0,
+                  max: 100
                 })}
-                className="pr-8"
               />
               <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">%</span>
             </div>
             {field.description && (
               <p className="text-sm text-gray-600">{field.description}</p>
-            )}
-            {field.unit && (
-              <p className="text-xs text-gray-500">Unit: {field.unit}</p>
-            )}
-          </div>
-        );
-
-      case 'currency':
-        return (
-          <div key={fieldName} className="space-y-2">
-            <Label htmlFor={fieldName}>
-              {field.label} {field.required && <span className="text-red-500">*</span>}
-            </Label>
-            <Input
-              type="number"
-              step="0.01"
-              min={field.validation?.min || 0}
-              {...register(fieldName, { 
-                required: field.required,
-                min: field.validation?.min
-              })}
-            />
-            {field.description && (
-              <p className="text-sm text-gray-600">{field.description}</p>
-            )}
-            {field.unit && (
-              <p className="text-xs text-gray-500">Unit: {field.unit}</p>
             )}
           </div>
         );
@@ -167,9 +176,7 @@ export const Goal1SpecificDataEntry: React.FC<Goal1SpecificDataEntryProps> = ({
             </Label>
             <Input
               type="number"
-              step={field.label.includes('Index') ? '0.001' : '1'}
-              min={field.validation?.min}
-              max={field.validation?.max}
+              step={field.validation?.step || "0.01"}
               {...register(fieldName, { 
                 required: field.required,
                 min: field.validation?.min,
@@ -216,7 +223,7 @@ export const Goal1SpecificDataEntry: React.FC<Goal1SpecificDataEntryProps> = ({
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Database className="h-5 w-5" />
-                {indicatorCode} Data Entry
+                {indicatorCode} - Balochistan Data Entry
               </CardTitle>
               <p className="text-sm text-gray-600 mt-1">{indicatorTitle}</p>
             </div>
@@ -224,30 +231,9 @@ export const Goal1SpecificDataEntry: React.FC<Goal1SpecificDataEntryProps> = ({
               <Badge variant="outline">
                 Section {currentSection + 1} of {formStructure.form_sections.length}
               </Badge>
-              <Badge variant="secondary">Goal 1</Badge>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 mt-4">
-            <div className="flex gap-1">
-              <Button
-                size="sm"
-                variant={useBalochistanForm ? "default" : "outline"}
-                onClick={() => setUseBalochistanForm(true)}
-                disabled={!balochistandForm}
-              >
+              <Badge variant="secondary" className="bg-green-100 text-green-800">
                 Balochistan Format
-              </Button>
-              <Button
-                size="sm"
-                variant={!useBalochistanForm ? "default" : "outline"}
-                onClick={() => setUseBalochistanForm(false)}
-                disabled={!unForm}
-              >
-                UN Format
-              </Button>
-            </div>
-            <div className="text-sm text-gray-600">
-              {useBalochistanForm ? 'Using Balochistan survey-based format' : 'Using UN standard format'}
+              </Badge>
             </div>
           </div>
         </CardHeader>
@@ -258,11 +244,11 @@ export const Goal1SpecificDataEntry: React.FC<Goal1SpecificDataEntryProps> = ({
         {formStructure.form_sections.map((_, index) => (
           <div key={index} className="flex items-center">
             <div className={`h-3 w-3 rounded-full ${
-              index <= currentSection ? 'bg-blue-500' : 'bg-gray-300'
+              index <= currentSection ? 'bg-green-500' : 'bg-gray-300'
             }`} />
             {index < formStructure.form_sections.length - 1 && (
               <div className={`h-0.5 w-8 ${
-                index < currentSection ? 'bg-blue-500' : 'bg-gray-300'
+                index < currentSection ? 'bg-green-500' : 'bg-gray-300'
               }`} />
             )}
           </div>
@@ -304,10 +290,10 @@ export const Goal1SpecificDataEntry: React.FC<Goal1SpecificDataEntryProps> = ({
                     type="button" 
                     onClick={() => setCurrentSection(currentSection + 1)}
                   >
-                    Next Section
+                    Next
                   </Button>
                 ) : (
-                  <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+                  <Button type="submit" className="bg-green-600 hover:bg-green-700">
                     Submit Data
                   </Button>
                 )}
@@ -317,44 +303,28 @@ export const Goal1SpecificDataEntry: React.FC<Goal1SpecificDataEntryProps> = ({
         </CardContent>
       </Card>
 
-      {/* Methodology info sidebar */}
+      {/* Form metadata */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            Methodology Info
+            <Calculator className="h-4 w-4" />
+            Data Requirements & Calculation
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {formStructure.calculation && (
-            <div>
-              <h4 className="font-medium flex items-center gap-2">
-                <Calculator className="h-4 w-4" />
-                Calculation
-              </h4>
-              <p className="text-sm text-gray-600 mt-1">{formStructure.calculation.formula}</p>
-              <p className="text-xs text-gray-500 mt-1">{formStructure.calculation.description}</p>
-            </div>
-          )}
-          
           <div>
-            <h4 className="font-medium">Data Quality Requirements</h4>
-            <ul className="text-sm text-gray-600 mt-1 space-y-1">
+            <Label className="text-sm font-medium">Calculation Method:</Label>
+            <p className="text-sm text-gray-600">{formStructure.calculation.description}</p>
+            <code className="text-xs bg-gray-100 p-1 rounded">{formStructure.calculation.formula}</code>
+          </div>
+          <div>
+            <Label className="text-sm font-medium">Data Quality Requirements:</Label>
+            <ul className="text-sm text-gray-600 list-disc list-inside space-y-1">
               {formStructure.data_quality_requirements.map((req, index) => (
-                <li key={index} className="flex items-start gap-2">
-                  <span className="w-1 h-1 bg-gray-400 rounded-full mt-2 flex-shrink-0" />
-                  {req}
-                </li>
+                <li key={index}>{req}</li>
               ))}
             </ul>
           </div>
-
-          {formStructure.minimum_sample_size && (
-            <div>
-              <h4 className="font-medium">Minimum Sample Size</h4>
-              <p className="text-sm text-gray-600">{formStructure.minimum_sample_size.toLocaleString()} households</p>
-            </div>
-          )}
         </CardContent>
       </Card>
     </div>

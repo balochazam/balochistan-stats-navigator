@@ -10,6 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search, Target, Database, BarChart3, Globe, Users, Calendar, Filter } from 'lucide-react';
 import { AuthenticSDGDataEntryForm } from './AuthenticSDGDataEntryForm';
 import { Goal1SpecificDataEntry } from './Goal1SpecificDataEntry';
+import { BalochistandDataEntry } from './BalochistandDataEntry';
 import { getIndicatorFormStructure } from '@/data/goal1IndicatorForms';
 
 // Types for database data
@@ -240,11 +241,11 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
           </div>
         </div>
         {selectedIndicator.goal_id === 1 ? (
-          <Goal1SpecificDataEntry
+          <BalochistandDataEntry
             indicatorCode={selectedIndicator.code}
             indicatorTitle={selectedIndicator.title}
             onSubmit={(data) => {
-              console.log('Goal 1 specific data submitted:', data);
+              console.log('Balochistan data submitted:', data);
               // TODO: Save to backend
               setViewMode('browse');
               setSelectedIndicator(null);

@@ -9,8 +9,9 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Plus, Trash2, Eye, Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { simpleApiClient } from '@/lib/simpleApi';
+import { SimpleFormRenderer } from '@/components/forms/SimpleFormRenderer';
 
 interface SimpleFormField {
   id: string;
@@ -32,16 +33,29 @@ interface SimpleSDGFormBuilderProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   indicator: Indicator | null;
+  mode?: 'create' | 'enter_data'; // New prop to determine mode
 }
 
 export const SimpleSDGFormBuilder: React.FC<SimpleSDGFormBuilderProps> = ({
   open,
   onOpenChange,
-  indicator
+  indicator,
+  mode = 'create'
 }) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [preview, setPreview] = useState(false);
+
+  // Check if form already exists for this indicator
+  const { data: existingForms = [] } = useQuery<any[]>({
+    queryKey: ['/api/forms'],
+    enabled: !!indicator && mode === 'enter_data',
+  });
+
+  const existingForm = existingForms.find(form => 
+    form.name.toLowerCase().includes(indicator?.indicator_code.toLowerCase() || '') ||
+    form.description?.toLowerCase().includes(indicator?.indicator_code.toLowerCase() || '')
+  );
 
   // Default form structure for SDG indicators
   const [formFields, setFormFields] = useState<SimpleFormField[]>([
@@ -192,6 +206,36 @@ export const SimpleSDGFormBuilder: React.FC<SimpleSDGFormBuilderProps> = ({
   };
 
   if (!indicator) return null;
+
+  // If mode is 'enter_data' and we have an existing form, show the form renderer
+  if (mode === 'enter_data' && existingForm) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl">
+              Enter Data for {indicator.indicator_code}
+            </DialogTitle>
+            <div className="text-sm text-gray-600 space-y-1">
+              <div><strong>Indicator:</strong> {indicator.indicator_code}</div>
+              <div><strong>Title:</strong> {indicator.title}</div>
+            </div>
+          </DialogHeader>
+          
+          <SimpleFormRenderer 
+            formId={existingForm.id} 
+            onSubmissionSuccess={() => {
+              toast({
+                title: "Success!",
+                description: "Data submitted successfully.",
+              });
+              onOpenChange(false);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

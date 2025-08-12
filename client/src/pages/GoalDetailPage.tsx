@@ -49,6 +49,7 @@ export default function GoalDetailPage() {
   const goalNumber = parseInt(goalId || '1');
   const [showFormBuilder, setShowFormBuilder] = useState(false);
   const [selectedIndicator, setSelectedIndicator] = useState<Indicator | null>(null);
+  const [formMode, setFormMode] = useState<'create' | 'enter_data'>('create');
 
   // Fetch goal details
   const { data: goals = [] } = useQuery<Goal[]>({
@@ -262,17 +263,24 @@ export default function GoalDetailPage() {
                     </div>
                     <div className="flex flex-col gap-2">
                       {existingForm.hasStaticForm || existingForm.hasDatabaseForm ? (
-                        <Link to={`/indicators/${indicator.id}`}>
-                          <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
-                            Enter Data
-                          </Button>
-                        </Link>
+                        <Button 
+                          size="sm" 
+                          className="bg-blue-600 hover:bg-blue-700 text-white"
+                          onClick={() => {
+                            setSelectedIndicator(indicator);
+                            setFormMode('enter_data');
+                            setShowFormBuilder(true);
+                          }}
+                        >
+                          Enter Data
+                        </Button>
                       ) : (
                         <Button 
                           size="sm" 
                           variant="outline"
                           onClick={() => {
                             setSelectedIndicator(indicator);
+                            setFormMode('create');
                             setShowFormBuilder(true);
                           }}
                         >
@@ -298,6 +306,7 @@ export default function GoalDetailPage() {
           }
         }}
         indicator={selectedIndicator}
+        mode={formMode}
       />
     </div>
   );

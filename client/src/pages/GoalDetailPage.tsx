@@ -27,7 +27,7 @@ interface Target {
 
 interface Indicator {
   id: string;
-  target_id: string;
+  sdg_target_id: string;
   indicator_code: string;
   title: string;
   description: string;
@@ -71,14 +71,16 @@ export default function GoalDetailPage() {
   // Get indicators with their targets
   const goalIndicators: IndicatorWithTarget[] = indicators
     .filter(indicator => {
-      const target = targets.find(t => t.id === indicator.target_id);
+      const target = targets.find(t => t.id === indicator.sdg_target_id);
       return target?.sdg_goal_id === goalNumber;
     })
     .map(indicator => ({
       ...indicator,
-      target: targets.find(t => t.id === indicator.target_id)!
+      target: targets.find(t => t.id === indicator.sdg_target_id)!
     }))
     .sort((a, b) => a.indicator_code.localeCompare(b.indicator_code));
+
+
 
   // Calculate real dynamic statistics from actual Balochistan data
   const totalIndicators = goalIndicators.length;
@@ -275,6 +277,7 @@ export default function GoalDetailPage() {
           {goalIndicators.length === 0 && (
             <div className="text-center py-8">
               <div className="text-gray-500">No indicators found for this goal</div>
+
             </div>
           )}
           
@@ -313,7 +316,7 @@ export default function GoalDetailPage() {
                           </div>
                           <Progress value={indicator.progress || 0} className="h-2" />
                         </div>
-                        {indicator.custodian_agencies.length > 0 && (
+                        {indicator.custodian_agencies && indicator.custodian_agencies.length > 0 && (
                           <p className="text-xs text-gray-500">
                             Custodian: {indicator.custodian_agencies.join(', ')}
                           </p>
@@ -346,7 +349,7 @@ export default function GoalDetailPage() {
                       <p className="text-sm text-gray-600 mb-3 line-clamp-2">
                         {indicator.description}
                       </p>
-                      {indicator.custodian_agencies.length > 0 && (
+                      {indicator.custodian_agencies && indicator.custodian_agencies.length > 0 && (
                         <p className="text-xs text-gray-500">
                           Custodian: {indicator.custodian_agencies.join(', ')}
                         </p>

@@ -87,6 +87,9 @@ export const SimpleSDGFormBuilder: React.FC<SimpleSDGFormBuilderProps> = ({
     mutationFn: async () => {
       if (!indicator) return;
 
+      console.log('Saving form for indicator:', indicator.indicator_code);
+      console.log('Form fields to save:', formFields);
+
       // Create the basic form
       const formData = {
         name: `${indicator.indicator_code} Data Collection Form`,
@@ -94,21 +97,32 @@ export const SimpleSDGFormBuilder: React.FC<SimpleSDGFormBuilderProps> = ({
         is_active: true
       };
 
+      console.log('Creating form with data:', formData);
       const formResponse = await simpleApiClient.post('/api/forms', formData);
+      console.log('Form created successfully:', formResponse);
       
-      // Create form fields
+      // Create form fields - ensuring we save ALL the fields from the current state
       const fieldsToSave = formFields.map((field, index) => ({
         form_id: formResponse.id,
-        field_name: field.label.toLowerCase().replace(/\s+/g, '_'),
+        field_name: field.label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, ''),
         field_label: field.label,
         field_type: field.type,
         is_required: field.required,
+        is_primary_column: index === 0, // First field is primary
+        is_secondary_column: false,
+        reference_data_name: field.type === 'select' ? field.options?.join(',') : null,
         placeholder_text: field.placeholder || '',
+        aggregate_fields: [],
         field_order: index + 1,
-        options: field.options || undefined
+        has_sub_headers: false,
+        sub_headers: [],
+        field_group_id: null // No groups for simple forms
       }));
 
-      await simpleApiClient.post('/api/form-fields', fieldsToSave);
+      console.log('Saving form fields:', fieldsToSave);
+      const fieldsResponse = await simpleApiClient.post('/api/form-fields', fieldsToSave);
+      console.log('Fields saved successfully:', fieldsResponse);
+      
       return formResponse;
     },
     onSuccess: () => {

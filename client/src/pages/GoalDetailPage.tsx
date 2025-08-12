@@ -381,8 +381,8 @@ export default function GoalDetailPage() {
                             variant="default"
                             className="whitespace-nowrap bg-blue-600 hover:bg-blue-700"
                             onClick={() => {
-                              // Navigate to data entry for this indicator
-                              window.location.href = `/data-collection?form=${existingForm.id}&indicator=${indicator.indicator_code}`;
+                              // Navigate to indicator details page for data entry
+                              window.location.href = `/indicators/${indicator.id}`;
                             }}
                           >
                             Enter Data

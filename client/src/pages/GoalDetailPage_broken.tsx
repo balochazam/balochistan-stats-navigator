@@ -74,45 +74,50 @@ export default function GoalDetailPage() {
     queryKey: ['/api/forms'],
   });
 
-  const goalIndicators = indicators.filter(indicator => 
-    goalTargets.some(target => target.id === indicator.sdg_target_id)
-  );
 
-  const totalIndicators = goalIndicators.length;
-  const indicatorsWithData = goalIndicators.filter(i => i.has_data).length;
-  const indicatorsNotStarted = goalIndicators.filter(i => !i.has_data).length;
-  const completionRate = totalIndicators > 0 ? Math.round((indicatorsWithData / totalIndicators) * 100) : 0;
 
+  // Get indicators with their targets
+  const goalIndicators: IndicatorWithTarget[] = indicators
+    .filter(indicator => {
+      const target = targets.find(t => t.id === indicator.sdg_target_id);
+      return target?.sdg_goal_id === goalNumber;
+    })
+    .map(indicator => ({
+      ...indicator,
+      target: targets.find(t => t.id === indicator.sdg_target_id)!
+    }))
+    .sort((a, b) => a.indicator_code.localeCompare(b.indicator_code));
+
+
+
+  // Check which indicators have forms
   const getIndicatorFormStatus = (indicatorCode: string) => {
-    const hasStaticForm = false; // No static forms for now
-    const hasDatabaseForm = allForms.some(form => 
-      form.name.toLowerCase().includes(indicatorCode.toLowerCase()) ||
+    return allForms.find(form => 
+      form.name.toLowerCase().includes(indicatorCode.toLowerCase()) || 
       form.description?.toLowerCase().includes(indicatorCode.toLowerCase())
     );
-
-    return {
-      hasStaticForm,
-      hasDatabaseForm,
-      totalForms: allForms.length,
-      allFormNames: allForms.map(f => f.name),
-      allFormDescriptions: allForms.map(f => f.description),
-      formsFound: allForms.filter(form => 
-        form.name.toLowerCase().includes(indicatorCode.toLowerCase()) ||
-        form.description?.toLowerCase().includes(indicatorCode.toLowerCase())
-      )
-    };
   };
+
+  // Calculate real dynamic statistics from actual Balochistan data
+  const totalIndicators = goalIndicators.length;
+  const indicatorsWithData = goalIndicators.filter(i => i.has_data).length;
+  const indicatorsInProgress = goalIndicators.filter(i => i.has_data && (i.progress || 0) > 0 && (i.progress || 0) < 100).length;
+  const indicatorsCompleted = goalIndicators.filter(i => (i.progress || 0) >= 100).length;
+  const indicatorsNotStarted = totalIndicators - indicatorsWithData;
+  
+  // Calculate completion percentage
+  const completionRate = totalIndicators > 0 ? Math.round((indicatorsWithData / totalIndicators) * 100) : 0;
+  const avgProgress = goalIndicators.length > 0 ? Math.round(goalIndicators.reduce((sum, i) => sum + (i.progress || 0), 0) / goalIndicators.length) : 0;
 
   if (!goal) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Goal Not Found</h1>
-          <p className="text-gray-600 mb-6">The requested goal doesn't exist or has been moved.</p>
-          <Link to="/dashboard">
-            <Button>
+          <Link to="/admin/sdg-management">
+            <Button variant="outline">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Dashboard
+              Back to SDG Goals
             </Button>
           </Link>
         </div>
@@ -120,14 +125,35 @@ export default function GoalDetailPage() {
     );
   }
 
+  const getStatusColor = (indicator: Indicator) => {
+    if (!indicator.has_data) return 'text-gray-500';
+    if ((indicator.progress || 0) >= 100) return 'text-green-600';
+    if ((indicator.progress || 0) > 0) return 'text-blue-600';
+    return 'text-orange-600';
+  };
+
+  const getStatusIcon = (indicator: Indicator) => {
+    if (!indicator.has_data) return <Clock className="w-4 h-4" />;
+    if ((indicator.progress || 0) >= 100) return <CheckCircle className="w-4 h-4" />;
+    if ((indicator.progress || 0) > 0) return <TrendingUp className="w-4 h-4" />;
+    return <AlertCircle className="w-4 h-4" />;
+  };
+
+  const getStatusText = (indicator: Indicator) => {
+    if (!indicator.has_data) return 'Not Started';
+    if ((indicator.progress || 0) >= 100) return 'Completed';
+    if ((indicator.progress || 0) > 0) return 'In Progress';
+    return 'Data Available';
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
-        <Link to="/dashboard">
+        <Link to="/admin/sdg-management">
           <Button variant="outline" size="sm">
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Dashboard
+            Back to Goals
           </Button>
         </Link>
         <div className="flex items-center gap-3">
@@ -199,12 +225,68 @@ export default function GoalDetailPage() {
         </CardContent>
       </Card>
 
+
+
+      {/* Key Insights */}
+      {indicatorsWithData > 0 && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5" />
+              Balochistan Performance Insights
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Top Performing */}
+              <div>
+                <h4 className="font-semibold text-green-700 mb-2">Top Performing Indicators</h4>
+                <div className="space-y-2">
+                  {goalIndicators
+                    .filter(i => i.has_data && (i.progress || 0) > 50)
+                    .slice(0, 3)
+                    .map(indicator => (
+                      <div key={indicator.id} className="flex items-center justify-between p-2 bg-green-50 rounded">
+                        <span className="text-xs font-medium text-green-800">{indicator.indicator_code}</span>
+                        <span className="text-xs font-bold text-green-700">{Math.round(indicator.progress || 0)}%</span>
+                      </div>
+                    ))
+                  }
+                  {goalIndicators.filter(i => i.has_data && (i.progress || 0) > 50).length === 0 && (
+                    <p className="text-xs text-gray-500 italic">Building progress in multiple areas</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Needs Attention */}
+              <div>
+                <h4 className="font-semibold text-orange-700 mb-2">Priority Areas</h4>
+                <div className="space-y-2">
+                  {goalIndicators
+                    .filter(i => !i.has_data || (i.progress || 0) < 25)
+                    .slice(0, 3)
+                    .map(indicator => (
+                      <div key={indicator.id} className="flex items-center justify-between p-2 bg-orange-50 rounded">
+                        <span className="text-xs font-medium text-orange-800">{indicator.indicator_code}</span>
+                        <span className="text-xs text-orange-600">
+                          {indicator.has_data ? `${Math.round(indicator.progress || 0)}%` : 'No data'}
+                        </span>
+                      </div>
+                    ))
+                  }
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* All Indicators */}
       <Card>
         <CardHeader>
           <CardTitle>All Indicators for this Goal</CardTitle>
           <p className="text-sm text-gray-600">
-            Create forms and enter data for each indicator to track Balochistan's progress
+            Click on any indicator to view detailed data entry forms and progress tracking
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -285,6 +367,70 @@ export default function GoalDetailPage() {
               </div>
             );
           })}
+                <div className="p-4 border border-gray-200 rounded-lg bg-gray-50">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant="secondary" className="text-xs">
+                          {indicator.indicator_code}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          Tier {indicator.tier}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700 border-orange-200">
+                          ⚠ No Data
+                        </Badge>
+                      </div>
+                      <h4 className="font-medium text-gray-900 mb-2 leading-tight">
+                        {indicator.title}
+                      </h4>
+                      <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                        {indicator.description}
+                      </p>
+                      {indicator.custodian_agencies && indicator.custodian_agencies.length > 0 && (
+                        <p className="text-xs text-gray-500">
+                          Custodian: {indicator.custodian_agencies.join(', ')}
+                        </p>
+                      )}
+                    </div>
+                    {(() => {
+                      const existingForm = getIndicatorFormStatus(indicator.indicator_code);
+                      
+                      if (existingForm) {
+                        return (
+                          <Button 
+                            size="sm" 
+                            variant="default"
+                            className="whitespace-nowrap bg-blue-600 hover:bg-blue-700"
+                            onClick={() => {
+                              // Navigate to indicator details page for data entry
+                              window.location.href = `/indicators/${indicator.id}`;
+                            }}
+                          >
+                            Enter Data
+                          </Button>
+                        );
+                      } else {
+                        return (
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="whitespace-nowrap"
+                            onClick={() => {
+                              setSelectedIndicator(indicator);
+                              setShowFormBuilder(true);
+                            }}
+                          >
+                            Create Form
+                          </Button>
+                        );
+                      }
+                    })()}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
         </CardContent>
       </Card>
 

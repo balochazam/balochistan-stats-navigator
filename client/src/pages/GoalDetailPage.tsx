@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { FormBuilderWithHierarchy } from '@/components/forms/FormBuilderWithHierarchy';
+import { SimpleSDGFormBuilder } from '@/components/sdg/SimpleSDGFormBuilder';
 
 interface Goal {
   id: number;
@@ -377,19 +377,17 @@ export default function GoalDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Form Builder Integration */}
-      {showFormBuilder && selectedIndicator && (
-        <FormBuilderWithHierarchy
-          open={showFormBuilder}
-          onOpenChange={(open) => {
-            setShowFormBuilder(open);
-            if (!open) {
-              setSelectedIndicator(null);
-            }
-          }}
-          editingForm={null}
-        />
-      )}
+      {/* Simple Form Builder Integration */}
+      <SimpleSDGFormBuilder
+        open={showFormBuilder}
+        onOpenChange={(open) => {
+          setShowFormBuilder(open);
+          if (!open) {
+            setSelectedIndicator(null);
+          }
+        }}
+        indicator={selectedIndicator}
+      />
     </div>
   );
 }

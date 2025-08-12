@@ -332,7 +332,7 @@ export const SDGGoalsManager = () => {
                   <div 
                     className="w-12 h-12 rounded overflow-hidden mb-1 border border-gray-200 cursor-pointer hover:scale-105 transition-transform"
                     title={`SDG ${sdg.id}: ${sdg.title} - Click to view details`}
-                    onClick={() => navigate(`/sdg/${sdg.id}`)}
+                    onClick={() => navigate(`/sdg/goals/${sdg.id}`)}
                   >
                     <img 
                       src={sdg.iconUrl}
@@ -386,8 +386,9 @@ export const SDGGoalsManager = () => {
               {sdgData.map((sdg: any) => (
                 <Card 
                   key={sdg.id} 
-                  className="border-2" 
+                  className="border-2 cursor-pointer hover:shadow-lg transition-shadow" 
                   style={{ borderColor: sdg.color }}
+                  onClick={() => navigate(`/sdg/goals/${sdg.id}`)}
                 >
                   <CardContent className="p-4">
                     <div className="flex items-center gap-3 mb-3">

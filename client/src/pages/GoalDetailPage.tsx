@@ -161,68 +161,51 @@ export default function GoalDetailPage() {
         <CardContent>
           <p className="text-gray-700 leading-relaxed mb-4">{goal.description}</p>
           
-          {/* Real-time Balochistan Progress Data */}
+          {/* Data Coverage Summary */}
+          <div className="bg-blue-50 p-4 rounded-lg mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+              <div>
+                <div className="text-2xl font-bold text-gray-900">{totalIndicators}</div>
+                <div className="text-sm text-gray-600">Total Indicators</div>
+                <div className="text-xs text-blue-600">UN Official Count</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-green-600">{indicatorsWithData}</div>
+                <div className="text-sm text-gray-600">Data Available</div>
+                <div className="text-xs text-green-600">Balochistan Covered</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-orange-600">{indicatorsNotStarted}</div>
+                <div className="text-sm text-gray-600">Need Data</div>
+                <div className="text-xs text-orange-600">Forms Required</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Real-time Progress Data */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-gray-700">Balochistan Progress</span>
+                <span className="text-sm font-medium text-gray-700">Overall Progress</span>
                 <span className="text-sm font-bold text-blue-600">{Math.round(goal.progress || 0)}%</span>
               </div>
               <Progress value={goal.progress || 0} className="h-2" />
-              <p className="text-xs text-gray-500">Based on authentic Balochistan data</p>
+              <p className="text-xs text-gray-500">Average across all indicators with data</p>
             </div>
             
             <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-gray-700">Data Availability</span>
+                <span className="text-sm font-medium text-gray-700">Data Coverage</span>
                 <span className="text-sm font-bold text-green-600">{completionRate}%</span>
               </div>
               <Progress value={completionRate} className="h-2" />
-              <p className="text-xs text-gray-500">{indicatorsWithData} of {totalIndicators} indicators have data</p>
+              <p className="text-xs text-gray-500">Indicators with Balochistan data available</p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Dynamic Performance Statistics */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900">{totalIndicators}</div>
-              <p className="text-xs text-gray-600">Total Indicators</p>
-              <p className="text-xs text-blue-500 mt-1">UN Official</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{indicatorsWithData}</div>
-              <p className="text-xs text-gray-600">With Balochistan Data</p>
-              <p className="text-xs text-green-500 mt-1">{completionRate}% coverage</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{indicatorsInProgress}</div>
-              <p className="text-xs text-gray-600">Making Progress</p>
-              <p className="text-xs text-blue-500 mt-1">Improving trend</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-orange-600">{indicatorsNotStarted}</div>
-              <p className="text-xs text-gray-600">Need Attention</p>
-              <p className="text-xs text-orange-500 mt-1">Data required</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+
 
       {/* Key Insights */}
       {indicatorsWithData > 0 && (
@@ -305,55 +288,98 @@ export default function GoalDetailPage() {
                 {targetIndicators.length > 0 && (
                   <div className="pl-6 space-y-2">
                     {targetIndicators.map((indicator) => (
-                      <Link
-                        key={indicator.id}
-                        to={`/indicator/${indicator.indicator_code}`}
-                        className="block"
-                      >
-                        <div className="p-3 border border-gray-200 rounded-lg hover:border-gray-300 hover:bg-gray-50 transition-colors cursor-pointer">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <Badge variant="secondary" className="text-xs">
-                                  {indicator.indicator_code}
-                                </Badge>
-                                <Badge variant="outline" className="text-xs">
-                                  Tier {indicator.tier}
-                                </Badge>
-                              </div>
-                              <h4 className="font-medium text-gray-900 mb-1 leading-tight">
-                                {indicator.title}
-                              </h4>
-                              <p className="text-xs text-gray-600 line-clamp-2">
-                                {indicator.description}
-                              </p>
-                              {indicator.custodian_agencies.length > 0 && (
-                                <p className="text-xs text-gray-500 mt-1">
-                                  Custodian: {indicator.custodian_agencies.join(', ')}
-                                </p>
-                              )}
-                            </div>
-                            <div className="flex flex-col items-end gap-2">
-                              <div className={`flex items-center gap-1 ${getStatusColor(indicator)}`}>
-                                {getStatusIcon(indicator)}
-                                <span className="text-xs font-medium">
-                                  {getStatusText(indicator)}
-                                </span>
-                              </div>
-                              {indicator.has_data && indicator.progress !== undefined && (
-                                <div className="text-xs font-bold text-gray-900">
-                                  {Math.round(indicator.progress)}%
+                      <div key={indicator.id} className="relative">
+                        {/* Clickable indicator card */}
+                        {indicator.has_data ? (
+                          <Link
+                            to={`/indicator/${indicator.indicator_code}`}
+                            className="block"
+                          >
+                            <div className="p-3 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors cursor-pointer">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <Badge variant="secondary" className="text-xs">
+                                      {indicator.indicator_code}
+                                    </Badge>
+                                    <Badge variant="outline" className="text-xs">
+                                      Tier {indicator.tier}
+                                    </Badge>
+                                    <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                                      ✓ Data Available
+                                    </Badge>
+                                  </div>
+                                  <h4 className="font-medium text-gray-900 mb-1 leading-tight">
+                                    {indicator.title}
+                                  </h4>
+                                  <p className="text-xs text-gray-600 line-clamp-2">
+                                    {indicator.description}
+                                  </p>
+                                  <div className="mt-2">
+                                    <div className="flex items-center justify-between text-xs mb-1">
+                                      <span className="text-gray-600">Balochistan Progress</span>
+                                      <span className="font-medium text-blue-600">{Math.round(indicator.progress || 0)}%</span>
+                                    </div>
+                                    <Progress value={indicator.progress || 0} className="h-1" />
+                                  </div>
+                                  {indicator.custodian_agencies.length > 0 && (
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      Custodian: {indicator.custodian_agencies.join(', ')}
+                                    </p>
+                                  )}
                                 </div>
-                              )}
+                                <div className="flex flex-col items-end gap-2">
+                                  <div className="flex items-center gap-1 text-blue-600">
+                                    <CheckCircle className="w-4 h-4" />
+                                    <span className="text-xs font-medium">
+                                      Click to View
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </Link>
+                        ) : (
+                          <div className="p-3 border border-gray-200 rounded-lg bg-gray-50 opacity-75">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Badge variant="secondary" className="text-xs">
+                                    {indicator.indicator_code}
+                                  </Badge>
+                                  <Badge variant="outline" className="text-xs">
+                                    Tier {indicator.tier}
+                                  </Badge>
+                                  <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700 border-orange-200">
+                                    ⚠ No Data
+                                  </Badge>
+                                </div>
+                                <h4 className="font-medium text-gray-700 mb-1 leading-tight">
+                                  {indicator.title}
+                                </h4>
+                                <p className="text-xs text-gray-500 line-clamp-2">
+                                  {indicator.description}
+                                </p>
+                                {indicator.custodian_agencies.length > 0 && (
+                                  <p className="text-xs text-gray-400 mt-1">
+                                    Custodian: {indicator.custodian_agencies.join(', ')}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="flex flex-col items-end gap-2">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => window.open(`/indicator/${indicator.indicator_code}`, '_blank')}
+                                  className="text-xs h-7 px-2"
+                                >
+                                  Create Form
+                                </Button>
+                              </div>
                             </div>
                           </div>
-                          {indicator.has_data && indicator.progress !== undefined && (
-                            <div className="mt-2">
-                              <Progress value={indicator.progress} className="h-1" />
-                            </div>
-                          )}
-                        </div>
-                      </Link>
+                        )}
+                      </div>
                     ))}
                   </div>
                 )}

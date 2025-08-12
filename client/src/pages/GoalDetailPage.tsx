@@ -78,12 +78,16 @@ export default function GoalDetailPage() {
     }))
     .sort((a, b) => a.indicator_code.localeCompare(b.indicator_code));
 
-  // Calculate statistics
+  // Calculate real dynamic statistics from actual Balochistan data
   const totalIndicators = goalIndicators.length;
   const indicatorsWithData = goalIndicators.filter(i => i.has_data).length;
   const indicatorsInProgress = goalIndicators.filter(i => i.has_data && (i.progress || 0) > 0 && (i.progress || 0) < 100).length;
   const indicatorsCompleted = goalIndicators.filter(i => (i.progress || 0) >= 100).length;
   const indicatorsNotStarted = totalIndicators - indicatorsWithData;
+  
+  // Calculate completion percentage
+  const completionRate = totalIndicators > 0 ? Math.round((indicatorsWithData / totalIndicators) * 100) : 0;
+  const avgProgress = goalIndicators.length > 0 ? Math.round(goalIndicators.reduce((sum, i) => sum + (i.progress || 0), 0) / goalIndicators.length) : 0;
 
   if (!goal) {
     return (
@@ -156,52 +160,130 @@ export default function GoalDetailPage() {
         </CardHeader>
         <CardContent>
           <p className="text-gray-700 leading-relaxed mb-4">{goal.description}</p>
-          {goal.progress !== undefined && (
+          
+          {/* Real-time Balochistan Progress Data */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-gray-700">Overall Progress</span>
-                <span className="text-sm font-bold text-gray-900">{Math.round(goal.progress)}%</span>
+                <span className="text-sm font-medium text-gray-700">Balochistan Progress</span>
+                <span className="text-sm font-bold text-blue-600">{Math.round(goal.progress || 0)}%</span>
               </div>
-              <Progress value={goal.progress} className="h-2" />
+              <Progress value={goal.progress || 0} className="h-2" />
+              <p className="text-xs text-gray-500">Based on authentic Balochistan data</p>
             </div>
-          )}
+            
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-gray-700">Data Availability</span>
+                <span className="text-sm font-bold text-green-600">{completionRate}%</span>
+              </div>
+              <Progress value={completionRate} className="h-2" />
+              <p className="text-xs text-gray-500">{indicatorsWithData} of {totalIndicators} indicators have data</p>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Statistics Cards */}
+      {/* Dynamic Performance Statistics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <Card>
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-gray-900">{totalIndicators}</div>
-            <p className="text-xs text-gray-600">Total Indicators</p>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-gray-900">{totalIndicators}</div>
+              <p className="text-xs text-gray-600">Total Indicators</p>
+              <p className="text-xs text-blue-500 mt-1">UN Official</p>
+            </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-green-600">{indicatorsCompleted}</div>
-            <p className="text-xs text-gray-600">Completed</p>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">{indicatorsWithData}</div>
+              <p className="text-xs text-gray-600">With Balochistan Data</p>
+              <p className="text-xs text-green-500 mt-1">{completionRate}% coverage</p>
+            </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-blue-600">{indicatorsInProgress}</div>
-            <p className="text-xs text-gray-600">In Progress</p>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600">{indicatorsInProgress}</div>
+              <p className="text-xs text-gray-600">Making Progress</p>
+              <p className="text-xs text-blue-500 mt-1">Improving trend</p>
+            </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-gray-500">{indicatorsNotStarted}</div>
-            <p className="text-xs text-gray-600">Not Started</p>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-orange-600">{indicatorsNotStarted}</div>
+              <p className="text-xs text-gray-600">Need Attention</p>
+              <p className="text-xs text-orange-500 mt-1">Data required</p>
+            </div>
           </CardContent>
         </Card>
       </div>
 
+      {/* Key Insights */}
+      {indicatorsWithData > 0 && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5" />
+              Balochistan Performance Insights
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Top Performing */}
+              <div>
+                <h4 className="font-semibold text-green-700 mb-2">Top Performing Indicators</h4>
+                <div className="space-y-2">
+                  {goalIndicators
+                    .filter(i => i.has_data && (i.progress || 0) > 50)
+                    .slice(0, 3)
+                    .map(indicator => (
+                      <div key={indicator.id} className="flex items-center justify-between p-2 bg-green-50 rounded">
+                        <span className="text-xs font-medium text-green-800">{indicator.indicator_code}</span>
+                        <span className="text-xs font-bold text-green-700">{Math.round(indicator.progress || 0)}%</span>
+                      </div>
+                    ))
+                  }
+                  {goalIndicators.filter(i => i.has_data && (i.progress || 0) > 50).length === 0 && (
+                    <p className="text-xs text-gray-500 italic">Building progress in multiple areas</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Needs Attention */}
+              <div>
+                <h4 className="font-semibold text-orange-700 mb-2">Priority Areas</h4>
+                <div className="space-y-2">
+                  {goalIndicators
+                    .filter(i => !i.has_data || (i.progress || 0) < 25)
+                    .slice(0, 3)
+                    .map(indicator => (
+                      <div key={indicator.id} className="flex items-center justify-between p-2 bg-orange-50 rounded">
+                        <span className="text-xs font-medium text-orange-800">{indicator.indicator_code}</span>
+                        <span className="text-xs text-orange-600">
+                          {indicator.has_data ? `${Math.round(indicator.progress || 0)}%` : 'No data'}
+                        </span>
+                      </div>
+                    ))
+                  }
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Targets and Indicators */}
       <Card>
         <CardHeader>
-          <CardTitle>Targets and Indicators</CardTitle>
+          <CardTitle>All Targets and Indicators</CardTitle>
           <p className="text-sm text-gray-600">
-            Click on any indicator to view detailed information and data entry forms
+            Click on any indicator to view detailed data entry forms and progress tracking
           </p>
         </CardHeader>
         <CardContent className="space-y-6">

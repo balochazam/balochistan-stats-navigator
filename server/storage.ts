@@ -527,14 +527,71 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSdgIndicators(targetId?: string): Promise<SdgIndicator[]> {
+    let baseQuery;
     if (targetId) {
-      return await db.select().from(sdg_indicators)
+      baseQuery = await db.select().from(sdg_indicators)
         .where(and(eq(sdg_indicators.sdg_target_id, targetId), eq(sdg_indicators.is_active, true)))
         .orderBy(asc(sdg_indicators.indicator_code));
+    } else {
+      baseQuery = await db.select().from(sdg_indicators)
+        .where(eq(sdg_indicators.is_active, true))
+        .orderBy(asc(sdg_indicators.indicator_code));
     }
-    return await db.select().from(sdg_indicators)
-      .where(eq(sdg_indicators.is_active, true))
-      .orderBy(asc(sdg_indicators.indicator_code));
+
+    // Import Balochistan data for progress calculations
+    const { balochistandIndicatorData } = await import('@shared/balochistandIndicatorData');
+    
+    // Add has_data and progress fields based on Balochistan data
+    const indicatorsWithProgress = baseQuery.map(indicator => {
+      const balochistandData = balochistandIndicatorData.find(
+        data => data.indicator_code === indicator.indicator_code
+      );
+      
+      let progress = 0;
+      let has_data = false;
+      
+      if (balochistandData) {
+        has_data = true;
+        const baselineValue = parseFloat(String(balochistandData.baseline.value).replace(/[%,]/g, '')) || 0;
+        const progressValue = parseFloat(String(balochistandData.progress.value).replace(/[%,]/g, '')) || 0;
+        
+        if (indicator.indicator_code.startsWith('1.')) {
+          // For poverty indicators, reduction is improvement
+          if (baselineValue > 0 && progressValue > 0 && baselineValue > progressValue) {
+            progress = ((baselineValue - progressValue) / baselineValue) * 100;
+          }
+        } else if (indicator.indicator_code.startsWith('2.') || indicator.indicator_code.startsWith('3.')) {
+          // For nutrition/health indicators, increase is improvement
+          if (baselineValue > 0 && progressValue > baselineValue) {
+            progress = ((progressValue - baselineValue) / baselineValue) * 100;
+          } else if (progressValue > 0) {
+            progress = (progressValue / 100) * 100; // Convert percentage to progress
+          }
+        } else if (indicator.indicator_code.startsWith('4.') || indicator.indicator_code.startsWith('5.')) {
+          // For education/gender indicators, use direct progress calculation
+          if (progressValue > baselineValue && baselineValue > 0) {
+            progress = ((progressValue - baselineValue) / baselineValue) * 100;
+          } else if (progressValue > 0) {
+            progress = progressValue; // Direct percentage
+          }
+        } else {
+          // Default calculation for other indicators
+          if (progressValue > baselineValue && baselineValue > 0) {
+            progress = ((progressValue - baselineValue) / baselineValue) * 100;
+          } else if (progressValue > 0) {
+            progress = progressValue;
+          }
+        }
+      }
+
+      return {
+        ...indicator,
+        has_data,
+        progress: Math.min(progress, 100) // Cap at 100%
+      };
+    });
+
+    return indicatorsWithProgress as SdgIndicator[];
   }
 
   async getSdgIndicator(id: string): Promise<SdgIndicator | undefined> {

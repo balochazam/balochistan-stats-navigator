@@ -535,7 +535,11 @@ export type InsertSdgGoal = z.infer<typeof insertSdgGoalSchema>;
 export type SdgTarget = typeof sdg_targets.$inferSelect;
 export type InsertSdgTarget = z.infer<typeof insertSdgTargetSchema>;
 
-export type SdgIndicator = typeof sdg_indicators.$inferSelect;
+export type SdgIndicator = typeof sdg_indicators.$inferSelect & {
+  has_data?: boolean;
+  progress?: number;
+  custodian_agencies?: string[];
+};
 export type InsertSdgIndicator = z.infer<typeof insertSdgIndicatorSchema>;
 
 export type SdgDataSource = typeof sdg_data_sources.$inferSelect;

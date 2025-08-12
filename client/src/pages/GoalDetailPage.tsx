@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { SimpleSDGFormBuilder } from '@/components/sdg/SimpleSDGFormBuilder';
+
 
 interface Goal {
   id: number;
@@ -47,9 +47,7 @@ interface IndicatorWithTarget extends Indicator {
 export default function GoalDetailPage() {
   const { goalId } = useParams<{ goalId: string }>();
   const goalNumber = parseInt(goalId || '1');
-  const [showFormBuilder, setShowFormBuilder] = useState(false);
-  const [selectedIndicator, setSelectedIndicator] = useState<Indicator | null>(null);
-  const [formMode, setFormMode] = useState<'create' | 'enter_data'>('create');
+
 
   // Fetch goal details
   const { data: goals = [] } = useQuery<Goal[]>({
@@ -70,11 +68,6 @@ export default function GoalDetailPage() {
     queryKey: ['/api/sdg/indicators'],
   });
 
-  // Fetch all forms to check which indicators have forms
-  const { data: allForms = [] } = useQuery<any[]>({
-    queryKey: ['/api/forms'],
-  });
-
   const goalIndicators = indicators.filter(indicator => 
     goalTargets.some(target => target.id === indicator.sdg_target_id)
   );
@@ -83,26 +76,6 @@ export default function GoalDetailPage() {
   const indicatorsWithData = goalIndicators.filter(i => i.has_data).length;
   const indicatorsNotStarted = goalIndicators.filter(i => !i.has_data).length;
   const completionRate = totalIndicators > 0 ? Math.round((indicatorsWithData / totalIndicators) * 100) : 0;
-
-  const getIndicatorFormStatus = (indicatorCode: string) => {
-    const hasStaticForm = false; // No static forms for now
-    const hasDatabaseForm = allForms.some(form => 
-      form.name.toLowerCase().includes(indicatorCode.toLowerCase()) ||
-      form.description?.toLowerCase().includes(indicatorCode.toLowerCase())
-    );
-
-    return {
-      hasStaticForm,
-      hasDatabaseForm,
-      totalForms: allForms.length,
-      allFormNames: allForms.map(f => f.name),
-      allFormDescriptions: allForms.map(f => f.description),
-      formsFound: allForms.filter(form => 
-        form.name.toLowerCase().includes(indicatorCode.toLowerCase()) ||
-        form.description?.toLowerCase().includes(indicatorCode.toLowerCase())
-      )
-    };
-  };
 
   if (!goal) {
     return (
@@ -205,7 +178,7 @@ export default function GoalDetailPage() {
         <CardHeader>
           <CardTitle>All Indicators for this Goal</CardTitle>
           <p className="text-sm text-gray-600">
-            Create forms and enter data for each indicator to track Balochistan's progress
+            Browse indicators and view detailed data for this SDG goal. For data entry, use the SDG Management page.
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -216,8 +189,6 @@ export default function GoalDetailPage() {
           )}
           
           {goalIndicators.map((indicator) => {
-            const existingForm = getIndicatorFormStatus(indicator.indicator_code);
-            
             return (
               <div key={indicator.id} className="relative">
                 <div className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors">
@@ -262,29 +233,15 @@ export default function GoalDetailPage() {
                       )}
                     </div>
                     <div className="flex flex-col gap-2">
-                      {existingForm.hasStaticForm || existingForm.hasDatabaseForm ? (
-                        <Button 
-                          size="sm" 
-                          className="bg-blue-600 hover:bg-blue-700 text-white"
-                          onClick={() => {
-                            setSelectedIndicator(indicator);
-                            setFormMode('enter_data');
-                            setShowFormBuilder(true);
-                          }}
-                        >
-                          Enter Data
-                        </Button>
+                      {indicator.has_data ? (
+                        <Link to={`/indicators/${indicator.id}`}>
+                          <Button size="sm" variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50">
+                            View Details
+                          </Button>
+                        </Link>
                       ) : (
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => {
-                            setSelectedIndicator(indicator);
-                            setFormMode('create');
-                            setShowFormBuilder(true);
-                          }}
-                        >
-                          Create Form
+                        <Button size="sm" variant="outline" disabled className="text-gray-400">
+                          No Data Available
                         </Button>
                       )}
                     </div>
@@ -296,18 +253,7 @@ export default function GoalDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Simple Form Builder Integration */}
-      <SimpleSDGFormBuilder
-        open={showFormBuilder}
-        onOpenChange={(open) => {
-          setShowFormBuilder(open);
-          if (!open) {
-            setSelectedIndicator(null);
-          }
-        }}
-        indicator={selectedIndicator}
-        mode={formMode}
-      />
+
     </div>
   );
 }

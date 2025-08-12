@@ -263,146 +263,108 @@ export default function GoalDetailPage() {
         </Card>
       )}
 
-      {/* Targets and Indicators */}
+      {/* All Indicators */}
       <Card>
         <CardHeader>
-          <CardTitle>All Targets and Indicators</CardTitle>
+          <CardTitle>All Indicators for this Goal</CardTitle>
           <p className="text-sm text-gray-600">
             Click on any indicator to view detailed data entry forms and progress tracking
           </p>
         </CardHeader>
-        <CardContent className="space-y-6">
-          {goalTargets.map((target) => {
-            const targetIndicators = goalIndicators.filter(i => i.target_id === target.id);
-            
-            return (
-              <div key={target.id} className="space-y-3">
-                <div className="flex items-start gap-3">
-                  <Badge variant="outline" className="mt-1">
-                    Target {target.target_number}
-                  </Badge>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900 mb-1">{target.title}</h3>
-                    <p className="text-sm text-gray-600 mb-3">{target.description}</p>
-                  </div>
-                </div>
-                
-                {targetIndicators.length > 0 && (
-                  <div className="pl-6 space-y-2">
-                    {targetIndicators.map((indicator) => (
-                      <div key={indicator.id} className="relative">
-                        {/* Clickable indicator card */}
-                        {indicator.has_data ? (
-                          <Link
-                            to={`/indicator/${indicator.indicator_code}`}
-                            className="block"
-                          >
-                            <div className="p-3 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors cursor-pointer">
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <Badge variant="secondary" className="text-xs">
-                                      {indicator.indicator_code}
-                                    </Badge>
-                                    <Badge variant="outline" className="text-xs">
-                                      Tier {indicator.tier}
-                                    </Badge>
-                                    <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
-                                      ✓ Data Available
-                                    </Badge>
-                                  </div>
-                                  <h4 className="font-medium text-gray-900 mb-1 leading-tight">
-                                    {indicator.title}
-                                  </h4>
-                                  <p className="text-xs text-gray-600 line-clamp-2">
-                                    {indicator.description}
-                                  </p>
-                                  <div className="mt-2">
-                                    <div className="flex items-center justify-between text-xs mb-1">
-                                      <span className="text-gray-600">Balochistan Progress</span>
-                                      <span className="font-medium text-blue-600">{Math.round(indicator.progress || 0)}%</span>
-                                    </div>
-                                    <Progress value={indicator.progress || 0} className="h-1" />
-                                  </div>
-                                  {indicator.custodian_agencies.length > 0 && (
-                                    <p className="text-xs text-gray-500 mt-1">
-                                      Custodian: {indicator.custodian_agencies.join(', ')}
-                                    </p>
-                                  )}
-                                </div>
-                                <div className="flex flex-col items-end gap-2">
-                                  <div className="flex items-center gap-1 text-blue-600">
-                                    <CheckCircle className="w-4 h-4" />
-                                    <span className="text-xs font-medium">
-                                      Click to View
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </Link>
-                        ) : (
-                          <div className="p-3 border border-gray-200 rounded-lg bg-gray-50 opacity-75">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <Badge variant="secondary" className="text-xs">
-                                    {indicator.indicator_code}
-                                  </Badge>
-                                  <Badge variant="outline" className="text-xs">
-                                    Tier {indicator.tier}
-                                  </Badge>
-                                  <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700 border-orange-200">
-                                    ⚠ No Data
-                                  </Badge>
-                                </div>
-                                <h4 className="font-medium text-gray-700 mb-1 leading-tight">
-                                  {indicator.title}
-                                </h4>
-                                <p className="text-xs text-gray-500 line-clamp-2">
-                                  {indicator.description}
-                                </p>
-                                {indicator.custodian_agencies.length > 0 && (
-                                  <p className="text-xs text-gray-400 mt-1">
-                                    Custodian: {indicator.custodian_agencies.join(', ')}
-                                  </p>
-                                )}
-                              </div>
-                              <div className="flex flex-col items-end gap-2">
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  onClick={() => window.open(`/indicator/${indicator.indicator_code}`, '_blank')}
-                                  className="text-xs h-7 px-2"
-                                >
-                                  Create Form
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-                
-                {targetIndicators.length === 0 && (
-                  <div className="pl-6 text-sm text-gray-500 italic">
-                    No indicators available for this target
-                  </div>
-                )}
-                
-                <Separator className="my-4" />
-              </div>
-            );
-          })}
-          
-          {goalTargets.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              <Target className="w-8 h-8 mx-auto mb-2 opacity-50" />
-              <p>No targets available for this goal</p>
+        <CardContent className="space-y-4">
+          {goalIndicators.length === 0 && (
+            <div className="text-center py-8">
+              <div className="text-gray-500">No indicators found for this goal</div>
             </div>
           )}
+          
+          {goalIndicators.map((indicator) => (
+            <div key={indicator.id} className="relative">
+              {/* Clickable indicator card */}
+              {indicator.has_data ? (
+                <Link
+                  to={`/indicator/${indicator.indicator_code}`}
+                  className="block"
+                >
+                  <div className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors cursor-pointer">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge variant="secondary" className="text-xs">
+                            {indicator.indicator_code}
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">
+                            Tier {indicator.tier}
+                          </Badge>
+                          <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                            ✓ Data Available
+                          </Badge>
+                        </div>
+                        <h4 className="font-medium text-gray-900 mb-2 leading-tight">
+                          {indicator.title}
+                        </h4>
+                        <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                          {indicator.description}
+                        </p>
+                        <div className="mb-2">
+                          <div className="flex items-center justify-between text-sm mb-1">
+                            <span className="text-gray-600">Balochistan Progress</span>
+                            <span className="font-medium text-blue-600">{Math.round(indicator.progress || 0)}%</span>
+                          </div>
+                          <Progress value={indicator.progress || 0} className="h-2" />
+                        </div>
+                        {indicator.custodian_agencies.length > 0 && (
+                          <p className="text-xs text-gray-500">
+                            Custodian: {indicator.custodian_agencies.join(', ')}
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-sm text-blue-600 font-medium whitespace-nowrap">
+                        Click to View
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              ) : (
+                <div className="p-4 border border-gray-200 rounded-lg bg-gray-50">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant="secondary" className="text-xs">
+                          {indicator.indicator_code}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          Tier {indicator.tier}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700 border-orange-200">
+                          ⚠ No Data
+                        </Badge>
+                      </div>
+                      <h4 className="font-medium text-gray-900 mb-2 leading-tight">
+                        {indicator.title}
+                      </h4>
+                      <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                        {indicator.description}
+                      </p>
+                      {indicator.custodian_agencies.length > 0 && (
+                        <p className="text-xs text-gray-500">
+                          Custodian: {indicator.custodian_agencies.join(', ')}
+                        </p>
+                      )}
+                    </div>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      className="whitespace-nowrap"
+                      onClick={() => console.log('Create form for', indicator.indicator_code)}
+                    >
+                      Create Form
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
         </CardContent>
       </Card>
     </div>

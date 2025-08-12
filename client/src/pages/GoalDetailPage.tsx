@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Target, TrendingUp, Clock, CheckCircle, AlertCircle } from 'lucide-react';
@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
+import { FormBuilderWithHierarchy } from '@/components/forms/FormBuilderWithHierarchy';
 
 interface Goal {
   id: number;
@@ -46,6 +47,8 @@ interface IndicatorWithTarget extends Indicator {
 export default function GoalDetailPage() {
   const { goalId } = useParams<{ goalId: string }>();
   const goalNumber = parseInt(goalId || '1');
+  const [showFormBuilder, setShowFormBuilder] = useState(false);
+  const [selectedIndicator, setSelectedIndicator] = useState<Indicator | null>(null);
 
   // Fetch goal details
   const { data: goals = [] } = useQuery<Goal[]>({
@@ -359,7 +362,10 @@ export default function GoalDetailPage() {
                       size="sm" 
                       variant="outline"
                       className="whitespace-nowrap"
-                      onClick={() => console.log('Create form for', indicator.indicator_code)}
+                      onClick={() => {
+                        setSelectedIndicator(indicator);
+                        setShowFormBuilder(true);
+                      }}
                     >
                       Create Form
                     </Button>
@@ -370,6 +376,20 @@ export default function GoalDetailPage() {
           ))}
         </CardContent>
       </Card>
+
+      {/* Form Builder Integration */}
+      {showFormBuilder && selectedIndicator && (
+        <FormBuilderWithHierarchy
+          open={showFormBuilder}
+          onOpenChange={(open) => {
+            setShowFormBuilder(open);
+            if (!open) {
+              setSelectedIndicator(null);
+            }
+          }}
+          editingForm={null}
+        />
+      )}
     </div>
   );
 }

@@ -19,7 +19,7 @@ interface Goal {
 
 interface Target {
   id: string;
-  goal_id: number;
+  sdg_goal_id: number;
   target_number: string;
   title: string;
   description: string;
@@ -55,22 +55,24 @@ export default function GoalDetailPage() {
   const goal = goals.find(g => g.id === goalNumber);
 
   // Fetch targets for this goal
-  const { data: targets = [] } = useQuery<Target[]>({
+  const { data: targets = [], isLoading: targetsLoading, error: targetsError } = useQuery<Target[]>({
     queryKey: ['/api/sdg/targets'],
   });
 
-  const goalTargets = targets.filter(t => t.goal_id === goalNumber);
+  const goalTargets = targets.filter(t => t.sdg_goal_id === goalNumber);
 
   // Fetch indicators for this goal
-  const { data: indicators = [] } = useQuery<Indicator[]>({
+  const { data: indicators = [], isLoading: indicatorsLoading, error: indicatorsError } = useQuery<Indicator[]>({
     queryKey: ['/api/sdg/indicators'],
   });
+
+
 
   // Get indicators with their targets
   const goalIndicators: IndicatorWithTarget[] = indicators
     .filter(indicator => {
       const target = targets.find(t => t.id === indicator.target_id);
-      return target?.goal_id === goalNumber;
+      return target?.sdg_goal_id === goalNumber;
     })
     .map(indicator => ({
       ...indicator,

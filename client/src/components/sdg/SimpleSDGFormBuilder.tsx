@@ -117,6 +117,7 @@ export const SimpleSDGFormBuilder: React.FC<SimpleSDGFormBuilderProps> = ({
         description: "Form created successfully for data collection.",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/forms'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/sdg/indicators'] });
       onOpenChange(false);
     },
     onError: (error) => {

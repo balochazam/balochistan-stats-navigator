@@ -69,6 +69,11 @@ export default function GoalDetailPage() {
     queryKey: ['/api/sdg/indicators'],
   });
 
+  // Fetch all forms to check which indicators have forms
+  const { data: allForms = [] } = useQuery<any[]>({
+    queryKey: ['/api/forms'],
+  });
+
 
 
   // Get indicators with their targets
@@ -84,6 +89,14 @@ export default function GoalDetailPage() {
     .sort((a, b) => a.indicator_code.localeCompare(b.indicator_code));
 
 
+
+  // Check which indicators have forms
+  const getIndicatorFormStatus = (indicatorCode: string) => {
+    return allForms.find(form => 
+      form.name.toLowerCase().includes(indicatorCode.toLowerCase()) || 
+      form.description?.toLowerCase().includes(indicatorCode.toLowerCase())
+    );
+  };
 
   // Calculate real dynamic statistics from actual Balochistan data
   const totalIndicators = goalIndicators.length;
@@ -358,17 +371,39 @@ export default function GoalDetailPage() {
                         </p>
                       )}
                     </div>
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      className="whitespace-nowrap"
-                      onClick={() => {
-                        setSelectedIndicator(indicator);
-                        setShowFormBuilder(true);
-                      }}
-                    >
-                      Create Form
-                    </Button>
+                    {(() => {
+                      const existingForm = getIndicatorFormStatus(indicator.indicator_code);
+                      
+                      if (existingForm) {
+                        return (
+                          <Button 
+                            size="sm" 
+                            variant="default"
+                            className="whitespace-nowrap bg-blue-600 hover:bg-blue-700"
+                            onClick={() => {
+                              // Navigate to data entry for this indicator
+                              window.location.href = `/data-collection?form=${existingForm.id}&indicator=${indicator.indicator_code}`;
+                            }}
+                          >
+                            Enter Data
+                          </Button>
+                        );
+                      } else {
+                        return (
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="whitespace-nowrap"
+                            onClick={() => {
+                              setSelectedIndicator(indicator);
+                              setShowFormBuilder(true);
+                            }}
+                          >
+                            Create Form
+                          </Button>
+                        );
+                      }
+                    })()}
                   </div>
                 </div>
               )}

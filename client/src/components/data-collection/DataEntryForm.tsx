@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/useSimpleAuth';
 import { ReferenceDataSelect } from '@/components/reference-data/ReferenceDataSelect';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { CheckCircle, Plus } from 'lucide-react';
+import { SimpleFormRenderer } from '@/components/forms/SimpleFormRenderer';
 
 interface SubHeaderField {
   id?: string;
@@ -904,99 +905,20 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
             </Button>
           </div>
         ) : (
-          <>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {formFields.map((field) => (
-                <div key={field.id} className="space-y-2">
-                  <Label htmlFor={field.field_name}>
-                    {field.field_label}
-                    {field.is_required && !field.has_sub_headers && <span className="text-red-500 ml-1">*</span>}
-                  </Label>
-                  {/* Only render the main field input if it doesn't have sub-headers */}
-                  {!field.has_sub_headers && renderField(field)}
-                  {/* Render sub-headers if they exist */}
-                  {field.has_sub_headers && field.sub_headers && (
-                    <div className="mt-4 space-y-4">
-                      {field.sub_headers.map((subHeader) => (
-                        <div key={subHeader.name} className="border rounded-lg p-4 bg-gray-50">
-                          <h4 className="font-semibold text-lg mb-3 text-gray-800">{subHeader.label || subHeader.name}</h4>
-                          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                            {subHeader.fields.map((subField) => (
-                              <div key={subField.field_name} className="space-y-3">
-                                <Label htmlFor={`${field.field_name}_${subHeader.name}_${subField.field_name}`} className="text-base font-medium">
-                                  {subField.field_label}
-                                  {subField.is_required && <span className="text-red-500 ml-1">*</span>}
-                                </Label>
-                                {subField.has_sub_headers && subField.sub_headers ? (
-                                  <div className="space-y-4 col-span-full">
-                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                      {subField.sub_headers.map((nestedSubHeader) => (
-                                        <div key={nestedSubHeader.name} className="border rounded-lg p-6 bg-white shadow-sm">
-                                          <h5 className="font-semibold text-lg mb-4 text-gray-800 border-b pb-3">{nestedSubHeader.label || nestedSubHeader.name}</h5>
-                                          <div className="space-y-4">
-                                            {nestedSubHeader.fields.map((nestedField) => (
-                                              <div key={nestedField.field_name} className="space-y-2">
-                                                <Label htmlFor={`${field.field_name}_${subHeader.name}_${subField.field_name}_${nestedSubHeader.name}_${nestedField.field_name}`} className="text-sm font-medium text-gray-700">
-                                                  {nestedField.field_label}
-                                                  {nestedField.is_required && <span className="text-red-500 ml-1">*</span>}
-                                                </Label>
-                                                {renderNestedSubHeaderField(nestedField, field.field_name, subHeader.name, subField.field_name, nestedSubHeader.name)}
-                                              </div>
-                                            ))}
-                                          </div>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                ) : (
-                                  renderSubHeaderField(subField, field.field_name, subHeader.name)
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-              
-              <div className="flex justify-between items-center pt-4 border-t">
-                <div className="text-sm text-gray-600">
-                  {submissionCount > 0 && (
-                    <span>{submissionCount} entries submitted</span>
-                  )}
-                </div>
-                <div className="flex space-x-2">
-                  <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting || isMarkingComplete}>
-                    Cancel
-                  </Button>
-                  {submissionCount > 0 && (
-                    <Button 
-                      type="button" 
-                      variant="secondary"
-                      onClick={handleMarkComplete}
-                      disabled={isSubmitting || isMarkingComplete}
-                      className="flex items-center space-x-2"
-                    >
-                      {isMarkingComplete && <LoadingSpinner size="sm" />}
-                      <CheckCircle className="h-4 w-4" />
-                      <span>{isMarkingComplete ? 'Marking Complete...' : 'Mark as Complete'}</span>
-                    </Button>
-                  )}
-                  <Button 
-                    type="submit" 
-                    disabled={isSubmitting || isMarkingComplete}
-                    className="flex items-center space-x-2"
-                  >
-                    {isSubmitting && <LoadingSpinner size="sm" />}
-                    <Plus className="h-4 w-4" />
-                    <span>{isSubmitting ? 'Adding Entry...' : 'Add Entry'}</span>
-                  </Button>
-                </div>
-              </div>
-            </form>
-          </>
+          <SimpleFormRenderer
+            formFields={formFields}
+            scheduleForm={scheduleForm}
+            schedule={schedule}
+            submissionCount={submissionCount}
+            isMarkingComplete={isMarkingComplete}
+            onCancel={onCancel}
+            onMarkComplete={handleMarkComplete}
+            onSubmitted={() => {
+              setSubmissionCount(prev => prev + 1);
+              fetchExistingSubmissions();
+              onSubmitted();
+            }}
+          />
         )}
       </CardContent>
     </Card>

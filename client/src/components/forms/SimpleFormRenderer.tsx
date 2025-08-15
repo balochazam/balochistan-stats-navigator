@@ -25,24 +25,44 @@ interface FormField {
 }
 
 interface SimpleFormRendererProps {
-  formId: string;
+  formId?: string;
+  formFields?: FormField[];
+  scheduleForm?: any;
+  schedule?: any;
+  submissionCount?: number;
+  isMarkingComplete?: boolean;
+  onCancel?: () => void;
+  onMarkComplete?: () => void;
+  onSubmitted?: () => void;
   onSubmissionSuccess?: () => void;
 }
 
 export const SimpleFormRenderer: React.FC<SimpleFormRendererProps> = ({
   formId,
+  formFields: propFormFields,
+  scheduleForm,
+  schedule,
+  submissionCount = 0,
+  isMarkingComplete = false,
+  onCancel,
+  onMarkComplete,
+  onSubmitted,
   onSubmissionSuccess
 }) => {
   const { toast } = useToast();
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [csvData, setCsvData] = useState('');
   const [activeTab, setActiveTab] = useState('manual');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Fetch form fields
-  const { data: formFields = [], isLoading } = useQuery<FormField[]>({
+  // Fetch form fields only if not provided as props
+  const { data: fetchedFormFields = [], isLoading } = useQuery<FormField[]>({
     queryKey: [`/api/form-fields/${formId}`],
-    enabled: !!formId,
+    enabled: !!formId && !propFormFields,
   });
+
+  // Use provided form fields or fetched ones
+  const formFields = propFormFields || fetchedFormFields;
 
   // Initialize form data when fields are loaded
   useEffect(() => {
@@ -58,16 +78,36 @@ export const SimpleFormRenderer: React.FC<SimpleFormRendererProps> = ({
   // Submit form mutation
   const submitMutation = useMutation({
     mutationFn: async (data: Record<string, any>) => {
-      return await simpleApiClient.post('/api/form-submissions', {
-        form_id: formId,
+      const payload: any = {
         data: data
-      });
+      };
+      
+      // Use formId or scheduleForm.form_id
+      if (formId) {
+        payload.form_id = formId;
+      } else if (scheduleForm?.form_id) {
+        payload.form_id = scheduleForm.form_id;
+        payload.schedule_id = schedule?.id;
+        payload.submitted_by = data.user_id; // Will be set in handleSubmit
+        payload.submitted_at = new Date().toISOString();
+      }
+      
+      return await simpleApiClient.post('/api/form-submissions', payload);
     },
     onSuccess: () => {
       toast({
         title: "Success!",
-        description: "Data submitted successfully.",
+        description: "Data submitted successfully. You can continue adding more entries.",
       });
+      
+      // Clear form data for next entry
+      const clearedData: Record<string, any> = {};
+      formFields.forEach(field => {
+        clearedData[field.field_name] = '';
+      });
+      setFormData(clearedData);
+      
+      onSubmitted?.();
       onSubmissionSuccess?.();
     },
     onError: (error) => {
@@ -83,12 +123,21 @@ export const SimpleFormRenderer: React.FC<SimpleFormRendererProps> = ({
   // CSV bulk upload mutation
   const csvUploadMutation = useMutation({
     mutationFn: async (entries: Record<string, any>[]) => {
-      const promises = entries.map(entry => 
-        simpleApiClient.post('/api/form-submissions', {
-          form_id: formId,
-          data: entry
-        })
-      );
+      const promises = entries.map(entry => {
+        const payload: any = { data: entry };
+        
+        // Use formId or scheduleForm.form_id
+        if (formId) {
+          payload.form_id = formId;
+        } else if (scheduleForm?.form_id) {
+          payload.form_id = scheduleForm.form_id;
+          payload.schedule_id = schedule?.id;
+          payload.submitted_by = entry.user_id; // Will be set per entry
+          payload.submitted_at = new Date().toISOString();
+        }
+        
+        return simpleApiClient.post('/api/form-submissions', payload);
+      });
       return await Promise.all(promises);
     },
     onSuccess: (results) => {
@@ -97,6 +146,7 @@ export const SimpleFormRenderer: React.FC<SimpleFormRendererProps> = ({
         description: `Successfully uploaded ${results.length} entries.`,
       });
       setCsvData('');
+      onSubmitted?.();
       onSubmissionSuccess?.();
     },
     onError: (error) => {
@@ -114,6 +164,55 @@ export const SimpleFormRenderer: React.FC<SimpleFormRendererProps> = ({
       ...prev,
       [fieldName]: value
     }));
+  };
+
+  // Manual form submission handler
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    // Validate required fields
+    const validationErrors = [];
+    for (const field of formFields) {
+      if (field.is_required && (!formData[field.field_name] || formData[field.field_name] === '')) {
+        validationErrors.push(`${field.field_label} is required`);
+      }
+    }
+
+    if (validationErrors.length > 0) {
+      toast({
+        title: "Validation Error",
+        description: validationErrors.join(', '),
+        variant: "destructive"
+      });
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
+      // Get current user ID if needed (for schedule submissions)
+      let userId = null;
+      if (scheduleForm) {
+        const userResponse = await fetch('/api/auth/user');
+        const userData = await userResponse.json();
+        userId = userData.user?.id;
+      }
+
+      const submitData = { ...formData };
+      if (userId) {
+        submitData.user_id = userId;
+      }
+
+      submitMutation.mutate(submitData);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to submit data. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Generate CSV template
@@ -218,26 +317,7 @@ export const SimpleFormRenderer: React.FC<SimpleFormRendererProps> = ({
     return { entries, validationErrors, duplicateErrors };
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Basic validation
-    const requiredFields = formFields.filter(field => field.is_required);
-    const missingFields = requiredFields.filter(field => 
-      !formData[field.field_name] || formData[field.field_name] === ''
-    );
 
-    if (missingFields.length > 0) {
-      toast({
-        title: "Validation Error",
-        description: `Please fill in all required fields: ${missingFields.map(f => f.field_label).join(', ')}`,
-        variant: "destructive",
-      });
-      return;
-    }
-
-    submitMutation.mutate(formData);
-  };
 
   // Check for existing entries in database
   const checkExistingEntries = async (entries: Record<string, any>[]): Promise<string[]> => {
@@ -465,24 +545,45 @@ export const SimpleFormRenderer: React.FC<SimpleFormRendererProps> = ({
                 </div>
               ))}
 
-            <div className="flex gap-2 pt-4">
-              <Button 
-                type="submit" 
-                disabled={submitMutation.isPending}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                {submitMutation.isPending ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    Submitting...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-4 h-4 mr-2" />
-                    Submit Data
-                  </>
+            <div className="flex justify-between items-center pt-4 border-t">
+              <div className="text-sm text-gray-600">
+                {submissionCount > 0 && (
+                  <span>{submissionCount} entries submitted</span>
                 )}
-              </Button>
+              </div>
+              <div className="flex space-x-2">
+                {onCancel && (
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={onCancel}
+                    disabled={submitMutation.isPending || isMarkingComplete}
+                  >
+                    Cancel
+                  </Button>
+                )}
+                {onMarkComplete && submissionCount > 0 && (
+                  <Button 
+                    type="button" 
+                    variant="secondary"
+                    onClick={onMarkComplete}
+                    disabled={submitMutation.isPending || isMarkingComplete}
+                    className="flex items-center space-x-2"
+                  >
+                    {isMarkingComplete && <Loader2 className="w-4 h-4 animate-spin" />}
+                    {isMarkingComplete ? 'Marking Complete...' : 'Mark as Complete'}
+                  </Button>
+                )}
+                <Button 
+                  type="submit" 
+                  disabled={submitMutation.isPending || isMarkingComplete}
+                  className="flex items-center space-x-2"
+                >
+                  {submitMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+                  <Save className="w-4 h-4" />
+                  <span>{submitMutation.isPending ? 'Adding Entry...' : 'Add Entry'}</span>
+                </Button>
+              </div>
             </div>
           </form>
         </TabsContent>

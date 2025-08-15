@@ -410,12 +410,26 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
 
   // Generate CSV template
   const generateCSVTemplate = () => {
-    const headers = formFields
-      .filter(field => !field.has_sub_headers) // Exclude parent fields with sub-headers
-      .sort((a, b) => (a.field_order || 0) - (b.field_order || 0))
-      .map(field => field.field_label);
+    const allHeaders: string[] = [];
     
-    const csvContent = headers.join(',') + '\n';
+    // Process all fields, including sub-header fields
+    formFields.forEach(field => {
+      if (field.has_sub_headers && field.sub_headers) {
+        // For fields with sub-headers, include all sub-header fields
+        field.sub_headers.forEach(subHeader => {
+          subHeader.fields.forEach(subField => {
+            const fieldKey = `${field.field_name}_${subHeader.name}_${subField.field_name}`;
+            const displayLabel = `${field.field_label} - ${subHeader.label} - ${subField.field_label}`;
+            allHeaders.push(displayLabel);
+          });
+        });
+      } else {
+        // For regular fields without sub-headers
+        allHeaders.push(field.field_label);
+      }
+    });
+    
+    const csvContent = allHeaders.join(',') + '\n';
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -428,7 +442,7 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
     
     toast({
       title: "Template Downloaded!",
-      description: "CSV template has been downloaded. Fill it out and upload using the CSV tab.",
+      description: "CSV template has been downloaded with all fields including sub-headers. Fill it out and upload using the CSV tab.",
     });
   };
 
@@ -446,20 +460,61 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
     const headers = lines[0].split(',').map(h => h.trim());
     const fieldMap: Record<string, string> = {};
     
-    // Map CSV headers to field names
+    // Map CSV headers to field names (including sub-header fields)
     formFields.forEach(field => {
-      const matchingHeader = headers.find(h => 
-        h.toLowerCase() === field.field_label.toLowerCase() ||
-        h.toLowerCase() === field.field_name.toLowerCase()
-      );
-      if (matchingHeader) {
-        fieldMap[matchingHeader] = field.field_name;
+      if (field.has_sub_headers && field.sub_headers) {
+        // Handle sub-header fields
+        field.sub_headers.forEach(subHeader => {
+          subHeader.fields.forEach(subField => {
+            const fieldKey = `${field.field_name}_${subHeader.name}_${subField.field_name}`;
+            const displayLabel = `${field.field_label} - ${subHeader.label} - ${subField.field_label}`;
+            
+            const matchingHeader = headers.find(h => 
+              h.toLowerCase() === displayLabel.toLowerCase() ||
+              h.toLowerCase() === fieldKey.toLowerCase() ||
+              h.toLowerCase() === subField.field_label.toLowerCase()
+            );
+            if (matchingHeader) {
+              fieldMap[matchingHeader] = fieldKey;
+            }
+          });
+        });
+      } else {
+        // Handle regular fields
+        const matchingHeader = headers.find(h => 
+          h.toLowerCase() === field.field_label.toLowerCase() ||
+          h.toLowerCase() === field.field_name.toLowerCase()
+        );
+        if (matchingHeader) {
+          fieldMap[matchingHeader] = field.field_name;
+        }
       }
     });
 
     // Identify primary columns for duplicate detection
     const primaryColumns = formFields.filter(field => field.is_primary_column);
-    const requiredFields = formFields.filter(field => field.is_required);
+    
+    // Build list of all required fields including sub-header fields
+    const requiredFields: { field_name: string; field_label: string }[] = [];
+    formFields.forEach(field => {
+      if (field.has_sub_headers && field.sub_headers) {
+        field.sub_headers.forEach(subHeader => {
+          subHeader.fields.forEach(subField => {
+            if (subField.is_required) {
+              requiredFields.push({
+                field_name: `${field.field_name}_${subHeader.name}_${subField.field_name}`,
+                field_label: `${field.field_label} - ${subHeader.label} - ${subField.field_label}`
+              });
+            }
+          });
+        });
+      } else if (field.is_required) {
+        requiredFields.push({
+          field_name: field.field_name,
+          field_label: field.field_label
+        });
+      }
+    });
     
     const entries: Record<string, any>[] = [];
     const validationErrors: string[] = [];

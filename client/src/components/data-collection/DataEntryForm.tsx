@@ -412,9 +412,10 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
     }
   };
 
-  // Generate CSV template
+  // Generate CSV template with Excel formulas for aggregate columns
   const generateCSVTemplate = () => {
     const allHeaders: string[] = [];
+    const formulaMapping: Record<number, string> = {}; // Column index to formula mapping
     
     // Process all fields, including sub-header fields
     formFields.forEach(field => {
@@ -422,8 +423,70 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
         // For fields with sub-headers, ONLY include the actual data entry fields (sub-header fields)
         field.sub_headers.forEach(subHeader => {
           subHeader.fields.forEach(subField => {
-            // Use only the sub-field label, not the parent field label
             allHeaders.push(subField.field_label);
+            
+            // Check if this field is a total/aggregate column
+            const isTotal = subField.field_label.toLowerCase().includes('total') ||
+                           subField.field_label.toLowerCase().includes('sum') ||
+                           subField.field_name.toLowerCase().includes('total') ||
+                           subField.field_name.toLowerCase().includes('sum') ||
+                           subField.field_label.toLowerCase().includes('aggregate') ||
+                           (subField.field_label.toLowerCase().includes('both') && subField.field_label.toLowerCase().includes('sexes'));
+                           
+            if (isTotal) {
+              // Find potential columns to sum within the same sub-header
+              const columnsToSum: number[] = [];
+              const currentFieldIndex = allHeaders.length - 1; // Current field position
+              
+              // Look for numeric columns in the same sub-header that aren't totals
+              subHeader.fields.forEach((potentialSumField, idx) => {
+                const isPotentialNumber = potentialSumField.field_type === 'number' || 
+                                        potentialSumField.field_type === 'integer';
+                const isNotTotal = !potentialSumField.field_label.toLowerCase().includes('total') &&
+                                 !potentialSumField.field_label.toLowerCase().includes('sum') &&
+                                 !potentialSumField.field_label.toLowerCase().includes('aggregate') &&
+                                 !(potentialSumField.field_label.toLowerCase().includes('both') && 
+                                   potentialSumField.field_label.toLowerCase().includes('sexes'));
+                                 
+                if (isPotentialNumber && isNotTotal && potentialSumField.field_name !== subField.field_name) {
+                  // Calculate the actual column index in the full header array
+                  const fieldsBeforeCurrent = subHeader.fields.slice(0, idx).length;
+                  const fullColumnIndex = currentFieldIndex - (subHeader.fields.length - 1 - idx);
+                  
+                  // Only include columns that come before the total column
+                  if (fullColumnIndex < currentFieldIndex) {
+                    columnsToSum.push(fullColumnIndex);
+                  }
+                }
+              });
+              
+              // Create Excel SUM formula if we found columns to sum
+              if (columnsToSum.length > 0) {
+                const columnLetters = columnsToSum.map(colIndex => {
+                  // Convert column index to Excel column letter (A=0, B=1, C=2, etc.)
+                  const getColumnLetter = (index: number): string => {
+                    let result = '';
+                    while (index >= 0) {
+                      result = String.fromCharCode(65 + (index % 26)) + result;
+                      index = Math.floor(index / 26) - 1;
+                    }
+                    return result;
+                  };
+                  return getColumnLetter(colIndex);
+                });
+                
+                // Create appropriate formula based on number of columns
+                if (columnLetters.length >= 1) {
+                  if (columnLetters.length === 1) {
+                    formulaMapping[allHeaders.length - 1] = `=${columnLetters[0]}2`;
+                  } else {
+                    // For multiple columns, create a SUM formula
+                    const ranges = columnLetters.map(letter => `${letter}2`).join('+');
+                    formulaMapping[allHeaders.length - 1] = `=${ranges}`;
+                  }
+                }
+              }
+            }
           });
         });
       } else {
@@ -432,7 +495,28 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
       }
     });
     
-    const csvContent = allHeaders.join(',') + '\n';
+    // Create CSV content with headers and example row with formulas
+    let csvContent = allHeaders.join(',') + '\n';
+    
+    // Add an example row with formulas for aggregate columns
+    const exampleRow = allHeaders.map((header, index) => {
+      if (formulaMapping[index]) {
+        return formulaMapping[index];
+      }
+      // For non-formula columns, provide helpful placeholder text
+      if (header.toLowerCase().includes('district') || header.toLowerCase().includes('province')) {
+        return 'Enter_Location_Name';
+      } else if (header.toLowerCase().includes('year') || header.toLowerCase().includes('date')) {
+        return '2024';
+      } else if (header.toLowerCase().includes('male') || header.toLowerCase().includes('female')) {
+        return '0';
+      } else {
+        return '0'; // Default for numeric fields
+      }
+    });
+    
+    csvContent += exampleRow.join(',') + '\n';
+    
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -443,9 +527,13 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
     link.click();
     document.body.removeChild(link);
     
+    const hasFormulas = Object.keys(formulaMapping).length > 0;
+    
     toast({
       title: "Template Downloaded!",
-      description: "CSV template has been downloaded with all fields including sub-headers. Fill it out and upload using the CSV tab.",
+      description: hasFormulas 
+        ? "CSV template downloaded with Excel formulas for total columns. Open in Excel to see automatic calculations."
+        : "CSV template downloaded with example data. Fill it out and upload using the CSV tab.",
     });
   };
 

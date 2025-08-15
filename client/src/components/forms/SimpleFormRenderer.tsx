@@ -17,6 +17,8 @@ interface FormField {
   field_label: string;
   field_type: string;
   is_required: boolean;
+  is_primary_column: boolean;
+  is_secondary_column: boolean;
   placeholder_text?: string;
   reference_data_name?: string;
   field_order: number;
@@ -137,10 +139,16 @@ export const SimpleFormRenderer: React.FC<SimpleFormRendererProps> = ({
     });
   };
 
-  // Parse CSV data
-  const parseCSVData = (csvText: string): Record<string, any>[] => {
+  // Parse CSV data with validation
+  const parseCSVData = (csvText: string): { 
+    entries: Record<string, any>[], 
+    validationErrors: string[], 
+    duplicateErrors: string[]
+  } => {
     const lines = csvText.trim().split('\n');
-    if (lines.length < 2) return [];
+    if (lines.length < 2) {
+      return { entries: [], validationErrors: ['CSV must have at least 2 lines (headers + data)'], duplicateErrors: [] };
+    }
 
     const headers = lines[0].split(',').map(h => h.trim());
     const fieldMap: Record<string, string> = {};
@@ -156,23 +164,58 @@ export const SimpleFormRenderer: React.FC<SimpleFormRendererProps> = ({
       }
     });
 
+    // Identify primary columns for duplicate detection
+    const primaryColumns = formFields.filter(field => field.is_primary_column);
+    const requiredFields = formFields.filter(field => field.is_required);
+    
     const entries: Record<string, any>[] = [];
+    const validationErrors: string[] = [];
+    const duplicateErrors: string[] = [];
+    const primaryKeyTracker = new Set<string>();
+
     for (let i = 1; i < lines.length; i++) {
+      const lineNumber = i + 1;
       const values = lines[i].split(',').map(v => v.trim());
       const entry: Record<string, any> = {};
       
+      // Parse row data
       headers.forEach((header, index) => {
-        if (fieldMap[header] && values[index]) {
-          entry[fieldMap[header]] = values[index];
+        if (fieldMap[header]) {
+          entry[fieldMap[header]] = values[index] || '';
         }
       });
       
-      if (Object.keys(entry).length > 0) {
-        entries.push(entry);
+      if (Object.keys(entry).length === 0) continue;
+
+      // Validate required fields
+      const missingRequired = requiredFields.filter(field => 
+        !entry[field.field_name] || entry[field.field_name] === ''
+      );
+      
+      if (missingRequired.length > 0) {
+        validationErrors.push(
+          `Row ${lineNumber}: Missing required fields: ${missingRequired.map(f => f.field_label).join(', ')}`
+        );
+        continue;
       }
+
+      // Check for duplicates based on primary columns
+      if (primaryColumns.length > 0) {
+        const primaryKeyValues = primaryColumns.map(col => entry[col.field_name] || '').join('|');
+        
+        if (primaryKeyTracker.has(primaryKeyValues)) {
+          const primaryLabels = primaryColumns.map(col => `${col.field_label}: ${entry[col.field_name]}`).join(', ');
+          duplicateErrors.push(`Row ${lineNumber}: Duplicate entry detected (${primaryLabels})`);
+          continue;
+        }
+        
+        primaryKeyTracker.add(primaryKeyValues);
+      }
+      
+      entries.push(entry);
     }
     
-    return entries;
+    return { entries, validationErrors, duplicateErrors };
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -196,7 +239,39 @@ export const SimpleFormRenderer: React.FC<SimpleFormRendererProps> = ({
     submitMutation.mutate(formData);
   };
 
-  const handleCSVUpload = () => {
+  // Check for existing entries in database
+  const checkExistingEntries = async (entries: Record<string, any>[]): Promise<string[]> => {
+    const primaryColumns = formFields.filter(field => field.is_primary_column);
+    if (primaryColumns.length === 0) return [];
+    
+    const existingEntries: string[] = [];
+    
+    try {
+      // Get existing submissions for this form
+      const response = await simpleApiClient.get(`/api/form-submissions?form_id=${formId}`);
+      const existingSubmissions = response.data || [];
+      
+      entries.forEach((entry, index) => {
+        const primaryKeyValues = primaryColumns.map(col => entry[col.field_name] || '').join('|');
+        
+        const duplicate = existingSubmissions.find((existing: any) => {
+          const existingKey = primaryColumns.map(col => existing.data?.[col.field_name] || '').join('|');
+          return existingKey === primaryKeyValues;
+        });
+        
+        if (duplicate) {
+          const primaryLabels = primaryColumns.map(col => `${col.field_label}: ${entry[col.field_name]}`).join(', ');
+          existingEntries.push(`Entry ${index + 1}: Already exists in database (${primaryLabels})`);
+        }
+      });
+    } catch (error) {
+      console.error('Error checking existing entries:', error);
+    }
+    
+    return existingEntries;
+  };
+
+  const handleCSVUpload = async () => {
     if (!csvData.trim()) {
       toast({
         title: "No Data",
@@ -206,16 +281,50 @@ export const SimpleFormRenderer: React.FC<SimpleFormRendererProps> = ({
       return;
     }
 
-    const entries = parseCSVData(csvData);
-    if (entries.length === 0) {
+    const parseResult = parseCSVData(csvData);
+    const { entries, validationErrors, duplicateErrors } = parseResult;
+    
+    // Show validation errors
+    if (validationErrors.length > 0) {
       toast({
-        title: "Parse Error",
-        description: "Could not parse CSV data. Please check the format.",
+        title: "Validation Errors",
+        description: validationErrors.slice(0, 3).join('; ') + (validationErrors.length > 3 ? '...' : ''),
         variant: "destructive",
       });
       return;
     }
 
+    // Show duplicate errors within CSV
+    if (duplicateErrors.length > 0) {
+      toast({
+        title: "Duplicate Entries in CSV",
+        description: duplicateErrors.slice(0, 3).join('; ') + (duplicateErrors.length > 3 ? '...' : ''),
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (entries.length === 0) {
+      toast({
+        title: "No Valid Data",
+        description: "No valid entries found in CSV data. Please check the format and required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check for existing entries in database
+    const existingErrors = await checkExistingEntries(entries);
+    if (existingErrors.length > 0) {
+      toast({
+        title: "Database Duplicates Found",
+        description: existingErrors.slice(0, 2).join('; ') + (existingErrors.length > 2 ? '...' : ''),
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // All validation passed, proceed with upload
     csvUploadMutation.mutate(entries);
   };
 
@@ -420,6 +529,17 @@ export const SimpleFormRenderer: React.FC<SimpleFormRendererProps> = ({
                 <li>3. Copy and paste the data (including headers) into the text area above</li>
                 <li>4. Click "Upload CSV Data" to submit all entries at once</li>
               </ul>
+              
+              {formFields.some(field => field.is_primary_column) && (
+                <div className="mt-3 p-2 bg-orange-100 border border-orange-200 rounded">
+                  <div className="text-sm font-medium text-orange-800 mb-1">Duplicate Prevention:</div>
+                  <div className="text-xs text-orange-700">
+                    Primary key fields: {formFields.filter(f => f.is_primary_column).map(f => f.field_label).join(', ')}
+                    <br />
+                    No duplicate entries allowed for the same combination of primary key values.
+                  </div>
+                </div>
+              )}
             </div>
             
             <div className="flex gap-2 pt-4">

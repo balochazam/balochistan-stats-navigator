@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,31 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { simpleApiClient } from '@/lib/simpleApi';
-import { Save, Loader2, Upload, Download, FileSpreadsheet } from 'lucide-react';
+import { ReferenceDataSelect } from '@/components/reference-data/ReferenceDataSelect';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { Save, Loader2, Upload, Download, FileSpreadsheet, CheckCircle, Plus } from 'lucide-react';
+
+interface SubHeaderField {
+  id?: string;
+  field_name: string;
+  field_label: string;
+  field_type: string;
+  is_required: boolean;
+  field_order: number;
+  reference_data_name?: string;
+  placeholder_text?: string;
+  aggregate_fields?: string[];
+  is_secondary_column?: boolean;
+  has_sub_headers?: boolean;
+  sub_headers?: SubHeader[];
+}
+
+interface SubHeader {
+  id?: string;
+  name: string;
+  label: string;
+  fields: SubHeaderField[];
+}
 
 interface FormField {
   id: string;
@@ -17,11 +41,14 @@ interface FormField {
   field_label: string;
   field_type: string;
   is_required: boolean;
-  is_primary_column: boolean;
-  is_secondary_column: boolean;
+  is_primary_column?: boolean;
+  is_secondary_column?: boolean;
   placeholder_text?: string;
   reference_data_name?: string;
   field_order: number;
+  aggregate_fields?: string[];
+  has_sub_headers?: boolean;
+  sub_headers?: SubHeader[];
 }
 
 interface SimpleFormRendererProps {

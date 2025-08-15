@@ -415,16 +415,15 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
     // Process all fields, including sub-header fields
     formFields.forEach(field => {
       if (field.has_sub_headers && field.sub_headers) {
-        // For fields with sub-headers, include all sub-header fields
+        // For fields with sub-headers, ONLY include the actual data entry fields (sub-header fields)
         field.sub_headers.forEach(subHeader => {
           subHeader.fields.forEach(subField => {
-            const fieldKey = `${field.field_name}_${subHeader.name}_${subField.field_name}`;
-            const displayLabel = `${field.field_label} - ${subHeader.label} - ${subField.field_label}`;
-            allHeaders.push(displayLabel);
+            // Use only the sub-field label, not the parent field label
+            allHeaders.push(subField.field_label);
           });
         });
       } else {
-        // For regular fields without sub-headers
+        // For regular fields without sub-headers (like primary fields)
         allHeaders.push(field.field_label);
       }
     });
@@ -467,12 +466,10 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
         field.sub_headers.forEach(subHeader => {
           subHeader.fields.forEach(subField => {
             const fieldKey = `${field.field_name}_${subHeader.name}_${subField.field_name}`;
-            const displayLabel = `${field.field_label} - ${subHeader.label} - ${subField.field_label}`;
             
             const matchingHeader = headers.find(h => 
-              h.toLowerCase() === displayLabel.toLowerCase() ||
-              h.toLowerCase() === fieldKey.toLowerCase() ||
-              h.toLowerCase() === subField.field_label.toLowerCase()
+              h.toLowerCase() === subField.field_label.toLowerCase() ||
+              h.toLowerCase() === fieldKey.toLowerCase()
             );
             if (matchingHeader) {
               fieldMap[matchingHeader] = fieldKey;
@@ -503,7 +500,7 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
             if (subField.is_required) {
               requiredFields.push({
                 field_name: `${field.field_name}_${subHeader.name}_${subField.field_name}`,
-                field_label: `${field.field_label} - ${subHeader.label} - ${subField.field_label}`
+                field_label: subField.field_label // Use only the sub-field label
               });
             }
           });

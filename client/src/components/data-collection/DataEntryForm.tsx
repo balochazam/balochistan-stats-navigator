@@ -5,12 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { simpleApiClient } from '@/lib/simpleApi';
 import { useAuth } from '@/hooks/useSimpleAuth';
 import { ReferenceDataSelect } from '@/components/reference-data/ReferenceDataSelect';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import { CheckCircle, Plus } from 'lucide-react';
+import { CheckCircle, Plus, Upload, Download, FileSpreadsheet, Loader2, Save } from 'lucide-react';
 import { SimpleFormRenderer } from '@/components/forms/SimpleFormRenderer';
 
 interface SubHeaderField {
@@ -95,6 +96,9 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
   const [isCompleted, setIsCompleted] = useState(false);
   const [existingSubmissions, setExistingSubmissions] = useState<any[]>([]);
   const [usedPrimaryValues, setUsedPrimaryValues] = useState<Set<string>>(new Set());
+  const [csvData, setCsvData] = useState('');
+  const [activeTab, setActiveTab] = useState('manual');
+  const [isCsvUploading, setIsCsvUploading] = useState(false);
 
   // Memoize the fetch function to prevent unnecessary re-renders
   const fetchFormFields = useCallback(async () => {
@@ -400,6 +404,210 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
       });
     } finally {
       setIsMarkingComplete(false);
+    }
+  };
+
+  // Generate CSV template
+  const generateCSVTemplate = () => {
+    const headers = formFields
+      .sort((a, b) => a.field_order - b.field_order)
+      .map(field => field.field_label);
+    
+    const csvContent = headers.join(',') + '\n';
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'data_entry_template.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({
+      title: "Template Downloaded!",
+      description: "CSV template has been downloaded. Fill it out and upload using the CSV tab.",
+    });
+  };
+
+  // Parse CSV data with validation
+  const parseCSVData = (csvText: string): { 
+    entries: Record<string, any>[], 
+    validationErrors: string[], 
+    duplicateErrors: string[]
+  } => {
+    const lines = csvText.trim().split('\n');
+    if (lines.length < 2) {
+      return { entries: [], validationErrors: ['CSV must have at least 2 lines (headers + data)'], duplicateErrors: [] };
+    }
+
+    const headers = lines[0].split(',').map(h => h.trim());
+    const fieldMap: Record<string, string> = {};
+    
+    // Map CSV headers to field names
+    formFields.forEach(field => {
+      const matchingHeader = headers.find(h => 
+        h.toLowerCase() === field.field_label.toLowerCase() ||
+        h.toLowerCase() === field.field_name.toLowerCase()
+      );
+      if (matchingHeader) {
+        fieldMap[matchingHeader] = field.field_name;
+      }
+    });
+
+    // Identify primary columns for duplicate detection
+    const primaryColumns = formFields.filter(field => field.is_primary_column);
+    const requiredFields = formFields.filter(field => field.is_required);
+    
+    const entries: Record<string, any>[] = [];
+    const validationErrors: string[] = [];
+    const duplicateErrors: string[] = [];
+    const primaryKeyTracker = new Set<string>();
+
+    for (let i = 1; i < lines.length; i++) {
+      const lineNumber = i + 1;
+      const values = lines[i].split(',').map(v => v.trim());
+      const entry: Record<string, any> = {};
+      
+      // Parse row data
+      headers.forEach((header, index) => {
+        if (fieldMap[header]) {
+          entry[fieldMap[header]] = values[index] || '';
+        }
+      });
+      
+      if (Object.keys(entry).length === 0) continue;
+
+      // Validate required fields
+      const missingRequired = requiredFields.filter(field => 
+        !entry[field.field_name] || entry[field.field_name] === ''
+      );
+      
+      if (missingRequired.length > 0) {
+        validationErrors.push(
+          `Row ${lineNumber}: Missing required fields: ${missingRequired.map(f => f.field_label).join(', ')}`
+        );
+        continue;
+      }
+
+      // Check for duplicates based on primary columns
+      if (primaryColumns.length > 0) {
+        const primaryKeyValues = primaryColumns.map(col => entry[col.field_name] || '').join('|');
+        
+        if (primaryKeyTracker.has(primaryKeyValues)) {
+          const primaryLabels = primaryColumns.map(col => `${col.field_label}: ${entry[col.field_name]}`).join(', ');
+          duplicateErrors.push(`Row ${lineNumber}: Duplicate entry detected (${primaryLabels})`);
+          continue;
+        }
+        
+        primaryKeyTracker.add(primaryKeyValues);
+      }
+      
+      entries.push(entry);
+    }
+    
+    return { entries, validationErrors, duplicateErrors };
+  };
+
+  // Handle CSV bulk upload
+  const handleCSVUpload = async () => {
+    if (!csvData.trim()) {
+      toast({
+        title: "No Data",
+        description: "Please paste CSV data before uploading.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsCsvUploading(true);
+    try {
+      const parseResult = parseCSVData(csvData);
+      const { entries, validationErrors, duplicateErrors } = parseResult;
+      
+      // Show validation errors
+      if (validationErrors.length > 0) {
+        toast({
+          title: "Validation Errors",
+          description: validationErrors.slice(0, 3).join('; ') + (validationErrors.length > 3 ? '...' : ''),
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Show duplicate errors within CSV
+      if (duplicateErrors.length > 0) {
+        toast({
+          title: "Duplicate Entries in CSV",
+          description: duplicateErrors.slice(0, 3).join('; ') + (duplicateErrors.length > 3 ? '...' : ''),
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Check for duplicates with existing database entries
+      const primaryColumns = formFields.filter(field => field.is_primary_column);
+      if (primaryColumns.length > 0) {
+        const databaseDuplicates: string[] = [];
+        
+        entries.forEach((entry, index) => {
+          const primaryKeyValues = primaryColumns.map(col => entry[col.field_name] || '').join('|');
+          
+          const duplicate = existingSubmissions.find((existing: any) => {
+            const existingKey = primaryColumns.map(col => existing.data?.[col.field_name] || '').join('|');
+            return existingKey === primaryKeyValues;
+          });
+          
+          if (duplicate) {
+            const primaryLabels = primaryColumns.map(col => `${col.field_label}: ${entry[col.field_name]}`).join(', ');
+            databaseDuplicates.push(`Row ${index + 2}: Already exists in database (${primaryLabels})`);
+          }
+        });
+
+        if (databaseDuplicates.length > 0) {
+          toast({
+            title: "Database Duplicates Found",
+            description: databaseDuplicates.slice(0, 3).join('; ') + (databaseDuplicates.length > 3 ? '...' : ''),
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
+      // Submit all entries
+      const promises = entries.map(entry => 
+        simpleApiClient.post('/api/form-submissions', {
+          schedule_id: schedule.id,
+          form_id: scheduleForm.form_id,
+          submitted_by: profile?.id,
+          data: entry,
+          submitted_at: new Date().toISOString()
+        })
+      );
+
+      await Promise.all(promises);
+
+      toast({
+        title: "Bulk Upload Complete!",
+        description: `Successfully uploaded ${entries.length} entries.`,
+      });
+      
+      setCsvData('');
+      setSubmissionCount(prev => prev + entries.length);
+      
+      // Refresh existing submissions for duplicate prevention
+      await fetchExistingSubmissions();
+      
+      onSubmitted();
+    } catch (error) {
+      console.error('CSV upload error:', error);
+      toast({
+        title: "Upload Error",
+        description: "Failed to upload CSV data. Please check the format and try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCsvUploading(false);
     }
   };
 
@@ -905,20 +1113,152 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
             </Button>
           </div>
         ) : (
-          <SimpleFormRenderer
-            formFields={formFields}
-            scheduleForm={scheduleForm}
-            schedule={schedule}
-            submissionCount={submissionCount}
-            isMarkingComplete={isMarkingComplete}
-            onCancel={onCancel}
-            onMarkComplete={handleMarkComplete}
-            onSubmitted={() => {
-              setSubmissionCount(prev => prev + 1);
-              fetchExistingSubmissions();
-              onSubmitted();
-            }}
-          />
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="manual" className="flex items-center gap-2">
+                <Plus className="w-4 h-4" />
+                Manual Entry
+              </TabsTrigger>
+              <TabsTrigger value="csv" className="flex items-center gap-2">
+                <Upload className="w-4 h-4" />
+                CSV Upload
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="manual" className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {formFields
+                  .sort((a, b) => (a.field_order || 0) - (b.field_order || 0))
+                  .map((field) => (
+                    <div key={field.id} className="space-y-2">
+                      <Label htmlFor={field.field_name} className="text-sm font-medium">
+                        {field.field_label}
+                        {field.is_required && <span className="text-red-500 ml-1">*</span>}
+                      </Label>
+                      {renderField(field)}
+                    </div>
+                  ))}
+
+                <div className="flex justify-between items-center pt-4 border-t">
+                  <div className="text-sm text-gray-600">
+                    {submissionCount > 0 && (
+                      <span>{submissionCount} entries submitted</span>
+                    )}
+                  </div>
+                  <div className="flex space-x-2">
+                    {onCancel && (
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={onCancel}
+                        disabled={isSubmitting || isMarkingComplete}
+                      >
+                        Cancel
+                      </Button>
+                    )}
+                    {submissionCount > 0 && (
+                      <Button 
+                        type="button" 
+                        variant="secondary"
+                        onClick={handleMarkComplete}
+                        disabled={isSubmitting || isMarkingComplete}
+                        className="flex items-center space-x-2"
+                      >
+                        {isMarkingComplete && <Loader2 className="w-4 h-4 animate-spin" />}
+                        {isMarkingComplete ? 'Marking Complete...' : 'Mark as Complete'}
+                      </Button>
+                    )}
+                    <Button 
+                      type="submit" 
+                      disabled={isSubmitting || isMarkingComplete}
+                      className="flex items-center space-x-2"
+                    >
+                      {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                      <Save className="w-4 h-4" />
+                      <span>{isSubmitting ? 'Adding Entry...' : 'Add Entry'}</span>
+                    </Button>
+                  </div>
+                </div>
+              </form>
+            </TabsContent>
+            
+            <TabsContent value="csv" className="space-y-4">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-medium">Bulk Data Upload</h3>
+                  <Button
+                    variant="outline"
+                    onClick={generateCSVTemplate}
+                    className="flex items-center gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    Download Template
+                  </Button>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="csv-data">
+                    Paste CSV Data
+                    <span className="text-sm text-gray-500 ml-2">
+                      (First row should contain column headers)
+                    </span>
+                  </Label>
+                  <Textarea
+                    id="csv-data"
+                    value={csvData}
+                    onChange={(e) => setCsvData(e.target.value)}
+                    placeholder="Paste your CSV data here, or download the template first to see the expected format..."
+                    rows={10}
+                    className="font-mono text-sm"
+                  />
+                </div>
+                
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <FileSpreadsheet className="w-4 h-4 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-800">CSV Upload Instructions:</span>
+                  </div>
+                  <ul className="text-sm text-blue-700 space-y-1">
+                    <li>1. Click "Download Template" to get the correct CSV format</li>
+                    <li>2. Fill out the template with your data in Excel or any spreadsheet app</li>
+                    <li>3. Copy and paste the data (including headers) into the text area above</li>
+                    <li>4. Click "Upload CSV Data" to submit all entries at once</li>
+                  </ul>
+                  
+                  {formFields.some(field => field.is_primary_column) && (
+                    <div className="mt-3 p-2 bg-orange-100 border border-orange-200 rounded">
+                      <div className="text-sm font-medium text-orange-800 mb-1">Duplicate Prevention:</div>
+                      <div className="text-xs text-orange-700">
+                        Primary key fields: {formFields.filter(f => f.is_primary_column).map(f => f.field_label).join(', ')}
+                        <br />
+                        No duplicate entries allowed for the same combination of primary key values.
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="flex gap-2 pt-4">
+                  <Button 
+                    onClick={handleCSVUpload}
+                    disabled={isCsvUploading || !csvData.trim()}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    {isCsvUploading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4 mr-2" />
+                        Upload CSV Data
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
         )}
       </CardContent>
     </Card>

@@ -49,6 +49,7 @@ interface FormField {
   aggregate_fields?: string[];
   has_sub_headers?: boolean;
   sub_headers?: SubHeader[];
+  field_order?: number;
 }
 
 interface Form {
@@ -410,7 +411,8 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
   // Generate CSV template
   const generateCSVTemplate = () => {
     const headers = formFields
-      .sort((a, b) => a.field_order - b.field_order)
+      .filter(field => !field.has_sub_headers) // Exclude parent fields with sub-headers
+      .sort((a, b) => (a.field_order || 0) - (b.field_order || 0))
       .map(field => field.field_label);
     
     const csvContent = headers.join(',') + '\n';
@@ -418,7 +420,7 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', 'data_entry_template.csv');
+    link.setAttribute('download', `${scheduleForm.form.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_template.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -560,7 +562,7 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
           
           if (duplicate) {
             const primaryLabels = primaryColumns.map(col => `${col.field_label}: ${entry[col.field_name]}`).join(', ');
-            databaseDuplicates.push(`Row ${index + 2}: Already exists in database (${primaryLabels})`);
+            databaseDuplicates.push(`Row ${index + 2}: Entry already exists in database (${primaryLabels})`);
           }
         });
 
@@ -1231,7 +1233,7 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
                       <div className="text-xs text-orange-700">
                         Primary key fields: {formFields.filter(f => f.is_primary_column).map(f => f.field_label).join(', ')}
                         <br />
-                        No duplicate entries allowed for the same combination of primary key values.
+                        No duplicate entries allowed for the same combination of primary key values (e.g., if District is primary, cannot enter same district twice).
                       </div>
                     </div>
                   )}

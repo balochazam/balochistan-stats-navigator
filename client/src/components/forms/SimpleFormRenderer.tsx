@@ -6,9 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { simpleApiClient } from '@/lib/simpleApi';
-import { Save, Loader2 } from 'lucide-react';
+import { Save, Loader2, Upload, Download, FileSpreadsheet } from 'lucide-react';
 
 interface FormField {
   id: string;
@@ -32,6 +33,8 @@ export const SimpleFormRenderer: React.FC<SimpleFormRendererProps> = ({
 }) => {
   const { toast } = useToast();
   const [formData, setFormData] = useState<Record<string, any>>({});
+  const [csvData, setCsvData] = useState('');
+  const [activeTab, setActiveTab] = useState('manual');
 
   // Fetch form fields
   const { data: formFields = [], isLoading } = useQuery<FormField[]>({
@@ -75,11 +78,101 @@ export const SimpleFormRenderer: React.FC<SimpleFormRendererProps> = ({
     }
   });
 
+  // CSV bulk upload mutation
+  const csvUploadMutation = useMutation({
+    mutationFn: async (entries: Record<string, any>[]) => {
+      const promises = entries.map(entry => 
+        simpleApiClient.post('/api/form-submissions', {
+          form_id: formId,
+          data: entry
+        })
+      );
+      return await Promise.all(promises);
+    },
+    onSuccess: (results) => {
+      toast({
+        title: "Bulk Upload Complete!",
+        description: `Successfully uploaded ${results.length} entries.`,
+      });
+      setCsvData('');
+      onSubmissionSuccess?.();
+    },
+    onError: (error) => {
+      console.error('CSV upload error:', error);
+      toast({
+        title: "Upload Error",
+        description: "Failed to upload CSV data. Please check the format and try again.",
+        variant: "destructive",
+      });
+    }
+  });
+
   const handleInputChange = (fieldName: string, value: any) => {
     setFormData(prev => ({
       ...prev,
       [fieldName]: value
     }));
+  };
+
+  // Generate CSV template
+  const generateCSVTemplate = () => {
+    const headers = formFields
+      .sort((a, b) => a.field_order - b.field_order)
+      .map(field => field.field_label);
+    
+    const csvContent = headers.join(',') + '\n';
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'data_entry_template.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({
+      title: "Template Downloaded!",
+      description: "CSV template has been downloaded. Fill it out and upload using the CSV tab.",
+    });
+  };
+
+  // Parse CSV data
+  const parseCSVData = (csvText: string): Record<string, any>[] => {
+    const lines = csvText.trim().split('\n');
+    if (lines.length < 2) return [];
+
+    const headers = lines[0].split(',').map(h => h.trim());
+    const fieldMap: Record<string, string> = {};
+    
+    // Map CSV headers to field names
+    formFields.forEach(field => {
+      const matchingHeader = headers.find(h => 
+        h.toLowerCase() === field.field_label.toLowerCase() ||
+        h.toLowerCase() === field.field_name.toLowerCase()
+      );
+      if (matchingHeader) {
+        fieldMap[matchingHeader] = field.field_name;
+      }
+    });
+
+    const entries: Record<string, any>[] = [];
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(',').map(v => v.trim());
+      const entry: Record<string, any> = {};
+      
+      headers.forEach((header, index) => {
+        if (fieldMap[header] && values[index]) {
+          entry[fieldMap[header]] = values[index];
+        }
+      });
+      
+      if (Object.keys(entry).length > 0) {
+        entries.push(entry);
+      }
+    }
+    
+    return entries;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -101,6 +194,29 @@ export const SimpleFormRenderer: React.FC<SimpleFormRendererProps> = ({
     }
 
     submitMutation.mutate(formData);
+  };
+
+  const handleCSVUpload = () => {
+    if (!csvData.trim()) {
+      toast({
+        title: "No Data",
+        description: "Please paste CSV data before uploading.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const entries = parseCSVData(csvData);
+    if (entries.length === 0) {
+      toast({
+        title: "Parse Error",
+        description: "Could not parse CSV data. Please check the format.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    csvUploadMutation.mutate(entries);
   };
 
   const renderField = (field: FormField) => {
@@ -213,38 +329,121 @@ export const SimpleFormRenderer: React.FC<SimpleFormRendererProps> = ({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {formFields
-        .sort((a, b) => a.field_order - b.field_order)
-        .map((field) => (
-          <div key={field.id} className="space-y-2">
-            <Label htmlFor={field.field_name} className="text-sm font-medium">
-              {field.field_label}
-              {field.is_required && <span className="text-red-500 ml-1">*</span>}
-            </Label>
-            {renderField(field)}
-          </div>
-        ))}
+    <div className="space-y-4">
+      <Tabs defaultValue="manual" value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="manual" className="flex items-center gap-2">
+            <Save className="w-4 h-4" />
+            Manual Entry
+          </TabsTrigger>
+          <TabsTrigger value="csv" className="flex items-center gap-2">
+            <Upload className="w-4 h-4" />
+            CSV Upload
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="manual" className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {formFields
+              .sort((a, b) => a.field_order - b.field_order)
+              .map((field) => (
+                <div key={field.id} className="space-y-2">
+                  <Label htmlFor={field.field_name} className="text-sm font-medium">
+                    {field.field_label}
+                    {field.is_required && <span className="text-red-500 ml-1">*</span>}
+                  </Label>
+                  {renderField(field)}
+                </div>
+              ))}
 
-      <div className="flex gap-2 pt-4">
-        <Button 
-          type="submit" 
-          disabled={submitMutation.isPending}
-          className="bg-blue-600 hover:bg-blue-700"
-        >
-          {submitMutation.isPending ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin mr-2" />
-              Submitting...
-            </>
-          ) : (
-            <>
-              <Save className="w-4 h-4 mr-2" />
-              Submit Data
-            </>
-          )}
-        </Button>
-      </div>
-    </form>
+            <div className="flex gap-2 pt-4">
+              <Button 
+                type="submit" 
+                disabled={submitMutation.isPending}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {submitMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    Submit Data
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </TabsContent>
+        
+        <TabsContent value="csv" className="space-y-4">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-medium">Bulk Data Upload</h3>
+              <Button
+                variant="outline"
+                onClick={generateCSVTemplate}
+                className="flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Download Template
+              </Button>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="csv-data">
+                Paste CSV Data
+                <span className="text-sm text-gray-500 ml-2">
+                  (First row should contain column headers)
+                </span>
+              </Label>
+              <Textarea
+                id="csv-data"
+                value={csvData}
+                onChange={(e) => setCsvData(e.target.value)}
+                placeholder="Paste your CSV data here, or download the template first to see the expected format..."
+                rows={10}
+                className="font-mono text-sm"
+              />
+            </div>
+            
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <div className="flex items-center gap-2 mb-2">
+                <FileSpreadsheet className="w-4 h-4 text-blue-600" />
+                <span className="text-sm font-medium text-blue-800">CSV Upload Instructions:</span>
+              </div>
+              <ul className="text-sm text-blue-700 space-y-1">
+                <li>1. Click "Download Template" to get the correct CSV format</li>
+                <li>2. Fill out the template with your data in Excel or any spreadsheet app</li>
+                <li>3. Copy and paste the data (including headers) into the text area above</li>
+                <li>4. Click "Upload CSV Data" to submit all entries at once</li>
+              </ul>
+            </div>
+            
+            <div className="flex gap-2 pt-4">
+              <Button 
+                onClick={handleCSVUpload}
+                disabled={csvUploadMutation.isPending || !csvData.trim()}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {csvUploadMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4 mr-2" />
+                    Upload CSV Data
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 };

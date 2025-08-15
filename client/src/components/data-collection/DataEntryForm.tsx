@@ -11,7 +11,8 @@ import { simpleApiClient } from '@/lib/simpleApi';
 import { useAuth } from '@/hooks/useSimpleAuth';
 import { ReferenceDataSelect } from '@/components/reference-data/ReferenceDataSelect';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import { CheckCircle, Plus, Upload, Download, FileSpreadsheet, Loader2, Save } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { CheckCircle, Plus, Upload, Download, FileSpreadsheet, Loader2, Save, AlertCircle } from 'lucide-react';
 import { SimpleFormRenderer } from '@/components/forms/SimpleFormRenderer';
 
 interface SubHeaderField {
@@ -98,6 +99,9 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
   const [existingSubmissions, setExistingSubmissions] = useState<any[]>([]);
   const [usedPrimaryValues, setUsedPrimaryValues] = useState<Set<string>>(new Set());
   const [csvData, setCsvData] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [csvPreviewData, setCsvPreviewData] = useState<Record<string, any>[] | null>(null);
+  const [csvErrors, setCsvErrors] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState('manual');
   const [isCsvUploading, setIsCsvUploading] = useState(false);
 
@@ -563,12 +567,41 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
     return { entries, validationErrors, duplicateErrors };
   };
 
+  // Handle file selection
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      toast({
+        title: "Invalid File Type",
+        description: "Please select a CSV file (.csv extension required).",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSelectedFile(file);
+    
+    // Read and preview the file
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      if (content) {
+        const { entries, validationErrors } = parseCSVData(content);
+        setCsvPreviewData(entries);
+        setCsvErrors(validationErrors);
+      }
+    };
+    reader.readAsText(file);
+  };
+
   // Handle CSV bulk upload
   const handleCSVUpload = async () => {
-    if (!csvData.trim()) {
+    if (!csvPreviewData || csvPreviewData.length === 0) {
       toast({
         title: "No Data",
-        description: "Please paste CSV data before uploading.",
+        description: "Please select a CSV file first.",
         variant: "destructive",
       });
       return;
@@ -576,8 +609,8 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
 
     setIsCsvUploading(true);
     try {
-      const parseResult = parseCSVData(csvData);
-      const { entries, validationErrors, duplicateErrors } = parseResult;
+      const entries = csvPreviewData;
+      const validationErrors = csvErrors;
       
       // Show validation errors
       if (validationErrors.length > 0) {
@@ -589,13 +622,8 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
         return;
       }
 
-      // Show duplicate errors within CSV
-      if (duplicateErrors.length > 0) {
-        toast({
-          title: "Duplicate Entries in CSV",
-          description: duplicateErrors.slice(0, 3).join('; ') + (duplicateErrors.length > 3 ? '...' : ''),
-          variant: "destructive",
-        });
+      // Validation errors were already shown in preview, skip if any exist
+      if (validationErrors.length > 0) {
         return;
       }
 
@@ -646,7 +674,9 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
         description: `Successfully uploaded ${entries.length} entries.`,
       });
       
-      setCsvData('');
+      setCsvPreviewData(null);
+      setSelectedFile(null);
+      setCsvErrors([]);
       setSubmissionCount(prev => prev + entries.length);
       
       // Refresh existing submissions for duplicate prevention
@@ -1237,80 +1267,142 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
             </TabsContent>
             
             <TabsContent value="csv" className="space-y-4">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium">Bulk Data Upload</h3>
-                  <Button
-                    variant="outline"
-                    onClick={generateCSVTemplate}
-                    className="flex items-center gap-2"
-                  >
-                    <Download className="w-4 h-4" />
-                    Download Template
-                  </Button>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-medium">CSV Upload</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Upload a CSV file with your data. Download the template first to ensure correct format.
+                  </p>
                 </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="csv-data">
-                    Paste CSV Data
-                    <span className="text-sm text-gray-500 ml-2">
-                      (First row should contain column headers)
-                    </span>
-                  </Label>
-                  <Textarea
-                    id="csv-data"
-                    value={csvData}
-                    onChange={(e) => setCsvData(e.target.value)}
-                    placeholder="Paste your CSV data here, or download the template first to see the expected format..."
-                    rows={10}
-                    className="font-mono text-sm"
-                  />
-                </div>
-                
-                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                  <div className="flex items-center gap-2 mb-2">
-                    <FileSpreadsheet className="w-4 h-4 text-blue-600" />
-                    <span className="text-sm font-medium text-blue-800">CSV Upload Instructions:</span>
-                  </div>
-                  <ul className="text-sm text-blue-700 space-y-1">
-                    <li>1. Click "Download Template" to get the correct CSV format</li>
-                    <li>2. Fill out the template with your data in Excel or any spreadsheet app</li>
-                    <li>3. Copy and paste the data (including headers) into the text area above</li>
-                    <li>4. Click "Upload CSV Data" to submit all entries at once</li>
-                  </ul>
-                  
-                  {formFields.some(field => field.is_primary_column) && (
-                    <div className="mt-3 p-2 bg-orange-100 border border-orange-200 rounded">
-                      <div className="text-sm font-medium text-orange-800 mb-1">Duplicate Prevention:</div>
-                      <div className="text-xs text-orange-700">
-                        Primary key fields: {formFields.filter(f => f.is_primary_column).map(f => f.field_label).join(', ')}
-                        <br />
-                        No duplicate entries allowed for the same combination of primary key values (e.g., if District is primary, cannot enter same district twice).
-                      </div>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="flex gap-2 pt-4">
-                  <Button 
-                    onClick={handleCSVUpload}
-                    disabled={isCsvUploading || !csvData.trim()}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    {isCsvUploading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                        Uploading...
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="w-4 h-4 mr-2" />
-                        Upload CSV Data
-                      </>
-                    )}
-                  </Button>
-                </div>
+                <Button
+                  onClick={generateCSVTemplate}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  Download Template
+                </Button>
               </div>
+
+              {!csvPreviewData ? (
+                <div className="space-y-4">
+                  <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6">
+                    <div className="text-center">
+                      <FileSpreadsheet className="mx-auto h-12 w-12 text-gray-400" />
+                      <div className="mt-4">
+                        <label htmlFor="csvFile" className="cursor-pointer">
+                          <span className="mt-2 block text-sm font-medium text-gray-900 dark:text-gray-100">
+                            Select a CSV file to upload
+                          </span>
+                          <span className="mt-1 block text-sm text-gray-500 dark:text-gray-400">
+                            or drag and drop it here
+                          </span>
+                        </label>
+                        <input
+                          id="csvFile"
+                          type="file"
+                          accept=".csv"
+                          onChange={handleFileSelect}
+                          className="hidden"
+                        />
+                      </div>
+                      <Button
+                        onClick={() => document.getElementById('csvFile')?.click()}
+                        variant="outline"
+                        className="mt-4"
+                      >
+                        Choose File
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-medium text-blue-900 dark:text-blue-100">Preview CSV Data</h4>
+                        <p className="text-sm text-blue-700 dark:text-blue-300">
+                          {csvPreviewData.length} rows found. Review the data below and approve to upload.
+                        </p>
+                      </div>
+                      <Button
+                        onClick={() => {
+                          setCsvPreviewData(null);
+                          setCsvErrors([]);
+                          setSelectedFile(null);
+                        }}
+                        variant="outline"
+                        size="sm"
+                      >
+                        Select Different File
+                      </Button>
+                    </div>
+                  </div>
+
+                  {csvErrors.length > 0 && (
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>Validation Errors Found</AlertTitle>
+                      <AlertDescription>
+                        <ul className="list-disc list-inside space-y-1 mt-2">
+                          {csvErrors.map((error, index) => (
+                            <li key={index} className="text-sm">{error}</li>
+                          ))}
+                        </ul>
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  <div className="border rounded-lg overflow-hidden">
+                    <div className="max-h-96 overflow-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0">
+                          <tr>
+                            {csvPreviewData.length > 0 && Object.keys(csvPreviewData[0]).map((header, index) => (
+                              <th key={index} className="px-4 py-2 text-left font-medium border-b">
+                                {header}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {csvPreviewData.slice(0, 10).map((row, rowIndex) => (
+                            <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-800'}>
+                              {Object.values(row).map((cell, cellIndex) => (
+                                <td key={cellIndex} className="px-4 py-2 border-b">
+                                  {String(cell)}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {csvPreviewData.length > 10 && (
+                      <div className="bg-gray-50 dark:bg-gray-800 px-4 py-2 text-sm text-gray-600 dark:text-gray-400 text-center">
+                        Showing first 10 rows of {csvPreviewData.length} total rows
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleCSVUpload}
+                      disabled={csvErrors.length > 0 || isCsvUploading}
+                      className="flex items-center gap-2"
+                    >
+                      {isCsvUploading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <CheckCircle className="h-4 w-4" />
+                      )}
+                      {isCsvUploading ? 'Uploading...' : `Approve & Upload ${csvPreviewData.length} Rows`}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         )}

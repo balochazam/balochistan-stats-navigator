@@ -116,6 +116,7 @@ export interface IStorage {
   // Form Submission methods
   getFormSubmissions(formId?: string, scheduleId?: string): Promise<FormSubmission[]>;
   createFormSubmission(submission: InsertFormSubmission): Promise<FormSubmission>;
+  deleteFormSubmission(id: string): Promise<boolean>;
 
   // Schedule Form Completion methods
   getScheduleFormCompletions(scheduleFormId: string): Promise<ScheduleFormCompletion[]>;
@@ -463,6 +464,12 @@ export class DatabaseStorage implements IStorage {
   async createFormSubmission(submission: InsertFormSubmission): Promise<FormSubmission> {
     const result = await db.insert(form_submissions).values(submission).returning();
     return result[0];
+  }
+
+  async deleteFormSubmission(id: string): Promise<boolean> {
+    const result = await db.delete(form_submissions)
+      .where(eq(form_submissions.id, id));
+    return (result.rowCount ?? 0) > 0;
   }
 
   // Schedule Form Completion methods

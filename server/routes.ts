@@ -948,6 +948,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete('/api/form-submissions/:id', requireAuth, async (req, res) => {
+    try {
+      const success = await storage.deleteFormSubmission(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: 'Form submission not found' });
+      }
+      res.status(200).json({ success: true });
+    } catch (error) {
+      console.error('Error deleting form submission:', error);
+      res.status(500).json({ error: 'Failed to delete form submission' });
+    }
+  });
+
   // Schedule Form Completion routes
   app.get('/api/schedule-forms/:scheduleFormId/completions', requireAuth, async (req, res) => {
     try {

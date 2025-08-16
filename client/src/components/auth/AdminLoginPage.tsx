@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useSimpleAuth';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +11,8 @@ import { Loader2, ArrowLeft, Shield, Database } from 'lucide-react';
 import logoPath from "@assets/6f64eb753133d8c8693ef11f8af6f2e5_1750318410601.png";
 
 export const AdminLoginPage = () => {
+  usePageTitle('Administrator Login');
+  
   const { signIn, user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

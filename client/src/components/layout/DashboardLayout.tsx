@@ -1,6 +1,7 @@
 
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useSimpleAuth';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -35,6 +36,31 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const location = useLocation();
   const { toast } = useToast();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Set page title based on current route
+  const getPageTitle = (pathname: string) => {
+    const routes: Record<string, string> = {
+      '/dashboard': 'Dashboard',
+      '/dashboard/users': 'User Management',
+      '/dashboard/departments': 'Department Management', 
+      '/dashboard/data-banks': 'Reference Data Management',
+      '/dashboard/forms': 'Form Management',
+      '/dashboard/schedules': 'Schedule Management',
+      '/dashboard/data-collection': 'Data Collection',
+      '/dashboard/reports': 'Reports & Analytics',
+      '/dashboard/sdg-management': 'SDG Goals Management',
+      '/dashboard/technology-transfer': 'Technology Transfer'
+    };
+    
+    // Handle dynamic routes
+    if (pathname.includes('/data-collection/')) return 'Data Entry';
+    if (pathname.includes('/schedules/')) return 'Schedule Details';
+    if (pathname.includes('/reports/')) return 'Report Details';
+    
+    return routes[pathname] || 'Dashboard';
+  };
+
+  usePageTitle(getPageTitle(location.pathname));
 
   const { signOut } = useAuth();
 

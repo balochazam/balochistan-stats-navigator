@@ -33,6 +33,7 @@ import {
   Shield
 } from 'lucide-react';
 import { simpleApiClient } from '@/lib/simpleApi';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import logoPath from "@assets/6f64eb753133d8c8693ef11f8af6f2e5_1750318410601.png";
 
 interface Schedule {
@@ -60,6 +61,8 @@ interface FormSubmission {
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
 
 export const PublicLanding = () => {
+  usePageTitle('SDG Data & Reports');
+  
   const [publishedSchedules, setPublishedSchedules] = useState<Schedule[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('all');

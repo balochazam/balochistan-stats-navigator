@@ -29,16 +29,10 @@ interface ReferenceData {
   };
 }
 
-interface Department {
-  id: string;
-  name: string;
-}
-
 export const DataBankManagement = () => {
   const { profile } = useAuth();
   const { toast } = useToast();
   const [referenceDataSets, setReferenceDataSets] = useState<ReferenceData[]>([]);
-  const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingReferenceData, setEditingReferenceData] = useState<ReferenceData | null>(null);
@@ -47,7 +41,6 @@ export const DataBankManagement = () => {
   useEffect(() => {
     if (profile) {
       fetchReferenceData();
-      fetchDepartments();
     }
   }, [profile]);
 
@@ -72,14 +65,7 @@ export const DataBankManagement = () => {
     }
   };
 
-  const fetchDepartments = async () => {
-    try {
-      const data = await simpleApiClient.get('/api/departments');
-      setDepartments(data || []);
-    } catch (error) {
-      console.error('Error in fetchDepartments:', error);
-    }
-  };
+
 
   const handleCreateReferenceData = () => {
     setEditingReferenceData(null);
@@ -193,7 +179,6 @@ export const DataBankManagement = () => {
           }}
           onSuccess={handleFormSuccess}
           editingReferenceData={editingReferenceData}
-          departments={departments}
         />
       </div>
     </DashboardLayout>

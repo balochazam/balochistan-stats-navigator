@@ -20,32 +20,24 @@ interface ReferenceData {
   is_active: boolean;
 }
 
-interface Department {
-  id: string;
-  name: string;
-}
-
 interface ReferenceDataFormProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
   editingReferenceData: ReferenceData | null;
-  departments: Department[];
 }
 
 export const ReferenceDataForm = ({ 
   isOpen, 
   onClose, 
   onSuccess, 
-  editingReferenceData, 
-  departments 
+  editingReferenceData
 }: ReferenceDataFormProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: '',
-    description: '',
-    department_id: ''
+    description: ''
   });
   const [loading, setLoading] = useState(false);
 
@@ -53,14 +45,12 @@ export const ReferenceDataForm = ({
     if (editingReferenceData) {
       setFormData({
         name: editingReferenceData.name,
-        description: editingReferenceData.description || '',
-        department_id: editingReferenceData.department_id || ''
+        description: editingReferenceData.description || ''
       });
     } else {
       setFormData({
         name: '',
-        description: '',
-        department_id: ''
+        description: ''
       });
     }
   }, [editingReferenceData]);
@@ -77,7 +67,6 @@ export const ReferenceDataForm = ({
         await simpleApiClient.put(`/api/data-banks/${editingReferenceData.id}`, {
           name: formData.name,
           description: formData.description || null,
-          department_id: formData.department_id || null,
           updated_at: new Date().toISOString()
         });
 
@@ -90,7 +79,6 @@ export const ReferenceDataForm = ({
         await simpleApiClient.post('/api/data-banks', {
           name: formData.name,
           description: formData.description || null,
-          department_id: formData.department_id || null,
           created_by: user.id
         });
 
@@ -149,28 +137,6 @@ export const ReferenceDataForm = ({
             />
           </div>
           
-          <div>
-            <label className="text-sm font-medium">Department</label>
-            <Select
-              value={formData.department_id}
-              onValueChange={(value) => setFormData(prev => ({ 
-                ...prev, 
-                department_id: value === 'none' ? '' : value 
-              }))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select department (optional)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Global (All Departments)</SelectItem>
-                {departments.map((dept) => (
-                  <SelectItem key={dept.id} value={dept.id}>
-                    {dept.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
           
           <div className="flex justify-end space-x-2 pt-4">
             <Button type="button" variant="outline" onClick={onClose}>

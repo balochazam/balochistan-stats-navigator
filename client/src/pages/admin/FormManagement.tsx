@@ -7,9 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { FileText, Plus, Edit2, Trash2, Users, Shield } from 'lucide-react';
+import { FileText, Plus, Edit2, Trash2, Users, Shield, Filter } from 'lucide-react';
 import { FormBuilderDialog } from '@/components/forms/FormBuilderDialog';
-import { DataFilter } from '@/components/ui/DataFilter';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Form {
   id: string;
@@ -212,45 +213,96 @@ export const FormManagement = () => {
         </Card>
 
         {/* Forms Filter */}
-        <DataFilter
-          title="Filter Forms"
-          searchValue={searchFilter}
-          onSearchChange={setSearchFilter}
-          searchPlaceholder="Search forms by name or description..."
-          resultCount={filteredForms.length}
-          totalCount={forms.length}
-          onClearAll={clearAllFilters}
-          filters={[
-            {
-              label: "Department",
-              value: departmentFilter,
-              onChange: setDepartmentFilter,
-              options: [
-                { value: 'all', label: 'All departments' },
-                ...departments.map(dept => ({ value: dept.name, label: dept.name }))
-              ]
-            },
-            {
-              label: "Status",
-              value: statusFilter,
-              onChange: setStatusFilter,
-              options: [
-                { value: 'all', label: 'All forms' },
-                { value: 'active', label: 'Active forms' },
-                { value: 'inactive', label: 'Inactive forms' }
-              ]
-            },
-            {
-              label: "Creator",
-              value: creatorFilter,
-              onChange: setCreatorFilter,
-              options: [
-                { value: 'all', label: 'All creators' },
-                ...uniqueCreators.map(creator => ({ value: creator, label: creator }))
-              ]
-            }
-          ]}
-        />
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Filter className="h-4 w-4" />
+                Filter Forms
+              </CardTitle>
+              <Badge variant="secondary">
+                {filteredForms.length} of {forms.length} forms
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Search Input */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Search</label>
+                <Input
+                  placeholder="Search forms by name or description..."
+                  value={searchFilter}
+                  onChange={(e) => setSearchFilter(e.target.value)}
+                />
+              </div>
+
+              {/* Department Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Department</label>
+                <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All departments</SelectItem>
+                    {departments.map(dept => (
+                      <SelectItem key={dept.id} value={dept.name}>
+                        {dept.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Status Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Status</label>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All forms</SelectItem>
+                    <SelectItem value="active">Active forms</SelectItem>
+                    <SelectItem value="inactive">Inactive forms</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Creator Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Creator</label>
+                <Select value={creatorFilter} onValueChange={setCreatorFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select creator" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All creators</SelectItem>
+                    {uniqueCreators.map(creator => (
+                      <SelectItem key={creator} value={creator}>
+                        {creator}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Clear Filters */}
+            {(searchFilter || departmentFilter !== 'all' || statusFilter !== 'all' || creatorFilter !== 'all') && (
+              <div className="flex items-center gap-2 mt-4 pt-4 border-t">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={clearAllFilters}
+                >
+                  Clear all filters
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         <div className="grid gap-4">
           {filteredForms.map((form) => (

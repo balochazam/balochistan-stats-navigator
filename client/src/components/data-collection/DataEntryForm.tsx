@@ -12,7 +12,7 @@ import { useAuth } from '@/hooks/useSimpleAuth';
 import { ReferenceDataSelect } from '@/components/reference-data/ReferenceDataSelect';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { CheckCircle, Plus, Upload, Download, FileSpreadsheet, Loader2, Save, AlertCircle, AlertTriangle } from 'lucide-react';
+import { CheckCircle, Plus, Upload, Download, FileSpreadsheet, Loader2, Save, AlertCircle, AlertTriangle, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { SimpleFormRenderer } from '@/components/forms/SimpleFormRenderer';
 
@@ -107,6 +107,8 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
   const [isDataComplete, setIsDataComplete] = useState(false);
   const [activeTab, setActiveTab] = useState('manual');
   const [isCsvUploading, setIsCsvUploading] = useState(false);
+  const [showApprovalDialog, setShowApprovalDialog] = useState(false);
+  const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
 
   // Memoize the fetch function to prevent unnecessary re-renders
   const fetchFormFields = useCallback(async () => {
@@ -432,8 +434,35 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
     return true;
   };
 
-  // Show approval dialog before marking complete
-  const [showApprovalDialog, setShowApprovalDialog] = useState(false);
+  // Delete entry handler
+  const handleDeleteEntry = async (entryId: string) => {
+    if (deletingEntryId) return;
+
+    try {
+      setDeletingEntryId(entryId);
+      
+      await simpleApiClient.delete(`/api/form-submissions/${entryId}`);
+      
+      toast({
+        title: "Success",
+        description: "Entry deleted successfully"
+      });
+
+      // Refresh data
+      await fetchExistingSubmissions();
+      await fetchSubmissionStatus();
+      
+    } catch (error) {
+      console.error('Error deleting entry:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete entry",
+        variant: "destructive"
+      });
+    } finally {
+      setDeletingEntryId(null);
+    }
+  };
 
   const handleMarkComplete = async () => {
     if (isMarkingComplete) return;
@@ -1505,6 +1534,65 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
                     {isMarkingComplete && <Loader2 className="w-4 h-4 animate-spin" />}
                     {isMarkingComplete ? 'Marking Complete...' : 'Mark as Complete'}
                   </Button>
+                </div>
+              )}
+
+              {/* Submitted Entries Table */}
+              {existingSubmissions.length > 0 && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-medium">Submitted Entries</h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        {existingSubmissions.length} entries have been submitted for this form.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="border rounded-lg overflow-hidden">
+                    <div className="max-h-96 overflow-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0">
+                          <tr>
+                            {formFields.map((field, index) => (
+                              <th key={index} className="px-4 py-2 text-left font-medium border-b">
+                                {field.field_label}
+                              </th>
+                            ))}
+                            <th className="px-4 py-2 text-center font-medium border-b w-20">
+                              Actions
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {existingSubmissions.map((submission, rowIndex) => (
+                            <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-800'}>
+                              {formFields.map((field, cellIndex) => (
+                                <td key={cellIndex} className="px-4 py-2 border-b">
+                                  {submission.data?.[field.field_name] || '-'}
+                                </td>
+                              ))}
+                              <td className="px-4 py-2 border-b text-center">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteEntry(submission.id)}
+                                  disabled={deletingEntryId === submission.id}
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  {deletingEntryId === submission.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 </div>
               )}
 

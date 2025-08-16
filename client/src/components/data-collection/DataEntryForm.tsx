@@ -12,7 +12,8 @@ import { useAuth } from '@/hooks/useSimpleAuth';
 import { ReferenceDataSelect } from '@/components/reference-data/ReferenceDataSelect';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { CheckCircle, Plus, Upload, Download, FileSpreadsheet, Loader2, Save, AlertCircle } from 'lucide-react';
+import { CheckCircle, Plus, Upload, Download, FileSpreadsheet, Loader2, Save, AlertCircle, AlertTriangle } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { SimpleFormRenderer } from '@/components/forms/SimpleFormRenderer';
 
 interface SubHeaderField {
@@ -102,6 +103,8 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [csvPreviewData, setCsvPreviewData] = useState<Record<string, any>[] | null>(null);
   const [csvErrors, setCsvErrors] = useState<string[]>([]);
+  const [csvCompletenessErrors, setCsvCompletenessErrors] = useState<string[]>([]);
+  const [isDataComplete, setIsDataComplete] = useState(false);
   const [activeTab, setActiveTab] = useState('manual');
   const [isCsvUploading, setIsCsvUploading] = useState(false);
 
@@ -381,9 +384,69 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
     }
   };
 
+  // Check if all reference data items are covered in submissions
+  const checkCompletenessForMarkComplete = async (): Promise<boolean> => {
+    const primaryColumns = formFields.filter(field => field.is_primary_column);
+    
+    for (const primaryCol of primaryColumns) {
+      if (primaryCol.reference_data_name) {
+        try {
+          const refData = await fetchReferenceData(primaryCol.reference_data_name);
+          const submissionValues = existingSubmissions.map(sub => 
+            sub.data?.[primaryCol.field_name]?.toLowerCase()
+          ).filter(Boolean);
+          
+          const missingItems = refData.filter(refItem => 
+            !submissionValues.includes(refItem.value.toLowerCase()) && 
+            !submissionValues.includes(refItem.key.toLowerCase())
+          );
+          
+          if (missingItems.length > 0) {
+            toast({
+              title: "Data Incomplete",
+              description: `Missing ${missingItems.length} ${primaryCol.field_label} entries. Complete all data before marking as complete.`,
+              variant: "destructive",
+            });
+            return false;
+          }
+
+          if (existingSubmissions.length !== refData.length) {
+            toast({
+              title: "Count Mismatch",
+              description: `Expected ${refData.length} entries but found ${existingSubmissions.length}. Ensure complete data coverage.`,
+              variant: "destructive",
+            });
+            return false;
+          }
+        } catch (error) {
+          toast({
+            title: "Validation Error",
+            description: `Could not verify completeness for ${primaryCol.field_label}`,
+            variant: "destructive",
+          });
+          return false;
+        }
+      }
+    }
+    
+    return true;
+  };
+
+  // Show approval dialog before marking complete
+  const [showApprovalDialog, setShowApprovalDialog] = useState(false);
+
   const handleMarkComplete = async () => {
     if (isMarkingComplete) return;
 
+    // First check if data is complete
+    const isComplete = await checkCompletenessForMarkComplete();
+    if (!isComplete) return;
+
+    // Show approval dialog
+    setShowApprovalDialog(true);
+  };
+
+  const confirmMarkComplete = async () => {
     setIsMarkingComplete(true);
     try {
       await simpleApiClient.post('/api/schedule-form-completions', {
@@ -392,6 +455,7 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
       });
 
       setIsCompleted(true);
+      setShowApprovalDialog(false);
       toast({
         title: "Success",
         description: "Form marked as complete"
@@ -537,27 +601,41 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
     });
   };
 
-  // Parse CSV data with validation
-  const parseCSVData = (csvText: string): { 
+  // Fetch reference data for validation
+  const fetchReferenceData = async (dataName: string): Promise<any[]> => {
+    try {
+      const data = await simpleApiClient.get(`/api/data-banks/${dataName}/entries`);
+      return data || [];
+    } catch (error) {
+      console.error(`Failed to fetch reference data for ${dataName}:`, error);
+      return [];
+    }
+  };
+
+  // Parse CSV data with comprehensive validation
+  const parseCSVData = async (csvText: string): Promise<{ 
     entries: Record<string, any>[], 
     validationErrors: string[], 
-    duplicateErrors: string[]
-  } => {
+    duplicateErrors: string[],
+    completenessErrors: string[]
+  }> => {
     const lines = csvText.trim().split('\n');
     if (lines.length < 2) {
-      return { entries: [], validationErrors: ['CSV must have at least 2 lines (headers + data)'], duplicateErrors: [] };
+      return { entries: [], validationErrors: ['CSV must have at least 2 lines (headers + data)'], duplicateErrors: [], completenessErrors: [] };
     }
 
     const headers = lines[0].split(',').map(h => h.trim());
     const fieldMap: Record<string, string> = {};
+    const expectedHeaders: string[] = [];
     
-    // Map CSV headers to field names (including sub-header fields)
+    // Map CSV headers to field names and build expected headers list
     formFields.forEach(field => {
       if (field.has_sub_headers && field.sub_headers) {
         // Handle sub-header fields
         field.sub_headers.forEach(subHeader => {
           subHeader.fields.forEach(subField => {
             const fieldKey = `${field.field_name}_${subHeader.name}_${subField.field_name}`;
+            expectedHeaders.push(subField.field_label);
             
             const matchingHeader = headers.find(h => 
               h.toLowerCase() === subField.field_label.toLowerCase() ||
@@ -570,6 +648,7 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
         });
       } else {
         // Handle regular fields
+        expectedHeaders.push(field.field_label);
         const matchingHeader = headers.find(h => 
           h.toLowerCase() === field.field_label.toLowerCase() ||
           h.toLowerCase() === field.field_name.toLowerCase()
@@ -580,11 +659,11 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
       }
     });
 
-    // Identify primary columns for duplicate detection
+    // Identify primary columns for validation
     const primaryColumns = formFields.filter(field => field.is_primary_column);
     
     // Build list of all required fields including sub-header fields
-    const requiredFields: { field_name: string; field_label: string }[] = [];
+    const requiredFields: { field_name: string; field_label: string; reference_data_name?: string }[] = [];
     formFields.forEach(field => {
       if (field.has_sub_headers && field.sub_headers) {
         field.sub_headers.forEach(subHeader => {
@@ -592,7 +671,8 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
             if (subField.is_required) {
               requiredFields.push({
                 field_name: `${field.field_name}_${subHeader.name}_${subField.field_name}`,
-                field_label: subField.field_label // Use only the sub-field label
+                field_label: subField.field_label,
+                reference_data_name: subField.reference_data_name
               });
             }
           });
@@ -600,16 +680,53 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
       } else if (field.is_required) {
         requiredFields.push({
           field_name: field.field_name,
-          field_label: field.field_label
+          field_label: field.field_label,
+          reference_data_name: field.reference_data_name
         });
       }
     });
-    
+
+    // Validation arrays
     const entries: Record<string, any>[] = [];
     const validationErrors: string[] = [];
     const duplicateErrors: string[] = [];
+    const completenessErrors: string[] = [];
     const primaryKeyTracker = new Set<string>();
 
+    // 1. COLUMN VALIDATION: Check exact column match
+    const missingHeaders = expectedHeaders.filter(expected => 
+      !headers.some(h => h.toLowerCase() === expected.toLowerCase())
+    );
+    const extraHeaders = headers.filter(h => 
+      !expectedHeaders.some(expected => expected.toLowerCase() === h.toLowerCase())
+    );
+
+    if (missingHeaders.length > 0) {
+      validationErrors.push(`Missing required columns: ${missingHeaders.join(', ')}`);
+    }
+    if (extraHeaders.length > 0) {
+      validationErrors.push(`Extra columns not allowed: ${extraHeaders.join(', ')}`);
+    }
+
+    // If column structure is wrong, return early
+    if (missingHeaders.length > 0 || extraHeaders.length > 0) {
+      return { entries: [], validationErrors, duplicateErrors: [], completenessErrors: [] };
+    }
+
+    // 2. FETCH REFERENCE DATA for primary columns validation
+    const referenceDataCache: Record<string, any[]> = {};
+    for (const primaryCol of primaryColumns) {
+      if (primaryCol.reference_data_name) {
+        try {
+          const refData = await fetchReferenceData(primaryCol.reference_data_name);
+          referenceDataCache[primaryCol.reference_data_name] = refData;
+        } catch (error) {
+          validationErrors.push(`Failed to load reference data for ${primaryCol.field_label}`);
+        }
+      }
+    }
+
+    // Parse data rows
     for (let i = 1; i < lines.length; i++) {
       const lineNumber = i + 1;
       const values = lines[i].split(',').map(v => v.trim());
@@ -636,6 +753,25 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
         continue;
       }
 
+      // 3. PRIMARY COLUMN REFERENCE DATA VALIDATION
+      for (const primaryCol of primaryColumns) {
+        if (primaryCol.reference_data_name && referenceDataCache[primaryCol.reference_data_name]) {
+          const refData = referenceDataCache[primaryCol.reference_data_name];
+          const entryValue = entry[primaryCol.field_name];
+          
+          const validValue = refData.some(refItem => 
+            refItem.value.toLowerCase() === entryValue.toLowerCase() ||
+            refItem.key.toLowerCase() === entryValue.toLowerCase()
+          );
+          
+          if (!validValue) {
+            validationErrors.push(
+              `Row ${lineNumber}: "${entryValue}" is not available in the ${primaryCol.field_label} reference data list`
+            );
+          }
+        }
+      }
+
       // Check for duplicates based on primary columns
       if (primaryColumns.length > 0) {
         const primaryKeyValues = primaryColumns.map(col => entry[col.field_name] || '').join('|');
@@ -651,12 +787,40 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
       
       entries.push(entry);
     }
+
+    // 4. COMPLETENESS VALIDATION: Check if all reference data items are covered
+    for (const primaryCol of primaryColumns) {
+      if (primaryCol.reference_data_name && referenceDataCache[primaryCol.reference_data_name]) {
+        const refData = referenceDataCache[primaryCol.reference_data_name];
+        const csvValues = entries.map(entry => entry[primaryCol.field_name]?.toLowerCase());
+        
+        const missingItems = refData.filter(refItem => 
+          !csvValues.includes(refItem.value.toLowerCase()) && 
+          !csvValues.includes(refItem.key.toLowerCase())
+        );
+        
+        if (missingItems.length > 0) {
+          completenessErrors.push(
+            `${primaryCol.field_label} completeness: Missing ${missingItems.length} items from reference data: ${missingItems.map(item => item.value).slice(0, 5).join(', ')}${missingItems.length > 5 ? '...' : ''}`
+          );
+        }
+
+        const expectedCount = refData.length;
+        const actualCount = entries.length;
+        
+        if (actualCount !== expectedCount) {
+          completenessErrors.push(
+            `Row count mismatch: Expected exactly ${expectedCount} rows (matching reference data), but got ${actualCount} rows`
+          );
+        }
+      }
+    }
     
-    return { entries, validationErrors, duplicateErrors };
+    return { entries, validationErrors, duplicateErrors, completenessErrors };
   };
 
   // Handle file selection
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -673,18 +837,30 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
     
     // Read and preview the file
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       const content = e.target?.result as string;
       if (content) {
-        const { entries, validationErrors } = parseCSVData(content);
-        setCsvPreviewData(entries);
-        setCsvErrors(validationErrors);
+        try {
+          const { entries, validationErrors, completenessErrors } = await parseCSVData(content);
+          setCsvPreviewData(entries);
+          setCsvErrors(validationErrors);
+          setCsvCompletenessErrors(completenessErrors);
+          
+          // Check if data is complete (no validation or completeness errors)
+          const isComplete = validationErrors.length === 0 && completenessErrors.length === 0;
+          setIsDataComplete(isComplete);
+        } catch (error) {
+          console.error('Error parsing CSV:', error);
+          setCsvErrors(['Failed to parse CSV file. Please check the format.']);
+          setCsvCompletenessErrors([]);
+          setIsDataComplete(false);
+        }
       }
     };
     reader.readAsText(file);
   };
 
-  // Handle CSV bulk upload
+  // Handle CSV bulk upload with approval workflow
   const handleCSVUpload = async () => {
     if (!csvPreviewData || csvPreviewData.length === 0) {
       toast({
@@ -695,27 +871,21 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
       return;
     }
 
+    // Check if data is complete before allowing upload
+    if (!isDataComplete) {
+      toast({
+        title: "Data Incomplete",
+        description: "Please fix all validation and completeness errors before uploading.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsCsvUploading(true);
     try {
       const entries = csvPreviewData;
-      const validationErrors = csvErrors;
       
-      // Show validation errors
-      if (validationErrors.length > 0) {
-        toast({
-          title: "Validation Errors",
-          description: validationErrors.slice(0, 3).join('; ') + (validationErrors.length > 3 ? '...' : ''),
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Validation errors were already shown in preview, skip if any exist
-      if (validationErrors.length > 0) {
-        return;
-      }
-
-      // Check for duplicates with existing database entries
+      // Final validation: Check for duplicates with existing database entries
       const primaryColumns = formFields.filter(field => field.is_primary_column);
       if (primaryColumns.length > 0) {
         const databaseDuplicates: string[] = [];
@@ -1443,6 +1613,30 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
                     </Alert>
                   )}
 
+                  {csvCompletenessErrors.length > 0 && (
+                    <Alert>
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertTitle>Completeness Issues</AlertTitle>
+                      <AlertDescription>
+                        <ul className="list-disc list-inside space-y-1 mt-2">
+                          {csvCompletenessErrors.map((error, index) => (
+                            <li key={index} className="text-sm">{error}</li>
+                          ))}
+                        </ul>
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {isDataComplete && csvErrors.length === 0 && csvCompletenessErrors.length === 0 && (
+                    <Alert>
+                      <CheckCircle className="h-4 w-4" />
+                      <AlertTitle>Data Ready for Upload</AlertTitle>
+                      <AlertDescription>
+                        All validations passed. Data is complete and ready for upload.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
                   <div className="border rounded-lg overflow-hidden">
                     <div className="max-h-96 overflow-auto">
                       <table className="w-full text-sm">
@@ -1478,15 +1672,20 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
                   <div className="flex gap-2">
                     <Button
                       onClick={handleCSVUpload}
-                      disabled={csvErrors.length > 0 || isCsvUploading}
+                      disabled={!isDataComplete || isCsvUploading}
                       className="flex items-center gap-2"
+                      variant={isDataComplete ? "default" : "secondary"}
                     >
                       {isCsvUploading ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
+                      ) : isDataComplete ? (
                         <CheckCircle className="h-4 w-4" />
+                      ) : (
+                        <AlertTriangle className="h-4 w-4" />
                       )}
-                      {isCsvUploading ? 'Uploading...' : `Approve & Upload ${csvPreviewData.length} Rows`}
+                      {isCsvUploading ? 'Uploading...' : 
+                       isDataComplete ? `Approve & Upload ${csvPreviewData.length} Rows` : 
+                       'Fix Issues to Upload'}
                     </Button>
                   </div>
                 </div>
@@ -1495,6 +1694,84 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
           </Tabs>
         )}
       </CardContent>
+
+      {/* Approval Dialog for Mark as Complete */}
+      <Dialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Confirm Form Completion</DialogTitle>
+            <DialogDescription>
+              Please review all submitted entries before marking this form as complete. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="max-h-96 overflow-auto">
+            <div className="space-y-2 mb-4">
+              <h4 className="font-medium">Summary:</h4>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-gray-600">Total Entries:</span>
+                  <span className="ml-2 font-medium">{existingSubmissions.length}</span>
+                </div>
+                <div>
+                  <span className="text-gray-600">Form:</span>
+                  <span className="ml-2 font-medium">{scheduleForm.form.name}</span>
+                </div>
+              </div>
+            </div>
+
+            {existingSubmissions.length > 0 && (
+              <div className="border rounded-lg overflow-hidden">
+                <div className="bg-gray-50 dark:bg-gray-800 px-3 py-2">
+                  <h4 className="font-medium text-sm">All Submitted Entries</h4>
+                </div>
+                <div className="max-h-64 overflow-auto">
+                  <table className="w-full text-xs">
+                    <thead className="bg-gray-100 dark:bg-gray-700 sticky top-0">
+                      <tr>
+                        {existingSubmissions.length > 0 && formFields.map((field, index) => (
+                          <th key={index} className="px-2 py-1 text-left font-medium border-b">
+                            {field.field_label}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {existingSubmissions.map((submission, rowIndex) => (
+                        <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-800'}>
+                          {formFields.map((field, cellIndex) => (
+                            <td key={cellIndex} className="px-2 py-1 border-b text-xs">
+                              {submission.data?.[field.field_name] || '-'}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowApprovalDialog(false)}
+              disabled={isMarkingComplete}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmMarkComplete}
+              disabled={isMarkingComplete}
+              className="flex items-center gap-2"
+            >
+              {isMarkingComplete && <Loader2 className="h-4 w-4 animate-spin" />}
+              {isMarkingComplete ? 'Marking Complete...' : 'Mark as Complete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };

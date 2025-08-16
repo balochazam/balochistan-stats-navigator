@@ -92,6 +92,39 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
       .substring(0, 50); // Limit length
   };
 
+  // Function to get all number fields from the entire form (main fields + sub-header fields)
+  const getAllNumberFields = () => {
+    const allNumberFields: Array<{ field_name: string; field_label: string; location: string }> = [];
+    
+    // Add main fields that are number type
+    fields.forEach((field, fieldIndex) => {
+      if (field.field_type === 'number' && field.field_name && field.field_label) {
+        allNumberFields.push({
+          field_name: field.field_name,
+          field_label: field.field_label,
+          location: 'Main Form'
+        });
+      }
+      
+      // Add sub-header fields that are number type
+      if (field.has_sub_headers && field.sub_headers) {
+        field.sub_headers.forEach((subHeader, subIndex) => {
+          subHeader.fields.forEach((subField, subFieldIndex) => {
+            if (subField.field_type === 'number' && subField.field_name && subField.field_label) {
+              allNumberFields.push({
+                field_name: subField.field_name,
+                field_label: subField.field_label,
+                location: `${field.field_label} → ${subHeader.label}`
+              });
+            }
+          });
+        });
+      }
+    });
+    
+    return allNumberFields;
+  };
+
   useEffect(() => {
     fetchReferenceDataSets();
   }, []);
@@ -402,11 +435,11 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
               <div className="space-y-2">
                 <Label>Fields to Aggregate *</Label>
                 <p className="text-xs text-gray-500 mb-2">
-                  Select two or more number fields to sum together. Only number fields are available for aggregation.
+                  Select two or more number fields to sum together. You can select from any number field in the entire form.
                 </p>
                 <div className="space-y-2 max-h-32 overflow-y-auto border rounded-md p-2">
-                  {fields
-                    .filter((f, i) => i !== index && f.field_type === 'number' && f.field_label)
+                  {getAllNumberFields()
+                    .filter(numberField => numberField.field_name !== field.field_name)
                     .map((numberField, i) => {
                       const isChecked = field.aggregate_fields?.includes(numberField.field_name) || false;
                       const checkboxId = `aggregate-${index}-field-${numberField.field_name || i}`;
@@ -437,11 +470,12 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
                           />
                           <Label htmlFor={checkboxId} className="text-sm cursor-pointer">
                             {numberField.field_label} ({numberField.field_name || 'unnamed'})
+                            <span className="text-gray-400 ml-1">- {numberField.location}</span>
                           </Label>
                         </div>
                       );
                     })}
-                  {fields.filter((f, i) => i !== index && f.field_type === 'number' && f.field_label).length === 0 && (
+                  {getAllNumberFields().length === 0 && (
                     <p className="text-sm text-gray-500 italic">
                       No number fields available. Add number fields first.
                     </p>
@@ -669,11 +703,11 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
                                 <div className="mb-2">
                                   <Label className="text-xs">Aggregate Fields</Label>
                                   <div className="space-y-2">
-                                    {/* Show available number fields from this sub-header */}
-                                    {subHeader.fields
-                                      .filter((f, fIdx) => f.field_type === 'number' && fIdx !== fieldIndex)
+                                    {/* Show ALL available number fields from the entire form */}
+                                    {getAllNumberFields()
+                                      .filter(numberField => numberField.field_name !== subField.field_name)
                                       .map((numberField, availableIdx) => (
-                                        <div key={availableIdx} className="flex items-center space-x-2">
+                                        <div key={`${numberField.field_name}-${availableIdx}`} className="flex items-center space-x-2">
                                           <Checkbox
                                             id={`aggregate-${index}-${subIndex}-${fieldIndex}-${availableIdx}`}
                                             checked={subField.aggregate_fields?.includes(numberField.field_name) || false}
@@ -692,17 +726,18 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
                                             className="text-xs"
                                           >
                                             {numberField.field_label || numberField.field_name}
+                                            <span className="text-gray-400 ml-1">({numberField.location})</span>
                                           </Label>
                                         </div>
                                       ))}
-                                    {subHeader.fields.filter(f => f.field_type === 'number' && subHeader.fields.indexOf(f) !== fieldIndex).length === 0 && (
+                                    {getAllNumberFields().length === 0 && (
                                       <p className="text-xs text-gray-500 italic">
-                                        No number fields available in this sub-header to aggregate
+                                        No number fields available in the form to aggregate
                                       </p>
                                     )}
                                   </div>
                                   <p className="text-xs text-gray-500 mt-1">
-                                    Select number fields from this sub-header to sum
+                                    Select number fields from anywhere in the form to sum
                                   </p>
                                 </div>
                               )}

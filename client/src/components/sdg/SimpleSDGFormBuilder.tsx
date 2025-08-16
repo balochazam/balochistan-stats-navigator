@@ -16,11 +16,10 @@ import { SimpleFormRenderer } from '@/components/forms/SimpleFormRenderer';
 interface SimpleFormField {
   id: string;
   label: string;
-  type: 'text' | 'number' | 'date' | 'select' | 'textarea' | 'aggregate';
+  type: 'text' | 'number' | 'date' | 'select' | 'textarea';
   required: boolean;
   options?: string[];
   placeholder?: string;
-  aggregateFields?: string[]; // IDs of number fields to sum
 }
 
 interface Indicator {
@@ -117,33 +116,22 @@ export const SimpleSDGFormBuilder: React.FC<SimpleSDGFormBuilderProps> = ({
       console.log('Form created successfully:', formResponse);
       
       // Create form fields - ensuring we save ALL the fields from the current state
-      const fieldsToSave = formFields.map((field, index) => {
-        // For aggregate fields, convert the field IDs to field names for storage
-        let aggregateFieldNames: string[] = [];
-        if (field.type === 'aggregate' && field.aggregateFields) {
-          aggregateFieldNames = field.aggregateFields.map(fieldId => {
-            const targetField = formFields.find(f => f.id === fieldId);
-            return targetField ? targetField.label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') : '';
-          }).filter(name => name !== '');
-        }
-
-        return {
-          form_id: formResponse.id,
-          field_name: field.label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, ''),
-          field_label: field.label,
-          field_type: field.type,
-          is_required: field.required,
-          is_primary_column: index === 0, // First field is primary
-          is_secondary_column: false,
-          reference_data_name: field.type === 'select' ? field.options?.join(',') : null,
-          placeholder_text: field.placeholder || '',
-          aggregate_fields: aggregateFieldNames,
-          field_order: index + 1,
-          has_sub_headers: false,
-          sub_headers: [],
-          field_group_id: null // No groups for simple forms
-        };
-      });
+      const fieldsToSave = formFields.map((field, index) => ({
+        form_id: formResponse.id,
+        field_name: field.label.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, ''),
+        field_label: field.label,
+        field_type: field.type,
+        is_required: field.required,
+        is_primary_column: index === 0, // First field is primary
+        is_secondary_column: false,
+        reference_data_name: field.type === 'select' ? field.options?.join(',') : null,
+        placeholder_text: field.placeholder || '',
+        aggregate_fields: [],
+        field_order: index + 1,
+        has_sub_headers: false,
+        sub_headers: [],
+        field_group_id: null // No groups for simple forms
+      }));
 
       console.log('Saving form fields:', fieldsToSave);
       const fieldsResponse = await simpleApiClient.post('/api/form-fields', fieldsToSave);
@@ -211,20 +199,6 @@ export const SimpleSDGFormBuilder: React.FC<SimpleSDGFormBuilderProps> = ({
               <option key={option} value={option}>{option}</option>
             ))}
           </select>
-        );
-      case 'aggregate':
-        return (
-          <div className="relative">
-            <Input 
-              type="number" 
-              placeholder="Auto-calculated sum" 
-              disabled 
-              className="bg-blue-50 border-blue-200"
-            />
-            <div className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs text-blue-600 font-medium">
-              SUM
-            </div>
-          </div>
         );
       default:
         return <Input placeholder={field.placeholder} disabled />;
@@ -324,7 +298,6 @@ export const SimpleSDGFormBuilder: React.FC<SimpleSDGFormBuilderProps> = ({
                           <option value="date">Date</option>
                           <option value="select">Dropdown</option>
                           <option value="textarea">Long Text</option>
-                          <option value="aggregate">Aggregate (Sum)</option>
                         </select>
                       </div>
                     </div>
@@ -349,35 +322,6 @@ export const SimpleSDGFormBuilder: React.FC<SimpleSDGFormBuilderProps> = ({
                           placeholder="Option 1&#10;Option 2&#10;Option 3"
                           rows={3}
                         />
-                      </div>
-                    )}
-
-                    {field.type === 'aggregate' && (
-                      <div>
-                        <Label className="text-xs">Fields to Sum (select all number fields to include)</Label>
-                        <div className="space-y-2 max-h-32 overflow-y-auto border rounded p-2">
-                          {formFields
-                            .filter(f => f.type === 'number' && f.id !== field.id)
-                            .map(numberField => (
-                              <label key={numberField.id} className="flex items-center space-x-2 text-sm">
-                                <input
-                                  type="checkbox"
-                                  checked={field.aggregateFields?.includes(numberField.id) || false}
-                                  onChange={(e) => {
-                                    const currentFields = field.aggregateFields || [];
-                                    const newFields = e.target.checked
-                                      ? [...currentFields, numberField.id]
-                                      : currentFields.filter(id => id !== numberField.id);
-                                    updateField(field.id, { aggregateFields: newFields });
-                                  }}
-                                />
-                                <span>{numberField.label || `Field ${formFields.indexOf(numberField) + 1}`}</span>
-                              </label>
-                            ))}
-                          {formFields.filter(f => f.type === 'number' && f.id !== field.id).length === 0 && (
-                            <div className="text-gray-500 text-sm">No number fields available for aggregation</div>
-                          )}
-                        </div>
                       </div>
                     )}
 

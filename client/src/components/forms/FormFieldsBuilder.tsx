@@ -125,6 +125,43 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
     return allNumberFields;
   };
 
+  // Function to check if a primary field already exists (excluding current field)
+  const hasPrimaryField = (excludeIndex?: number, excludeSubHeader?: {fieldIndex: number, subIndex: number, subFieldIndex: number}) => {
+    // Check main fields
+    const mainFieldHasPrimary = fields.some((field, index) => {
+      if (excludeIndex !== undefined && index === excludeIndex) return false;
+      return field.is_primary_column;
+    });
+    
+    if (mainFieldHasPrimary) return true;
+    
+    // Check sub-header fields
+    for (let fieldIndex = 0; fieldIndex < fields.length; fieldIndex++) {
+      const field = fields[fieldIndex];
+      if (field.has_sub_headers && field.sub_headers) {
+        for (let subIndex = 0; subIndex < field.sub_headers.length; subIndex++) {
+          const subHeader = field.sub_headers[subIndex];
+          for (let subFieldIndex = 0; subFieldIndex < subHeader.fields.length; subFieldIndex++) {
+            // Skip the excluded sub-header field
+            if (excludeSubHeader && 
+                excludeSubHeader.fieldIndex === fieldIndex && 
+                excludeSubHeader.subIndex === subIndex && 
+                excludeSubHeader.subFieldIndex === subFieldIndex) {
+              continue;
+            }
+            
+            const subField = subHeader.fields[subFieldIndex];
+            if (subField.is_primary_column) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+    
+    return false;
+  };
+
   useEffect(() => {
     fetchReferenceDataSets();
   }, []);
@@ -548,17 +585,36 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
                 <Checkbox
                   id={`primary-${index}`}
                   checked={field.is_primary_column}
-                  onCheckedChange={(checked) => updateField(index, { is_primary_column: !!checked })}
+                  disabled={!field.is_primary_column && hasPrimaryField(index)}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      // When setting as primary, unset secondary
+                      updateField(index, { is_primary_column: true, is_secondary_column: false });
+                    } else {
+                      updateField(index, { is_primary_column: false });
+                    }
+                  }}
                 />
-                <Label htmlFor={`primary-${index}`} className="text-sm">Primary column</Label>
+                <Label htmlFor={`primary-${index}`} className="text-sm">
+                  Primary column
+                  {!field.is_primary_column && hasPrimaryField(index) && (
+                    <span className="text-xs text-gray-500 ml-1">(only one allowed)</span>
+                  )}
+                </Label>
               </div>
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id={`secondary-${index}`}
                   checked={field.is_secondary_column}
+                  disabled={field.is_primary_column}
                   onCheckedChange={(checked) => updateField(index, { is_secondary_column: !!checked })}
                 />
-                <Label htmlFor={`secondary-${index}`} className="text-sm">Secondary column</Label>
+                <Label htmlFor={`secondary-${index}`} className="text-sm">
+                  Secondary column
+                  {field.is_primary_column && (
+                    <span className="text-xs text-gray-500 ml-1">(disabled when primary)</span>
+                  )}
+                </Label>
               </div>
             </div>
 
@@ -765,12 +821,37 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
                                 </div>
                                 <div className="flex items-center space-x-2">
                                   <Checkbox
+                                    id={`sub-primary-${index}-${subIndex}-${fieldIndex}`}
+                                    checked={subField.is_primary_column || false}
+                                    disabled={!subField.is_primary_column && hasPrimaryField(undefined, {fieldIndex: index, subIndex, subFieldIndex: fieldIndex})}
+                                    onCheckedChange={(checked) => {
+                                      if (checked) {
+                                        // When setting as primary, unset secondary
+                                        updateSubHeaderField(index, subIndex, fieldIndex, { is_primary_column: true, is_secondary_column: false });
+                                      } else {
+                                        updateSubHeaderField(index, subIndex, fieldIndex, { is_primary_column: false });
+                                      }
+                                    }}
+                                  />
+                                  <Label htmlFor={`sub-primary-${index}-${subIndex}-${fieldIndex}`} className="text-xs">
+                                    Primary column
+                                    {!subField.is_primary_column && hasPrimaryField(undefined, {fieldIndex: index, subIndex, subFieldIndex: fieldIndex}) && (
+                                      <span className="text-xs text-gray-500 ml-1">(only one allowed)</span>
+                                    )}
+                                  </Label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <Checkbox
                                     id={`sub-secondary-${index}-${subIndex}-${fieldIndex}`}
                                     checked={subField.is_secondary_column || false}
+                                    disabled={subField.is_primary_column || false}
                                     onCheckedChange={(checked) => updateSubHeaderField(index, subIndex, fieldIndex, { is_secondary_column: !!checked })}
                                   />
                                   <Label htmlFor={`sub-secondary-${index}-${subIndex}-${fieldIndex}`} className="text-xs">
                                     Secondary column
+                                    {subField.is_primary_column && (
+                                      <span className="text-xs text-gray-500 ml-1">(disabled when primary)</span>
+                                    )}
                                   </Label>
                                 </div>
                               </div>

@@ -37,6 +37,7 @@ export const DepartmentManagement = () => {
   // Filter states
   const [searchFilter, setSearchFilter] = useState('');
   const [userCountFilter, setUserCountFilter] = useState('all');
+  const [departmentNameFilter, setDepartmentNameFilter] = useState('all');
 
   useEffect(() => {
     if (profile?.role === 'admin') {
@@ -149,11 +150,17 @@ export const DepartmentManagement = () => {
     setEditingDepartment(null);
   };
 
+  // Get unique department names for filter dropdown
+  const uniqueDepartmentNames = Array.from(new Set(departments.map(dept => dept.name)));
+
   // Filter departments based on current filters
   const filteredDepartments = departments.filter(department => {
     const matchesSearch = searchFilter === '' || 
       department.name.toLowerCase().includes(searchFilter.toLowerCase()) ||
       department.description?.toLowerCase().includes(searchFilter.toLowerCase());
+    
+    const matchesDepartmentName = departmentNameFilter === 'all' || 
+      department.name === departmentNameFilter;
     
     const userCount = department.user_count || 0;
     let matchesUserCount = true;
@@ -177,13 +184,14 @@ export const DepartmentManagement = () => {
       }
     }
     
-    return matchesSearch && matchesUserCount;
+    return matchesSearch && matchesDepartmentName && matchesUserCount;
   });
 
   // Clear all filters
   const clearAllFilters = () => {
     setSearchFilter('');
     setUserCountFilter('all');
+    setDepartmentNameFilter('all');
   };
 
   if (profile?.role !== 'admin') {
@@ -317,6 +325,24 @@ export const DepartmentManagement = () => {
                 </div>
               </div>
 
+              {/* Department Name Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Department</label>
+                <Select value={departmentNameFilter} onValueChange={setDepartmentNameFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All departments</SelectItem>
+                    {uniqueDepartmentNames.map(deptName => (
+                      <SelectItem key={deptName} value={deptName}>
+                        {deptName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* User Count Filter */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">User Count</label>
@@ -325,7 +351,7 @@ export const DepartmentManagement = () => {
                     <SelectValue placeholder="Select user count" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All departments</SelectItem>
+                    <SelectItem value="all">All user counts</SelectItem>
                     <SelectItem value="empty">Empty (0 users)</SelectItem>
                     <SelectItem value="small">Small (1-5 users)</SelectItem>
                     <SelectItem value="medium">Medium (6-20 users)</SelectItem>
@@ -336,7 +362,7 @@ export const DepartmentManagement = () => {
             </div>
 
             {/* Clear Filters */}
-            {(searchFilter || userCountFilter !== 'all') && (
+            {(searchFilter || departmentNameFilter !== 'all' || userCountFilter !== 'all') && (
               <div className="flex items-center gap-2 mt-4 pt-4 border-t">
                 <Button 
                   variant="ghost" 

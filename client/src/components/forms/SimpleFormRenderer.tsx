@@ -187,10 +187,27 @@ export const SimpleFormRenderer: React.FC<SimpleFormRendererProps> = ({
   });
 
   const handleInputChange = (fieldName: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [fieldName]: value
-    }));
+    setFormData(prev => {
+      const updatedData = {
+        ...prev,
+        [fieldName]: value
+      };
+
+      // Update aggregate fields that depend on this number field
+      formFields.forEach(field => {
+        if (field.field_type === 'aggregate' && field.aggregate_fields?.includes(fieldName)) {
+          const aggregateValue = field.aggregate_fields.reduce((sum, sourceFieldName) => {
+            const sourceValue = sourceFieldName === fieldName ? value : updatedData[sourceFieldName];
+            const numValue = parseFloat(sourceValue || '0');
+            return sum + (isNaN(numValue) ? 0 : numValue);
+          }, 0);
+          
+          updatedData[field.field_name] = aggregateValue.toString();
+        }
+      });
+
+      return updatedData;
+    });
   };
 
   // Manual form submission handler
@@ -504,6 +521,32 @@ export const SimpleFormRenderer: React.FC<SimpleFormRendererProps> = ({
               ))}
             </SelectContent>
           </Select>
+        );
+
+      case 'aggregate':
+        // Calculate sum of selected number fields
+        const aggregateValue = (() => {
+          if (!field.aggregate_fields || field.aggregate_fields.length === 0) return 0;
+          
+          return field.aggregate_fields.reduce((sum, fieldName) => {
+            const fieldValue = parseFloat(formData[fieldName] || '0');
+            return sum + (isNaN(fieldValue) ? 0 : fieldValue);
+          }, 0);
+        })();
+
+        return (
+          <div className="relative">
+            <Input
+              id={field.field_name}
+              type="number"
+              value={aggregateValue.toString()}
+              disabled
+              className="bg-blue-50 border-blue-200 text-blue-900 font-medium"
+            />
+            <div className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs text-blue-600 font-bold">
+              SUM
+            </div>
+          </div>
         );
 
       default:

@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Building, Plus, Edit2, Trash2, Users } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { DataFilter } from '@/components/ui/DataFilter';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Department {
   id: string;
@@ -154,21 +155,27 @@ export const DepartmentManagement = () => {
       department.name.toLowerCase().includes(searchFilter.toLowerCase()) ||
       department.description?.toLowerCase().includes(searchFilter.toLowerCase());
     
-    const matchesUserCount = userCountFilter === 'all' || (() => {
-      const userCount = department.user_count || 0;
+    const userCount = department.user_count || 0;
+    let matchesUserCount = true;
+    
+    if (userCountFilter !== 'all') {
       switch (userCountFilter) {
         case 'empty':
-          return userCount === 0;
+          matchesUserCount = userCount === 0;
+          break;
         case 'small':
-          return userCount > 0 && userCount <= 5;
+          matchesUserCount = userCount > 0 && userCount <= 5;
+          break;
         case 'medium':
-          return userCount > 5 && userCount <= 20;
+          matchesUserCount = userCount > 5 && userCount <= 20;
+          break;
         case 'large':
-          return userCount > 20;
+          matchesUserCount = userCount > 20;
+          break;
         default:
-          return true;
+          matchesUserCount = true;
       }
-    })();
+    }
     
     return matchesSearch && matchesUserCount;
   });
@@ -283,29 +290,65 @@ export const DepartmentManagement = () => {
         </Card>
 
         {/* Departments Filter */}
-        <DataFilter
-          title="Filter Departments"
-          searchValue={searchFilter}
-          onSearchChange={setSearchFilter}
-          searchPlaceholder="Search departments by name or description..."
-          resultCount={filteredDepartments.length}
-          totalCount={departments.length}
-          onClearAll={clearAllFilters}
-          filters={[
-            {
-              label: "User Count",
-              value: userCountFilter,
-              onChange: setUserCountFilter,
-              options: [
-                { value: 'all', label: 'All departments' },
-                { value: 'empty', label: 'Empty (0 users)' },
-                { value: 'small', label: 'Small (1-5 users)' },
-                { value: 'medium', label: 'Medium (6-20 users)' },
-                { value: 'large', label: 'Large (20+ users)' }
-              ]
-            }
-          ]}
-        />
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Building className="h-4 w-4" />
+                Filter Departments
+              </CardTitle>
+              <Badge variant="secondary">
+                {filteredDepartments.length} of {departments.length} departments
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Search Input */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Search</label>
+                <div className="relative">
+                  <Input
+                    placeholder="Search departments by name or description..."
+                    value={searchFilter}
+                    onChange={(e) => setSearchFilter(e.target.value)}
+                    className="pl-3"
+                  />
+                </div>
+              </div>
+
+              {/* User Count Filter */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">User Count</label>
+                <Select value={userCountFilter} onValueChange={setUserCountFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select user count" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All departments</SelectItem>
+                    <SelectItem value="empty">Empty (0 users)</SelectItem>
+                    <SelectItem value="small">Small (1-5 users)</SelectItem>
+                    <SelectItem value="medium">Medium (6-20 users)</SelectItem>
+                    <SelectItem value="large">Large (20+ users)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Clear Filters */}
+            {(searchFilter || userCountFilter !== 'all') && (
+              <div className="flex items-center gap-2 mt-4 pt-4 border-t">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={clearAllFilters}
+                >
+                  Clear all filters
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {filteredDepartments.length === 0 ? (
           <Card>

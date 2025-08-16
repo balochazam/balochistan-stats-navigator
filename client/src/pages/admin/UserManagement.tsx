@@ -8,12 +8,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Users, Shield, Building, Mail, Plus, Edit2, UserPlus } from 'lucide-react';
+import { Users, Shield, Building, Mail, Plus, Edit2, UserPlus, AlertTriangle } from 'lucide-react';
 
 interface User {
   id: string;
@@ -55,6 +56,35 @@ export const UserManagement = () => {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  
+  // Confirmation dialog states
+  const [roleChangeConfirm, setRoleChangeConfirm] = useState<{
+    open: boolean;
+    userId: string;
+    currentRole: string;
+    newRole: string;
+    userName: string;
+  }>({
+    open: false,
+    userId: '',
+    currentRole: '',
+    newRole: '',
+    userName: ''
+  });
+  
+  const [departmentChangeConfirm, setDepartmentChangeConfirm] = useState<{
+    open: boolean;
+    userId: string;
+    currentDepartment: string;
+    newDepartment: string;
+    userName: string;
+  }>({
+    open: false,
+    userId: '',
+    currentDepartment: '',
+    newDepartment: '',
+    userName: ''
+  });
   
   const form = useForm<CreateUserData>({
     resolver: zodResolver(createUserSchema),
@@ -120,13 +150,48 @@ export const UserManagement = () => {
     }
   };
 
-  const updateUserRole = async (userId: string, newRole: string) => {
+  // Helper functions for confirmation dialogs
+  const handleRoleChangeRequest = (userId: string, currentRole: string, newRole: string) => {
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+    
+    setRoleChangeConfirm({
+      open: true,
+      userId,
+      currentRole,
+      newRole,
+      userName: user.full_name || user.email
+    });
+  };
+
+  const handleDepartmentChangeRequest = (userId: string, currentDepartmentId: string | null, newDepartmentId: string) => {
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+    
+    const currentDeptName = getDepartmentName(currentDepartmentId);
+    const newDeptName = getDepartmentName(newDepartmentId === 'none' ? null : newDepartmentId);
+    
+    setDepartmentChangeConfirm({
+      open: true,
+      userId,
+      currentDepartment: currentDeptName,
+      newDepartment: newDeptName,
+      userName: user.full_name || user.email
+    });
+  };
+
+  const confirmRoleChange = async () => {
     try {
-      await simpleApiClient.patch(`/api/profiles/${userId}`, { role: newRole });
+      await simpleApiClient.patch(`/api/profiles/${roleChangeConfirm.userId}`, { 
+        role: roleChangeConfirm.newRole 
+      });
+      
       toast({
         title: "User role updated",
-        description: "User role has been successfully updated",
+        description: `${roleChangeConfirm.userName}'s role has been changed from ${roleChangeConfirm.currentRole.replace('_', ' ')} to ${roleChangeConfirm.newRole.replace('_', ' ')}`,
       });
+      
+      setRoleChangeConfirm(prev => ({ ...prev, open: false }));
       fetchUsers();
     } catch (error: any) {
       toast({
@@ -137,14 +202,22 @@ export const UserManagement = () => {
     }
   };
 
-  const updateUserDepartment = async (userId: string, departmentId: string | null) => {
+  const confirmDepartmentChange = async () => {
     try {
-      const actualDepartmentId = departmentId === 'none' ? null : departmentId;
-      await simpleApiClient.patch(`/api/profiles/${userId}`, { department_id: actualDepartmentId });
+      // Find the new department ID - if it's "No Department", use null
+      const newDeptId = departmentChangeConfirm.newDepartment === 'No Department' ? null :
+        departments.find(d => d.name === departmentChangeConfirm.newDepartment)?.id || null;
+      
+      await simpleApiClient.patch(`/api/profiles/${departmentChangeConfirm.userId}`, { 
+        department_id: newDeptId 
+      });
+      
       toast({
         title: "User department updated",
-        description: "User department has been successfully updated",
+        description: `${departmentChangeConfirm.userName}'s department has been changed from ${departmentChangeConfirm.currentDepartment} to ${departmentChangeConfirm.newDepartment}`,
       });
+      
+      setDepartmentChangeConfirm(prev => ({ ...prev, open: false }));
       fetchUsers();
     } catch (error: any) {
       toast({
@@ -152,6 +225,21 @@ export const UserManagement = () => {
         description: error.message || "Failed to update user department",
         variant: "destructive",
       });
+    }
+  };
+
+  // Legacy functions (kept for backward compatibility but modified to use confirmation)
+  const updateUserRole = async (userId: string, newRole: string) => {
+    const user = users.find(u => u.id === userId);
+    if (user && user.role !== newRole) {
+      handleRoleChangeRequest(userId, user.role, newRole);
+    }
+  };
+
+  const updateUserDepartment = async (userId: string, departmentId: string | null) => {
+    const user = users.find(u => u.id === userId);
+    if (user && user.department_id !== departmentId) {
+      handleDepartmentChangeRequest(userId, user.department_id, departmentId || 'none');
     }
   };
 
@@ -429,6 +517,78 @@ export const UserManagement = () => {
           </Card>
         )}
       </div>
+
+      {/* Role Change Confirmation Dialog */}
+      <AlertDialog open={roleChangeConfirm.open} onOpenChange={(open) => 
+        setRoleChangeConfirm(prev => ({ ...prev, open }))
+      }>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Confirm Role Change
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              You are about to change <strong>{roleChangeConfirm.userName}</strong>'s role from{' '}
+              <span className="font-semibold capitalize">
+                {roleChangeConfirm.currentRole.replace('_', ' ')}
+              </span>{' '}
+              to{' '}
+              <span className="font-semibold capitalize">
+                {roleChangeConfirm.newRole.replace('_', ' ')}
+              </span>.
+              <br /><br />
+              <span className="text-red-600 font-medium">
+                This action will immediately change their access permissions and cannot be undone automatically.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmRoleChange}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Confirm Role Change
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Department Change Confirmation Dialog */}
+      <AlertDialog open={departmentChangeConfirm.open} onOpenChange={(open) => 
+        setDepartmentChangeConfirm(prev => ({ ...prev, open }))
+      }>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Building className="h-5 w-5 text-blue-500" />
+              Confirm Department Change
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              You are about to change <strong>{departmentChangeConfirm.userName}</strong>'s department from{' '}
+              <span className="font-semibold">
+                {departmentChangeConfirm.currentDepartment}
+              </span>{' '}
+              to{' '}
+              <span className="font-semibold">
+                {departmentChangeConfirm.newDepartment}
+              </span>.
+              <br /><br />
+              This will affect their access to department-specific data and forms.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDepartmentChange}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              Confirm Department Change
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 };

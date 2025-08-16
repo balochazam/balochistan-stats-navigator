@@ -1455,76 +1455,19 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
             </Button>
           </div>
         ) : (
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="manual" className="flex items-center gap-2">
-                <Plus className="w-4 h-4" />
-                Manual Entry
-              </TabsTrigger>
-              <TabsTrigger value="csv" className="flex items-center gap-2">
-                <Upload className="w-4 h-4" />
-                CSV Upload
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="manual" className="space-y-4">
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {formFields
-                  .sort((a, b) => (a.field_order || 0) - (b.field_order || 0))
-                  .map((field) => (
-                    <div key={field.id} className="space-y-2">
-                      <Label htmlFor={field.field_name} className="text-sm font-medium">
-                        {field.field_label}
-                        {field.is_required && <span className="text-red-500 ml-1">*</span>}
-                      </Label>
-                      {renderField(field)}
-                    </div>
-                  ))}
+          <div className="space-y-6">
+            {/* Manual Entry Disabled Notice */}
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Data Entry Method</AlertTitle>
+              <AlertDescription>
+                Manual data entry has been disabled for this form. Please use CSV upload for data submission. 
+                If you need manual entry access, contact the administrator for assistance.
+              </AlertDescription>
+            </Alert>
 
-                <div className="flex justify-between items-center pt-4 border-t">
-                  <div className="text-sm text-gray-600">
-                    {submissionCount > 0 && (
-                      <span>{submissionCount} entries submitted</span>
-                    )}
-                  </div>
-                  <div className="flex space-x-2">
-                    {onCancel && (
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        onClick={onCancel}
-                        disabled={isSubmitting || isMarkingComplete}
-                      >
-                        Cancel
-                      </Button>
-                    )}
-                    {submissionCount > 0 && (
-                      <Button 
-                        type="button" 
-                        variant="secondary"
-                        onClick={handleMarkComplete}
-                        disabled={isSubmitting || isMarkingComplete}
-                        className="flex items-center space-x-2"
-                      >
-                        {isMarkingComplete && <Loader2 className="w-4 h-4 animate-spin" />}
-                        {isMarkingComplete ? 'Marking Complete...' : 'Mark as Complete'}
-                      </Button>
-                    )}
-                    <Button 
-                      type="submit" 
-                      disabled={isSubmitting || isMarkingComplete}
-                      className="flex items-center space-x-2"
-                    >
-                      {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                      <Save className="w-4 h-4" />
-                      <span>{isSubmitting ? 'Adding Entry...' : 'Add Entry'}</span>
-                    </Button>
-                  </div>
-                </div>
-              </form>
-            </TabsContent>
-            
-            <TabsContent value="csv" className="space-y-4">
+            {/* CSV Upload Section */}
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-medium">CSV Upload</h3>
@@ -1542,6 +1485,28 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
                   Download Template
                 </Button>
               </div>
+
+              {/* Mark as Complete Button */}
+              {submissionCount > 0 && (
+                <div className="flex justify-between items-center p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <div>
+                    <h4 className="font-medium text-blue-900 dark:text-blue-100">Ready to Complete?</h4>
+                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                      {submissionCount} entries submitted. You can mark this form as complete when all data is uploaded.
+                    </p>
+                  </div>
+                  <Button 
+                    type="button" 
+                    variant="default"
+                    onClick={handleMarkComplete}
+                    disabled={isMarkingComplete}
+                    className="flex items-center space-x-2"
+                  >
+                    {isMarkingComplete && <Loader2 className="w-4 h-4 animate-spin" />}
+                    {isMarkingComplete ? 'Marking Complete...' : 'Mark as Complete'}
+                  </Button>
+                </div>
+              )}
 
               {!csvPreviewData ? (
                 <div className="space-y-4">
@@ -1690,8 +1655,8 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
                   </div>
                 </div>
               )}
-            </TabsContent>
-          </Tabs>
+            </div>
+          </div>
         )}
       </CardContent>
 

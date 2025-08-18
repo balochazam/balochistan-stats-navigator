@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertProfileSchema, insertDepartmentSchema, insertDataBankSchema, insertDataBankEntrySchema, insertFormSchema, insertFormFieldSchema, insertFieldGroupSchema, insertScheduleSchema, insertScheduleFormSchema, insertFormSubmissionSchema, insertScheduleFormCompletionSchema, insertSdgGoalSchema, insertSdgTargetSchema, insertSdgIndicatorSchema, insertSdgDataSourceSchema, insertSdgIndicatorValueSchema, insertSdgProgressCalculationSchema } from "@shared/schema";
+import { insertProfileSchema, insertDepartmentSchema, insertDataBankSchema, insertDataBankEntrySchema, insertFormSchema, insertFormFieldSchema, insertFieldGroupSchema, insertScheduleSchema, insertScheduleFormSchema, insertFormSubmissionSchema, insertScheduleFormCompletionSchema, insertYearlySummaryReportSchema, insertSdgGoalSchema, insertSdgTargetSchema, insertSdgIndicatorSchema, insertSdgDataSourceSchema, insertSdgIndicatorValueSchema, insertSdgProgressCalculationSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Simple authentication routes for demo purposes
@@ -1022,6 +1022,238 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(completion);
     } catch (error) {
       res.status(400).json({ error: 'Invalid schedule form completion data' });
+    }
+  });
+
+  // Yearly Summary Reports routes
+  app.get('/api/forms/:formId/yearly-data', requireAuth, async (req, res) => {
+    try {
+      const formId = req.params.formId;
+      
+      // Get all submissions for this form across all schedules
+      const submissions = await storage.getFormSubmissions();
+      const formSubmissions = submissions.filter(sub => sub.form_id === formId);
+      
+      // Get all schedules to extract years
+      const schedules = await storage.getSchedules();
+      const scheduleMap = Object.fromEntries(schedules.map(s => [s.id, s]));
+      
+      // Group submissions by year
+      const yearlyData: Record<string, any[]> = {};
+      
+      formSubmissions.forEach(submission => {
+        if (submission.schedule_id) {
+          const schedule = scheduleMap[submission.schedule_id];
+          if (schedule) {
+            const startYear = new Date(schedule.start_date).getFullYear();
+            const endYear = new Date(schedule.end_date).getFullYear();
+            const year = startYear === endYear ? startYear.toString() : `${startYear}-${endYear}`;
+            
+            if (!yearlyData[year]) {
+              yearlyData[year] = [];
+            }
+            yearlyData[year].push(submission);
+          }
+        }
+      });
+      
+      res.json(yearlyData);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch yearly data' });
+    }
+  });
+
+  app.post('/api/yearly-summary-reports/generate', requireAuth, async (req: any, res) => {
+    try {
+      const { formId, reportType, years, name, description } = req.body;
+      
+      // Get form and its fields
+      const form = await storage.getForm(formId);
+      if (!form) {
+        return res.status(404).json({ error: 'Form not found' });
+      }
+      
+      const formFields = await storage.getFormFields(formId);
+      
+      // Get yearly data
+      const submissions = await storage.getFormSubmissions();
+      const formSubmissions = submissions.filter(sub => sub.form_id === formId);
+      
+      const schedules = await storage.getSchedules();
+      const scheduleMap = Object.fromEntries(schedules.map(s => [s.id, s]));
+      
+      // Group submissions by year
+      const yearlyData: Record<string, any[]> = {};
+      formSubmissions.forEach(submission => {
+        if (submission.schedule_id) {
+          const schedule = scheduleMap[submission.schedule_id];
+          if (schedule) {
+            const startYear = new Date(schedule.start_date).getFullYear();
+            const endYear = new Date(schedule.end_date).getFullYear();
+            const year = startYear === endYear ? startYear.toString() : `${startYear}-${endYear}`;
+            
+            if (years.includes(year)) {
+              if (!yearlyData[year]) {
+                yearlyData[year] = [];
+              }
+              yearlyData[year].push(submission);
+            }
+          }
+        }
+      });
+      
+      let reportData: any = {};
+      
+      if (reportType === 'vertical') {
+        // Vertical layout: Years as rows, fields as columns
+        reportData = {
+          headers: formFields.map(field => field.field_label),
+          rows: years.map((year: string) => {
+            const yearSubmissions = yearlyData[year] || [];
+            const totals: Record<string, number> = {};
+            
+            // Calculate totals for each field
+            formFields.forEach(field => {
+              let total = 0;
+              yearSubmissions.forEach(submission => {
+                const value = submission.data?.[field.field_name];
+                if (value && !isNaN(Number(value))) {
+                  total += Number(value);
+                }
+              });
+              totals[field.field_name] = total;
+            });
+            
+            return {
+              year,
+              data: totals,
+              total: Object.values(totals).reduce((sum, val) => sum + val, 0)
+            };
+          })
+        };
+        
+        // Add totals row
+        const grandTotals: Record<string, number> = {};
+        formFields.forEach(field => {
+          grandTotals[field.field_name] = reportData.rows.reduce((sum: number, row: any) => 
+            sum + (row.data[field.field_name] || 0), 0);
+        });
+        
+        reportData.totalsRow = {
+          year: 'TOTAL',
+          data: grandTotals,
+          total: Object.values(grandTotals).reduce((sum, val) => sum + val, 0)
+        };
+        
+      } else if (reportType === 'horizontal') {
+        // Horizontal layout: Forms/entities as rows, years as columns (totals only)
+        const numericFields = formFields.filter(field => 
+          field.field_type === 'number' || field.field_type === 'integer'
+        );
+        
+        reportData = {
+          headers: ['Entity', ...years, 'TOTAL'],
+          rows: []
+        };
+        
+        // For horizontal layout, we need to group by entities (primary field values)
+        const primaryField = formFields.find(field => field.is_primary_column);
+        if (primaryField) {
+          const entities = new Set<string>();
+          Object.values(yearlyData).flat().forEach(submission => {
+            const entityValue = submission.data?.[primaryField.field_name];
+            if (entityValue) entities.add(entityValue);
+          });
+          
+          Array.from(entities).forEach(entity => {
+            const row: any = { entity, yearlyTotals: {}, grandTotal: 0 };
+            
+            years.forEach((year: string) => {
+              const yearSubmissions = yearlyData[year] || [];
+              const entitySubmissions = yearSubmissions.filter(sub => 
+                sub.data?.[primaryField.field_name] === entity
+              );
+              
+              let yearTotal = 0;
+              numericFields.forEach(field => {
+                entitySubmissions.forEach(submission => {
+                  const value = submission.data?.[field.field_name];
+                  if (value && !isNaN(Number(value))) {
+                    yearTotal += Number(value);
+                  }
+                });
+              });
+              
+              row.yearlyTotals[year] = yearTotal;
+              row.grandTotal += yearTotal;
+            });
+            
+            reportData.rows.push(row);
+          });
+          
+          // Add totals row for horizontal layout
+          const columnTotals: Record<string, number> = {};
+          years.forEach((year: string) => {
+            columnTotals[year] = reportData.rows.reduce((sum: number, row: any) => 
+              sum + (row.yearlyTotals[year] || 0), 0);
+          });
+          
+          reportData.totalsRow = {
+            entity: 'TOTAL',
+            yearlyTotals: columnTotals,
+            grandTotal: Object.values(columnTotals).reduce((sum, val) => sum + val, 0)
+          };
+        }
+      }
+      
+      // Save the report to database
+      const savedReport = await storage.createYearlySummaryReport({
+        name: name || `${form.name} - ${reportType.charAt(0).toUpperCase() + reportType.slice(1)} Summary`,
+        description,
+        form_id: formId,
+        report_type: reportType,
+        years_included: years,
+        report_data: reportData,
+        created_by: req.userId
+      });
+      
+      res.status(201).json(savedReport);
+    } catch (error) {
+      console.error('Error generating yearly summary report:', error);
+      res.status(500).json({ error: 'Failed to generate yearly summary report' });
+    }
+  });
+
+  app.get('/api/yearly-summary-reports', requireAuth, async (req, res) => {
+    try {
+      const reports = await storage.getYearlySummaryReports();
+      res.json(reports);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch yearly summary reports' });
+    }
+  });
+
+  app.get('/api/yearly-summary-reports/:id', requireAuth, async (req, res) => {
+    try {
+      const report = await storage.getYearlySummaryReport(req.params.id);
+      if (!report) {
+        return res.status(404).json({ error: 'Report not found' });
+      }
+      res.json(report);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch yearly summary report' });
+    }
+  });
+
+  app.delete('/api/yearly-summary-reports/:id', requireAuth, async (req, res) => {
+    try {
+      const success = await storage.deleteYearlySummaryReport(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: 'Report not found' });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to delete yearly summary report' });
     }
   });
 

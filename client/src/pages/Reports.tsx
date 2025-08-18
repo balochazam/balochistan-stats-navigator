@@ -9,7 +9,9 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText, Download, Eye, Calendar, FileX, Search, Filter } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import YearlySummaryReports from '@/components/reports/YearlySummaryReports';
+import { FileText, Download, Eye, Calendar, FileX, Search, Filter, BarChart3, TrendingUp } from 'lucide-react';
 
 interface Schedule {
   id: string;
@@ -691,11 +693,25 @@ export const Reports = () => {
               )}
             </CardTitle>
             <CardDescription>
-              View and export data from published schedules
+              View and export data from published schedules and generate yearly summaries
               {profile?.role !== 'admin' && ' from your department'}
             </CardDescription>
           </CardHeader>
         </Card>
+
+        <Tabs defaultValue="schedule-reports" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="schedule-reports" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Schedule Reports
+            </TabsTrigger>
+            <TabsTrigger value="yearly-summaries" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Yearly Summaries
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="schedule-reports" className="space-y-6 mt-6">
 
         {!selectedSchedule ? (
           <div className="space-y-4">
@@ -1196,6 +1212,13 @@ export const Reports = () => {
             )}
           </div>
         )}
+        </TabsContent>
+        
+        <TabsContent value="yearly-summaries" className="space-y-6 mt-6">
+          <YearlySummaryReports />
+        </TabsContent>
+        
+        </Tabs>
       </div>
     </DashboardLayout>
   );

@@ -12,6 +12,7 @@ import {
   schedule_forms,
   form_submissions,
   schedule_form_completions,
+  yearly_summary_reports,
   sdg_goals,
   sdg_targets,
   sdg_indicators,
@@ -40,6 +41,8 @@ import {
   type InsertFormSubmission,
   type ScheduleFormCompletion,
   type InsertScheduleFormCompletion,
+  type YearlySummaryReport,
+  type InsertYearlySummaryReport,
   type SdgGoal,
   type InsertSdgGoal,
   type SdgTarget,
@@ -150,6 +153,12 @@ export interface IStorage {
   getSdgProgressCalculations(goalId?: number): Promise<SdgProgressCalculation[]>;
   createSdgProgressCalculation(calculation: InsertSdgProgressCalculation): Promise<SdgProgressCalculation>;
   updateSdgProgressCalculation(id: string, updates: Partial<SdgProgressCalculation>): Promise<SdgProgressCalculation | undefined>;
+
+  // Yearly Summary Reports methods
+  getYearlySummaryReports(): Promise<YearlySummaryReport[]>;
+  getYearlySummaryReport(id: string): Promise<YearlySummaryReport | undefined>;
+  createYearlySummaryReport(report: InsertYearlySummaryReport): Promise<YearlySummaryReport>;
+  deleteYearlySummaryReport(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -669,6 +678,26 @@ export class DatabaseStorage implements IStorage {
   async updateSdgProgressCalculation(id: string, updates: Partial<SdgProgressCalculation>): Promise<SdgProgressCalculation | undefined> {
     const result = await db.update(sdg_progress_calculations).set(updates).where(eq(sdg_progress_calculations.id, id)).returning();
     return result[0];
+  }
+
+  // Yearly Summary Reports methods
+  async getYearlySummaryReports(): Promise<YearlySummaryReport[]> {
+    return await db.select().from(yearly_summary_reports).orderBy(desc(yearly_summary_reports.created_at));
+  }
+
+  async getYearlySummaryReport(id: string): Promise<YearlySummaryReport | undefined> {
+    const result = await db.select().from(yearly_summary_reports).where(eq(yearly_summary_reports.id, id)).limit(1);
+    return result[0];
+  }
+
+  async createYearlySummaryReport(report: InsertYearlySummaryReport): Promise<YearlySummaryReport> {
+    const result = await db.insert(yearly_summary_reports).values(report).returning();
+    return result[0];
+  }
+
+  async deleteYearlySummaryReport(id: string): Promise<boolean> {
+    const result = await db.delete(yearly_summary_reports).where(eq(yearly_summary_reports.id, id));
+    return (result.rowCount ?? 0) > 0;
   }
 }
 

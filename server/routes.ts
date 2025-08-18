@@ -310,9 +310,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Data Bank Entry routes
   app.get('/api/data-banks/:dataBankId/entries', requireAuth, async (req, res) => {
     try {
-      const entries = await storage.getDataBankEntries(req.params.dataBankId);
+      const { dataBankId } = req.params;
+      
+      // Check if dataBankId is actually a name (for reference data lookups)
+      let actualDataBankId = dataBankId;
+      
+      // If it doesn't look like a UUID, treat it as a name and resolve to ID
+      if (!dataBankId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i)) {
+        const dataBanks = await storage.getDataBanks();
+        const dataBank = dataBanks.find(db => db.name === dataBankId);
+        if (!dataBank) {
+          return res.status(404).json({ error: `Data bank '${dataBankId}' not found` });
+        }
+        actualDataBankId = dataBank.id;
+      }
+      
+      const entries = await storage.getDataBankEntries(actualDataBankId);
       res.json(entries);
     } catch (error) {
+      console.error('Error fetching data bank entries:', error);
       res.status(500).json({ error: 'Failed to fetch data bank entries' });
     }
   });

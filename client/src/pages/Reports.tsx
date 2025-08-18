@@ -131,6 +131,18 @@ export const Reports = () => {
     }
   }, [searchParams, publishedSchedules, scheduleForms]);
 
+  // Helper function to extract year from schedule date
+  const getScheduleYear = (schedule: Schedule) => {
+    const startYear = new Date(schedule.start_date).getFullYear();
+    const endYear = new Date(schedule.end_date).getFullYear();
+    
+    if (startYear === endYear) {
+      return startYear.toString();
+    } else {
+      return `${startYear}-${endYear}`;
+    }
+  };
+
   const fetchPublishedSchedules = async () => {
     try {
       const data = await simpleApiClient.get('/api/schedules');
@@ -140,7 +152,7 @@ export const Reports = () => {
       if (profile?.role !== 'admin' && profile?.department_id) {
         // For department users, only show schedules that have forms from their department
         const schedulesWithForms = await Promise.all(
-          published.map(async (schedule) => {
+          published.map(async (schedule: Schedule) => {
             try {
               const forms = await simpleApiClient.get(`/api/schedules/${schedule.id}/forms`);
               const departmentForms = forms?.filter((form: any) => 
@@ -446,7 +458,7 @@ export const Reports = () => {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${selectedForm.form.name}_${selectedSchedule?.name}_report.csv`;
+    a.download = `${selectedForm.form.name}_${selectedSchedule?.name}_${getScheduleYear(selectedSchedule!)}_report.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -631,7 +643,10 @@ export const Reports = () => {
         <body>
           <div class="header">
             <div class="title">${selectedForm.form.name.toUpperCase()}</div>
-            <div class="subtitle">Comprehensive data collection for ${selectedForm.form.name.toLowerCase()} across provinces</div>
+            <div class="subtitle">
+              ${selectedSchedule?.name} - Year: ${getScheduleYear(selectedSchedule!)}
+              <br>Comprehensive data collection for ${selectedForm.form.name.toLowerCase()} across provinces
+            </div>
           </div>
           
           ${tableHTML}
@@ -768,6 +783,9 @@ export const Reports = () => {
                           <div className="flex items-center space-x-3 mb-2">
                             <Calendar className="h-5 w-5 text-gray-500" />
                             <h4 className="font-semibold">{schedule.name}</h4>
+                            <Badge variant="outline" className="text-gray-700">
+                              Year: {getScheduleYear(schedule)}
+                            </Badge>
                             <Badge className="bg-blue-500 text-white">Published</Badge>
                           </div>
                           {schedule.description && (
@@ -792,7 +810,13 @@ export const Reports = () => {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-semibold">{selectedSchedule.name} - Forms</h3>
+                <h3 className="text-lg font-semibold">
+                  {selectedSchedule.name} - Forms
+                  <Badge variant="outline" className="ml-2">
+                    <Calendar className="h-3 w-3 mr-1" />
+                    Year: {getScheduleYear(selectedSchedule)}
+                  </Badge>
+                </h3>
                 <p className="text-gray-600">Select a form to view its submitted data</p>
               </div>
               <div className="flex items-center gap-2">
@@ -911,11 +935,20 @@ export const Reports = () => {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-semibold">{selectedForm.form.name} - Data Report</h3>
-                <p className="text-gray-600">Submitted data for {selectedSchedule.name}</p>
+                <p className="text-gray-600">
+                  Submitted data for {selectedSchedule.name} 
+                  <Badge variant="outline" className="ml-2">
+                    <Calendar className="h-3 w-3 mr-1" />
+                    Year: {getScheduleYear(selectedSchedule)}
+                  </Badge>
+                </p>
               </div>
               <div className="flex items-center gap-2">
                 <Badge variant="secondary">
                   {filteredSubmissions.length} of {formSubmissions.length} submissions
+                </Badge>
+                <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                  Schedule Year: {getScheduleYear(selectedSchedule)}
                 </Badge>
                 <Button variant="outline" onClick={exportToPDF} disabled={!filteredSubmissions.length}>
                   <FileX className="h-4 w-4 mr-2" />

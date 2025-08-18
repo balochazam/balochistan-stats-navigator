@@ -152,12 +152,10 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
   // Function to get value from submission data based on field structure
   const getSubmissionValue = (submission: any, expandedField: any) => {
     if (expandedField.sub_field_name && expandedField.sub_header_name) {
-      // For sub-header fields, look in the nested structure
-      const fieldData = submission.data?.[expandedField.field_name];
-      if (typeof fieldData === 'object' && fieldData !== null) {
-        return fieldData[expandedField.sub_field_name] || '-';
-      }
-      return '-';
+      // For sub-header fields, the data is stored with flattened keys like:
+      // "number_of_units_Number of Units_hospitals": "12"
+      const flattenedKey = `${expandedField.field_name}_${expandedField.sub_header_name}_${expandedField.sub_field_name}`;
+      return submission.data?.[flattenedKey] || '-';
     } else {
       // For regular fields, get directly
       return submission.data?.[expandedField.field_name] || '-';

@@ -1150,7 +1150,7 @@ export const Reports = () => {
                     Cross-Year Analysis: {selectedForm.form.name}
                   </CardTitle>
                   <CardDescription>
-                    Comparative data across {crossTabData.years.join(', ')} - showing totals by field
+                    Comparative data across {crossTabData.years.join(', ')} - showing totals by year
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -1159,66 +1159,69 @@ export const Reports = () => {
                       <thead>
                         <tr className="bg-gray-100">
                           <th className="border border-gray-300 p-3 text-left font-semibold bg-blue-50">
-                            Field
+                            YEAR
                           </th>
-                          {crossTabData.years.map((year: string) => (
-                            <th key={year} className="border border-gray-300 p-3 text-center font-semibold bg-gray-50">
-                              {year}
+                          {crossTabData.fields
+                            .filter((field: any) => !field.is_primary_column)
+                            .map((field: any) => (
+                            <th key={field.field_name} className="border border-gray-300 p-3 text-center font-semibold bg-gray-50">
+                              {field.field_label}
                             </th>
                           ))}
                           <th className="border border-gray-300 p-3 text-center font-semibold bg-green-50">
-                            Total
+                            TOTAL
                           </th>
                         </tr>
                       </thead>
                       <tbody>
-                        {crossTabData.fields
-                          .filter((field: any) => !field.is_primary_column)
-                          .map((field: any, index: number) => {
-                            const rowTotal = crossTabData.years.reduce((sum: number, year: string) => 
-                              sum + (field.yearlyTotals[year] || 0), 0
-                            );
-                            
-                            return (
-                              <tr key={field.field_name} className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-                                <td className="border border-gray-300 p-3 font-medium">
-                                  {field.field_label}
+                        {crossTabData.years.map((year: string, index: number) => {
+                          const yearTotal = crossTabData.fields
+                            .filter((field: any) => !field.is_primary_column)
+                            .reduce((sum: number, field: any) => sum + (field.yearlyTotals[year] || 0), 0);
+                          
+                          return (
+                            <tr key={year} className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                              <td className="border border-gray-300 p-3 font-medium">
+                                {year}
+                              </td>
+                              {crossTabData.fields
+                                .filter((field: any) => !field.is_primary_column)
+                                .map((field: any) => (
+                                <td key={field.field_name} className="border border-gray-300 p-3 text-center">
+                                  {field.yearlyTotals[year]?.toLocaleString() || 0}
                                 </td>
-                                {crossTabData.years.map((year: string) => (
-                                  <td key={year} className="border border-gray-300 p-3 text-center">
-                                    {field.yearlyTotals[year]?.toLocaleString() || 0}
-                                  </td>
-                                ))}
-                                <td className="border border-gray-300 p-3 text-center font-semibold bg-green-50">
-                                  {rowTotal.toLocaleString()}
-                                </td>
-                              </tr>
-                            );
-                          })}
+                              ))}
+                              <td className="border border-gray-300 p-3 text-center font-semibold bg-green-50">
+                                {yearTotal.toLocaleString()}
+                              </td>
+                            </tr>
+                          );
+                        })}
                         
                         {/* Grand Total Row */}
                         <tr className="bg-blue-100 font-bold">
                           <td className="border border-gray-300 p-3">
                             GRAND TOTAL
                           </td>
-                          {crossTabData.years.map((year: string) => {
-                            const yearTotal = crossTabData.fields
-                              .filter((field: any) => !field.is_primary_column)
-                              .reduce((sum: number, field: any) => sum + (field.yearlyTotals[year] || 0), 0);
-                            return (
-                              <td key={year} className="border border-gray-300 p-3 text-center">
-                                {yearTotal.toLocaleString()}
-                              </td>
-                            );
-                          })}
+                          {crossTabData.fields
+                            .filter((field: any) => !field.is_primary_column)
+                            .map((field: any) => {
+                              const fieldTotal = crossTabData.years.reduce((sum: number, year: string) => 
+                                sum + (field.yearlyTotals[year] || 0), 0
+                              );
+                              return (
+                                <td key={field.field_name} className="border border-gray-300 p-3 text-center">
+                                  {fieldTotal.toLocaleString()}
+                                </td>
+                              );
+                            })}
                           <td className="border border-gray-300 p-3 text-center bg-green-100">
-                            {crossTabData.fields
-                              .filter((field: any) => !field.is_primary_column)
-                              .reduce((sum: number, field: any) => {
-                                return sum + crossTabData.years.reduce((yearSum: number, year: string) => 
-                                  yearSum + (field.yearlyTotals[year] || 0), 0
-                                );
-                              }, 0).toLocaleString()}
+                            {crossTabData.years.reduce((grandTotal: number, year: string) => {
+                              const yearTotal = crossTabData.fields
+                                .filter((field: any) => !field.is_primary_column)
+                                .reduce((sum: number, field: any) => sum + (field.yearlyTotals[year] || 0), 0);
+                              return grandTotal + yearTotal;
+                            }, 0).toLocaleString()}
                           </td>
                         </tr>
                       </tbody>

@@ -100,6 +100,13 @@ export const Reports = () => {
   const [submissionDateFilter, setSubmissionDateFilter] = useState('all');
   const [tableSearchFilter, setTableSearchFilter] = useState('');
   
+  // Year filter states for cross-tabulation
+  const [availableYears, setAvailableYears] = useState<string[]>([]);
+  const [selectedYears, setSelectedYears] = useState<string[]>([]);
+  const [showCrossTabulation, setShowCrossTabulation] = useState(false);
+  const [crossTabData, setCrossTabData] = useState<any>(null);
+  const [loadingCrossTab, setLoadingCrossTab] = useState(false);
+  
 
 
   useEffect(() => {
@@ -266,9 +273,43 @@ export const Reports = () => {
     scheduleForms.map(form => form.form.department?.name).filter((name): name is string => Boolean(name))
   ));
 
+  // Fetch available years for a form
+  const fetchAvailableYears = async (formId: string) => {
+    try {
+      const yearlyData = await simpleApiClient.get(`/api/forms/${formId}/yearly-data`);
+      const years = Object.keys(yearlyData).sort();
+      setAvailableYears(years);
+      setSelectedYears(years.length > 0 ? [years[0]] : []); // Default to first year
+    } catch (error) {
+      console.error('Error fetching yearly data:', error);
+      setAvailableYears([]);
+      setSelectedYears([]);
+    }
+  };
+
+  // Generate cross-tabulation report
+  const generateCrossTabulation = async () => {
+    if (!selectedForm || selectedYears.length === 0) return;
+    
+    setLoadingCrossTab(true);
+    try {
+      const data = await simpleApiClient.post(`/api/forms/${selectedForm.form_id}/cross-tabulation`, {
+        selectedYears
+      });
+      setCrossTabData(data);
+      setShowCrossTabulation(true);
+    } catch (error) {
+      console.error('Error generating cross-tabulation:', error);
+    } finally {
+      setLoadingCrossTab(false);
+    }
+  };
+
   const handleViewSchedule = async (schedule: Schedule) => {
     setSelectedSchedule(schedule);
     setSelectedForm(null);
+    setShowCrossTabulation(false);
+    setCrossTabData(null);
     setLoadingData(true);
     
     try {
@@ -292,6 +333,8 @@ export const Reports = () => {
 
   const handleViewFormData = async (scheduleForm: ScheduleForm) => {
     setSelectedForm(scheduleForm);
+    setShowCrossTabulation(false);
+    setCrossTabData(null);
     setLoadingData(true);
     
     try {
@@ -302,6 +345,9 @@ export const Reports = () => {
       // Fetch form submissions for this schedule and form
       const submissions = await simpleApiClient.get(`/api/form-submissions?formId=${scheduleForm.form_id}&scheduleId=${selectedSchedule?.id}`);
       setFormSubmissions(submissions || []);
+      
+      // Fetch available years for cross-tabulation
+      await fetchAvailableYears(scheduleForm.form_id);
     } catch (error) {
       console.error('Error fetching form data:', error);
     } finally {
@@ -1018,8 +1064,173 @@ export const Reports = () => {
               </CardContent>
             </Card>
 
+            {/* Year Filter for Cross-Tabulation */}
+            {availableYears.length > 1 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Cross-Year Analysis
+                  </CardTitle>
+                  <CardDescription>
+                    Compare data across multiple years - select 2 or more years to generate a cross-tabulation report
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                      {availableYears.map((year) => (
+                        <div key={year} className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id={`year-${year}`}
+                            checked={selectedYears.includes(year)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedYears([...selectedYears, year]);
+                              } else {
+                                setSelectedYears(selectedYears.filter(y => y !== year));
+                              }
+                            }}
+                            className="rounded border-gray-300"
+                          />
+                          <label htmlFor={`year-${year}`} className="text-sm font-medium">
+                            {year}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        onClick={generateCrossTabulation}
+                        disabled={selectedYears.length < 2 || loadingCrossTab}
+                        variant={selectedYears.length >= 2 ? "default" : "outline"}
+                      >
+                        {loadingCrossTab ? 'Generating...' : 'Generate Cross-Year Report'}
+                      </Button>
+                      {showCrossTabulation && (
+                        <Button 
+                          variant="outline"
+                          onClick={() => setShowCrossTabulation(false)}
+                        >
+                          Show Regular View
+                        </Button>
+                      )}
+                      {selectedYears.length > 0 && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => setSelectedYears([])}
+                        >
+                          Clear selection
+                        </Button>
+                      )}
+                    </div>
+                    
+                    {selectedYears.length > 0 && (
+                      <div className="text-sm text-gray-600">
+                        Selected years: {selectedYears.sort().join(', ')}
+                        {selectedYears.length === 1 && ' (select at least 2 years for comparison)'}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {loadingData ? (
               <div className="text-center py-8">Loading data...</div>
+            ) : showCrossTabulation && crossTabData ? (
+              // Cross-Tabulation View
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Cross-Year Analysis: {selectedForm.form.name}
+                  </CardTitle>
+                  <CardDescription>
+                    Comparative data across {crossTabData.years.join(', ')} - showing totals by field
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse border border-gray-300">
+                      <thead>
+                        <tr className="bg-gray-100">
+                          <th className="border border-gray-300 p-3 text-left font-semibold bg-blue-50">
+                            Field
+                          </th>
+                          {crossTabData.years.map((year: string) => (
+                            <th key={year} className="border border-gray-300 p-3 text-center font-semibold bg-gray-50">
+                              {year}
+                            </th>
+                          ))}
+                          <th className="border border-gray-300 p-3 text-center font-semibold bg-green-50">
+                            Total
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {crossTabData.fields
+                          .filter((field: any) => !field.is_primary_column)
+                          .map((field: any, index: number) => {
+                            const rowTotal = crossTabData.years.reduce((sum: number, year: string) => 
+                              sum + (field.yearlyTotals[year] || 0), 0
+                            );
+                            
+                            return (
+                              <tr key={field.field_name} className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                                <td className="border border-gray-300 p-3 font-medium">
+                                  {field.field_label}
+                                </td>
+                                {crossTabData.years.map((year: string) => (
+                                  <td key={year} className="border border-gray-300 p-3 text-center">
+                                    {field.yearlyTotals[year]?.toLocaleString() || 0}
+                                  </td>
+                                ))}
+                                <td className="border border-gray-300 p-3 text-center font-semibold bg-green-50">
+                                  {rowTotal.toLocaleString()}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        
+                        {/* Grand Total Row */}
+                        <tr className="bg-blue-100 font-bold">
+                          <td className="border border-gray-300 p-3">
+                            GRAND TOTAL
+                          </td>
+                          {crossTabData.years.map((year: string) => {
+                            const yearTotal = crossTabData.fields
+                              .filter((field: any) => !field.is_primary_column)
+                              .reduce((sum: number, field: any) => sum + (field.yearlyTotals[year] || 0), 0);
+                            return (
+                              <td key={year} className="border border-gray-300 p-3 text-center">
+                                {yearTotal.toLocaleString()}
+                              </td>
+                            );
+                          })}
+                          <td className="border border-gray-300 p-3 text-center bg-green-100">
+                            {crossTabData.fields
+                              .filter((field: any) => !field.is_primary_column)
+                              .reduce((sum: number, field: any) => {
+                                return sum + crossTabData.years.reduce((yearSum: number, year: string) => 
+                                  yearSum + (field.yearlyTotals[year] || 0), 0
+                                );
+                              }, 0).toLocaleString()}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  
+                  <div className="mt-4 text-sm text-gray-600">
+                    <p><strong>Note:</strong> This cross-tabulation shows aggregated totals for numeric fields across the selected years. 
+                    Primary columns (typically names/locations) are excluded from the analysis.</p>
+                  </div>
+                </CardContent>
+              </Card>
             ) : filteredSubmissions.length === 0 ? (
               <Card>
                 <CardContent className="text-center py-8">

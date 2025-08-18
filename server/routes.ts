@@ -1025,6 +1025,116 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get yearly data for cross-tabulation reports
+  app.get('/api/forms/:formId/yearly-data', requireAuth, async (req, res) => {
+    try {
+      const formId = req.params.formId;
+      
+      // Get all submissions for this form across all schedules
+      const submissions = await storage.getFormSubmissions();
+      const formSubmissions = submissions.filter(sub => sub.form_id === formId);
+      
+      // Get all schedules to extract years
+      const schedules = await storage.getSchedules();
+      const scheduleMap = Object.fromEntries(schedules.map(s => [s.id, s]));
+      
+      // Group submissions by year
+      const yearlyData: Record<string, any[]> = {};
+      
+      formSubmissions.forEach(submission => {
+        if (submission.schedule_id) {
+          const schedule = scheduleMap[submission.schedule_id];
+          if (schedule) {
+            const startYear = new Date(schedule.start_date).getFullYear();
+            const endYear = new Date(schedule.end_date).getFullYear();
+            const year = startYear === endYear ? startYear.toString() : `${startYear}-${endYear}`;
+            
+            if (!yearlyData[year]) {
+              yearlyData[year] = [];
+            }
+            yearlyData[year].push(submission);
+          }
+        }
+      });
+      
+      res.json(yearlyData);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch yearly data' });
+    }
+  });
+
+  // Generate cross-tabulation report
+  app.post('/api/forms/:formId/cross-tabulation', requireAuth, async (req, res) => {
+    try {
+      const formId = req.params.formId;
+      const { selectedYears } = req.body;
+      
+      // Get form and its fields
+      const form = await storage.getForm(formId);
+      if (!form) {
+        return res.status(404).json({ error: 'Form not found' });
+      }
+      
+      const formFields = await storage.getFormFields(formId);
+      
+      // Get yearly data
+      const submissions = await storage.getFormSubmissions();
+      const formSubmissions = submissions.filter(sub => sub.form_id === formId);
+      
+      const schedules = await storage.getSchedules();
+      const scheduleMap = Object.fromEntries(schedules.map(s => [s.id, s]));
+      
+      // Group submissions by year
+      const yearlyData: Record<string, any[]> = {};
+      formSubmissions.forEach(submission => {
+        if (submission.schedule_id) {
+          const schedule = scheduleMap[submission.schedule_id];
+          if (schedule) {
+            const startYear = new Date(schedule.start_date).getFullYear();
+            const endYear = new Date(schedule.end_date).getFullYear();
+            const year = startYear === endYear ? startYear.toString() : `${startYear}-${endYear}`;
+            
+            if (selectedYears.includes(year)) {
+              if (!yearlyData[year]) {
+                yearlyData[year] = [];
+              }
+              yearlyData[year].push(submission);
+            }
+          }
+        }
+      });
+      
+      // Create cross-tabulation data
+      const crossTabData = {
+        years: selectedYears.sort(),
+        fields: formFields.map(field => ({
+          field_name: field.field_name,
+          field_label: field.field_label,
+          field_type: field.field_type,
+          is_primary_column: field.is_primary_column,
+          yearlyTotals: selectedYears.reduce((acc: Record<string, number>, year: string) => {
+            const yearSubmissions = yearlyData[year] || [];
+            let total = 0;
+            
+            yearSubmissions.forEach(submission => {
+              const value = submission.data?.[field.field_name];
+              if (value && !isNaN(Number(value))) {
+                total += Number(value);
+              }
+            });
+            
+            acc[year] = total;
+            return acc;
+          }, {})
+        }))
+      };
+      
+      res.json(crossTabData);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to generate cross-tabulation report' });
+    }
+  });
+
   // SDG Routes
   app.get('/api/sdg-goals', requireAuth, async (req, res) => {
     try {

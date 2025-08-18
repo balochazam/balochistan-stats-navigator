@@ -505,24 +505,9 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
     }
   };
 
-  // Generate CSV template with Excel formulas for aggregate columns and primary column reference data
-  const generateCSVTemplate = async () => {
+  // Generate simple CSV template
+  const generateCSVTemplate = () => {
     const allHeaders: string[] = [];
-    const formulaMapping: Record<number, string> = {}; // Column index to formula mapping
-    const primaryColumnData: Record<string, any[]> = {}; // Store reference data for primary columns
-    
-    // Fetch reference data for primary columns
-    const primaryColumns = formFields.filter(field => field.is_primary_column && field.reference_data_name);
-    for (const primaryCol of primaryColumns) {
-      if (primaryCol.reference_data_name) {
-        try {
-          const refData = await fetchReferenceData(primaryCol.reference_data_name);
-          primaryColumnData[primaryCol.field_name] = refData;
-        } catch (error) {
-          console.error(`Failed to fetch reference data for ${primaryCol.field_label}:`, error);
-        }
-      }
-    }
     
     // Process all fields, including sub-header fields
     formFields.forEach(field => {
@@ -531,69 +516,6 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
         field.sub_headers.forEach(subHeader => {
           subHeader.fields.forEach(subField => {
             allHeaders.push(subField.field_label);
-            
-            // Check if this field is a total/aggregate column
-            const isTotal = subField.field_label.toLowerCase().includes('total') ||
-                           subField.field_label.toLowerCase().includes('sum') ||
-                           subField.field_name.toLowerCase().includes('total') ||
-                           subField.field_name.toLowerCase().includes('sum') ||
-                           subField.field_label.toLowerCase().includes('aggregate') ||
-                           (subField.field_label.toLowerCase().includes('both') && subField.field_label.toLowerCase().includes('sexes'));
-                           
-            if (isTotal) {
-              // Find potential columns to sum within the same sub-header
-              const columnsToSum: number[] = [];
-              const currentFieldIndex = allHeaders.length - 1; // Current field position
-              
-              // Look for numeric columns in the same sub-header that aren't totals
-              subHeader.fields.forEach((potentialSumField, idx) => {
-                const isPotentialNumber = potentialSumField.field_type === 'number' || 
-                                        potentialSumField.field_type === 'integer';
-                const isNotTotal = !potentialSumField.field_label.toLowerCase().includes('total') &&
-                                 !potentialSumField.field_label.toLowerCase().includes('sum') &&
-                                 !potentialSumField.field_label.toLowerCase().includes('aggregate') &&
-                                 !(potentialSumField.field_label.toLowerCase().includes('both') && 
-                                   potentialSumField.field_label.toLowerCase().includes('sexes'));
-                                 
-                if (isPotentialNumber && isNotTotal && potentialSumField.field_name !== subField.field_name) {
-                  // Calculate the actual column index in the full header array
-                  const fieldsBeforeCurrent = subHeader.fields.slice(0, idx).length;
-                  const fullColumnIndex = currentFieldIndex - (subHeader.fields.length - 1 - idx);
-                  
-                  // Only include columns that come before the total column
-                  if (fullColumnIndex < currentFieldIndex) {
-                    columnsToSum.push(fullColumnIndex);
-                  }
-                }
-              });
-              
-              // Create Excel SUM formula if we found columns to sum
-              if (columnsToSum.length > 0) {
-                const columnLetters = columnsToSum.map(colIndex => {
-                  // Convert column index to Excel column letter (A=0, B=1, C=2, etc.)
-                  const getColumnLetter = (index: number): string => {
-                    let result = '';
-                    while (index >= 0) {
-                      result = String.fromCharCode(65 + (index % 26)) + result;
-                      index = Math.floor(index / 26) - 1;
-                    }
-                    return result;
-                  };
-                  return getColumnLetter(colIndex);
-                });
-                
-                // Create appropriate formula based on number of columns
-                if (columnLetters.length >= 1) {
-                  if (columnLetters.length === 1) {
-                    formulaMapping[allHeaders.length - 1] = `=${columnLetters[0]}2`;
-                  } else {
-                    // For multiple columns, create a SUM formula
-                    const ranges = columnLetters.map(letter => `${letter}2`).join('+');
-                    formulaMapping[allHeaders.length - 1] = `=${ranges}`;
-                  }
-                }
-              }
-            }
           });
         });
       } else {
@@ -602,27 +524,11 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
       }
     });
     
-    // Create CSV content with headers and example row with formulas
+    // Create CSV content with headers and example row
     let csvContent = allHeaders.join(',') + '\n';
     
-    // Add an example row with formulas for aggregate columns
-    const exampleRow = allHeaders.map((header, index) => {
-      if (formulaMapping[index]) {
-        return formulaMapping[index];
-      }
-      
-      // Check if this header corresponds to a primary column with reference data
-      const primaryField = formFields.find(field => 
-        field.is_primary_column && 
-        (field.field_label === header || field.field_name === header) &&
-        primaryColumnData[field.field_name]
-      );
-      
-      if (primaryField && primaryColumnData[primaryField.field_name]?.length > 0) {
-        // For primary columns with reference data, use the first value as example
-        return primaryColumnData[primaryField.field_name][0].value;
-      }
-      
+    // Add a simple example row with placeholder values
+    const exampleRow = allHeaders.map((header) => {
       // For non-formula columns, provide helpful placeholder text
       if (header.toLowerCase().includes('district') || header.toLowerCase().includes('province')) {
         return 'Enter_Location_Name';
@@ -637,20 +543,6 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
     
     csvContent += exampleRow.join(',') + '\n';
     
-    // Add reference data section as comments for primary columns
-    if (Object.keys(primaryColumnData).length > 0) {
-      csvContent += '\n# PRIMARY COLUMN REFERENCE DATA\n';
-      csvContent += '# Use the exact values listed below for primary columns to avoid validation errors\n\n';
-      
-      for (const [fieldName, refData] of Object.entries(primaryColumnData)) {
-        const field = formFields.find(f => f.field_name === fieldName);
-        if (field && refData.length > 0) {
-          csvContent += `# ${field.field_label} - Available Values:\n`;
-          csvContent += `# ${refData.map(item => item.value).join(', ')}\n\n`;
-        }
-      }
-    }
-    
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -661,16 +553,9 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
     link.click();
     document.body.removeChild(link);
     
-    const hasFormulas = Object.keys(formulaMapping).length > 0;
-    const hasPrimaryData = Object.keys(primaryColumnData).length > 0;
-    
     toast({
       title: "Template Downloaded!",
-      description: hasFormulas 
-        ? "CSV template downloaded with Excel formulas for total columns and primary column reference data. Check the bottom of the file for allowed values."
-        : hasPrimaryData 
-          ? "CSV template downloaded with primary column reference data. Check the bottom of the file for exact values to use."
-          : "CSV template downloaded with example data. Fill it out and upload using the CSV tab.",
+      description: "CSV template downloaded with example data. Fill it out and upload using the CSV tab.",
     });
   };
 
@@ -1549,7 +1434,7 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
                   </p>
                 </div>
                 <Button
-                  onClick={() => generateCSVTemplate()}
+                  onClick={generateCSVTemplate}
                   variant="outline"
                   size="sm"
                   className="flex items-center gap-2"

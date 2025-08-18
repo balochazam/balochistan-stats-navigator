@@ -1161,13 +1161,13 @@ export const Reports = () => {
                         <tr className="bg-gray-100">
                           <th rowSpan={2} className="border border-gray-300 p-3 text-center font-semibold bg-blue-50 align-middle">
                             {(() => {
-                              const primaryField = crossTabData.fields.find((field: any) => field.is_primary_column);
+                              const primaryField = crossTabData.primaryField;
                               return primaryField ? primaryField.field_label.toUpperCase() : 'ITEMS';
                             })()}
                           </th>
                           {crossTabData.years.map((year: string) => {
                             // Each year spans across all the data fields for that year
-                            const fieldsCount = crossTabData.fields.filter((field: any) => !field.is_primary_column).length;
+                            const fieldsCount = crossTabData.fields.length;
                             return (
                               <th key={year} colSpan={fieldsCount} className="border border-gray-300 p-2 text-center font-semibold bg-gray-100">
                                 {year}
@@ -1179,7 +1179,6 @@ export const Reports = () => {
                         <tr className="bg-gray-50">
                           {crossTabData.years.map((year: string) => 
                             crossTabData.fields
-                              .filter((field: any) => !field.is_primary_column)
                               .map((field: any) => (
                                 <th key={`${year}-${field.field_name}`} className="border border-gray-300 p-2 text-center font-medium text-sm">
                                   {field.field_label}
@@ -1191,7 +1190,7 @@ export const Reports = () => {
                       <tbody>
                         {/* Get unique primary values (crop names) */}
                         {(() => {
-                          const primaryField = crossTabData.fields.find((field: any) => field.is_primary_column);
+                          const primaryField = crossTabData.primaryField;
                           const uniquePrimaryValues = Array.from(new Set(
                             Object.values(crossTabData.submissions || {}).flat().map((submission: any) => {
                               if (primaryField && submission.data) {
@@ -1212,7 +1211,6 @@ export const Reports = () => {
                               </td>
                               {crossTabData.years.map((year: string) => 
                                 crossTabData.fields
-                                  .filter((field: any) => !field.is_primary_column)
                                   .map((field: any) => {
                                     // Find submissions for this year and primary value
                                     const yearSubmissions = crossTabData.submissions?.[year] || [];

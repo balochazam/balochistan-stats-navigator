@@ -1104,46 +1104,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
       
+      // Extract all data columns (both main fields and sub-fields)
+      const allDataColumns: any[] = [];
+      
+      formFields.forEach(field => {
+        if (field.is_primary_column) {
+          // Skip primary column as it will be used for rows
+          return;
+        }
+        
+        if (field.has_sub_headers && field.sub_headers && typeof field.sub_headers === 'string') {
+          // Parse sub_headers JSON and extract sub-fields
+          try {
+            const subHeadersData = JSON.parse(field.sub_headers);
+            if (subHeadersData.length > 0 && subHeadersData[0].fields) {
+              subHeadersData[0].fields.forEach((subField: any) => {
+                allDataColumns.push({
+                  field_name: `${field.field_name}_${field.field_label}_${subField.field_name}`,
+                  field_label: subField.field_label,
+                  field_type: subField.field_type,
+                  parent_field_name: field.field_name,
+                  parent_field_label: field.field_label,
+                  is_sub_field: true
+                });
+              });
+            }
+          } catch (e) {
+            // If parsing fails, treat as regular field
+            allDataColumns.push({
+              field_name: field.field_name,
+              field_label: field.field_label,
+              field_type: field.field_type,
+              is_sub_field: false
+            });
+          }
+        } else {
+          // Regular field without sub-headers
+          allDataColumns.push({
+            field_name: field.field_name,
+            field_label: field.field_label,
+            field_type: field.field_type,
+            is_sub_field: false
+          });
+        }
+      });
+
       // Create cross-tabulation data with detailed submissions
       const crossTabData = {
         years: selectedYears.sort(),
-        fields: formFields.map(field => ({
-          field_name: field.field_name,
-          field_label: field.field_label,
-          field_type: field.field_type,
-          is_primary_column: field.is_primary_column,
-          yearlyTotals: selectedYears.reduce((acc: Record<string, number>, year: string) => {
-            const yearSubmissions = yearlyData[year] || [];
-            let total = 0;
-            
-            yearSubmissions.forEach(submission => {
-              if (!submission.data) return;
-              
-              // Find the actual field key in submission data (format: "fieldName_FieldLabel_type")
-              const dataKey = Object.keys(submission.data).find(key => 
-                key.includes(field.field_name) || key.includes(field.field_label)
-              );
-              
-              if (dataKey) {
-                const value = submission.data[dataKey];
-                if (value && !isNaN(Number(value))) {
-                  total += Number(value);
-                }
-              }
-            });
-            
-            acc[year] = total;
-            return acc;
-          }, {})
-        })),
-        submissions: yearlyData,  // Include raw submissions data for detailed table rendering
+        fields: allDataColumns,
+        primaryField: formFields.find(field => field.is_primary_column),
+        submissions: yearlyData,
         debug: {
           totalSubmissions: formSubmissions.length,
           yearlySubmissionCounts: Object.entries(yearlyData).map(([year, subs]) => ({
             year,
             count: subs.length
           })),
-          sampleSubmissionKeys: formSubmissions.length > 0 ? Object.keys(formSubmissions[0].data || {}) : []
+          sampleSubmissionKeys: formSubmissions.length > 0 ? Object.keys(formSubmissions[0].data || {}) : [],
+          allDataColumns: allDataColumns
         }
       };
       

@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit2, Trash2, Key, Save, X } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Plus, Edit2, Trash2, Key, Save, X, AlertTriangle } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface DataBank {
@@ -40,6 +41,11 @@ export const DataBankEntries = ({ dataBank }: DataBankEntriesProps) => {
   const [newEntry, setNewEntry] = useState({ key: '', value: '' });
   const [editValues, setEditValues] = useState<{ [key: string]: { key: string; value: string } }>({});
   const [isAddingNew, setIsAddingNew] = useState(false);
+  const [deleteConfirmDialog, setDeleteConfirmDialog] = useState<{ isOpen: boolean; entryId: string | null; entryKey: string }>({ 
+    isOpen: false, 
+    entryId: null, 
+    entryKey: '' 
+  });
 
   useEffect(() => {
     fetchEntries();
@@ -47,28 +53,15 @@ export const DataBankEntries = ({ dataBank }: DataBankEntriesProps) => {
 
   const fetchEntries = async () => {
     try {
-      const data = await apiClient
-        .get
-        .get(`
-          *,
-          creator:profiles!data_bank_entries_created_by_fkey(full_name, email)
-        `)
-        .get
-        .get
-        .order('key');
-
-      if (error) {
-        console.error('Error fetching entries:', error);
-        toast({
-          title: "Error",
-          description: "Failed to fetch entries",
-          variant: "destructive",
-        });
-      } else {
-        setEntries(data || []);
-      }
+      const response = await simpleApiClient.get(`/api/data-banks/${dataBank.id}/entries`);
+      setEntries(response || []);
     } catch (error) {
-      console.error('Error in fetchEntries:', error);
+      console.error('Error fetching entries:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch entries",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -85,27 +78,11 @@ export const DataBankEntries = ({ dataBank }: DataBankEntriesProps) => {
     }
 
     try {
-      const { error } = await apiClient
-        .get
-        .post({
-          data_bank_id: dataBank.id,
-          key: newEntry.key.trim(),
-          value: newEntry.value.trim(),
-          created_by: user.id
-        });
-
-      if (error) {
-        if (error.code === '23505') { // Unique constraint violation
-          toast({
-            title: "Error",
-            description: "A key with this name already exists",
-            variant: "destructive",
-          });
-        } else {
-          throw error;
-        }
-        return;
-      }
+      await simpleApiClient.post(`/api/data-banks/${dataBank.id}/entries`, {
+        key: newEntry.key.trim(),
+        value: newEntry.value.trim(),
+        created_by: user.id
+      });
 
       toast({
         title: "Success",
@@ -115,13 +92,21 @@ export const DataBankEntries = ({ dataBank }: DataBankEntriesProps) => {
       setNewEntry({ key: '', value: '' });
       setIsAddingNew(false);
       fetchEntries();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding entry:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add entry",
-        variant: "destructive",
-      });
+      if (error.message && error.message.includes('unique')) {
+        toast({
+          title: "Error",
+          description: "A key with this name already exists",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to add entry",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -145,27 +130,11 @@ export const DataBankEntries = ({ dataBank }: DataBankEntriesProps) => {
     }
 
     try {
-      const { error } = await apiClient
-        .get
-        .put({
-          key: editData.key.trim(),
-          value: editData.value.trim(),
-          updated_at: new Date().toISOString()
-        })
-        .get;
-
-      if (error) {
-        if (error.code === '23505') { // Unique constraint violation
-          toast({
-            title: "Error",
-            description: "A key with this name already exists",
-            variant: "destructive",
-          });
-        } else {
-          throw error;
-        }
-        return;
-      }
+      await simpleApiClient.put(`/api/data-banks/${dataBank.id}/entries/${entryId}`, { 
+        key: editData.key.trim(),
+        value: editData.value.trim(),
+        updated_at: new Date().toISOString()
+      });
 
       toast({
         title: "Success",
@@ -179,33 +148,47 @@ export const DataBankEntries = ({ dataBank }: DataBankEntriesProps) => {
         return newValues;
       });
       fetchEntries();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating entry:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update entry",
-        variant: "destructive",
-      });
+      if (error.message && error.message.includes('unique')) {
+        toast({
+          title: "Error",
+          description: "A key with this name already exists",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to update entry",
+          variant: "destructive",
+        });
+      }
     }
   };
 
-  const handleDeleteEntry = async (entryId: string) => {
-    if (!confirm('Are you sure you want to delete this entry?')) {
-      return;
-    }
+  const openDeleteConfirmation = (entryId: string, entryKey: string) => {
+    setDeleteConfirmDialog({ isOpen: true, entryId, entryKey });
+  };
 
+  const closeDeleteConfirmation = () => {
+    setDeleteConfirmDialog({ isOpen: false, entryId: null, entryKey: '' });
+  };
+
+  const confirmDeleteEntry = async () => {
+    if (!deleteConfirmDialog.entryId) return;
+    
+    console.log(`Deleting entry: ${deleteConfirmDialog.entryId}`);
+    
     try {
-      const { error } = await apiClient
-        .get
-        .put
-        .get;
-
-      if (error) throw error;
+      const response = await simpleApiClient.delete(`/api/data-banks/${dataBank.id}/entries/${deleteConfirmDialog.entryId}`);
+      console.log(`Delete success: ${!!response}`);
 
       toast({
         title: "Success",
         description: "Entry deleted successfully",
       });
+      
+      closeDeleteConfirmation();
       fetchEntries();
     } catch (error) {
       console.error('Error deleting entry:', error);
@@ -214,6 +197,7 @@ export const DataBankEntries = ({ dataBank }: DataBankEntriesProps) => {
         description: "Failed to delete entry",
         variant: "destructive",
       });
+      closeDeleteConfirmation();
     }
   };
 
@@ -381,7 +365,7 @@ export const DataBankEntries = ({ dataBank }: DataBankEntriesProps) => {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleDeleteEntry(entry.id)}
+                            onClick={() => openDeleteConfirmation(entry.id, entry.key)}
                             className="h-7 w-7 p-0 text-red-600 hover:text-red-800"
                           >
                             <Trash2 className="h-3 w-3" />
@@ -396,6 +380,37 @@ export const DataBankEntries = ({ dataBank }: DataBankEntriesProps) => {
           )}
         </div>
       </CardContent>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteConfirmDialog.isOpen} onOpenChange={closeDeleteConfirmation}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              Confirm Delete
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-gray-600 mb-2">
+              Are you sure you want to delete this data entry?
+            </p>
+            <div className="bg-gray-50 p-3 rounded border">
+              <p className="font-medium text-sm">Key: {deleteConfirmDialog.entryKey}</p>
+            </div>
+            <p className="text-xs text-red-600 mt-2">
+              This action cannot be undone.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeDeleteConfirmation}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmDeleteEntry}>
+              Delete Entry
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };

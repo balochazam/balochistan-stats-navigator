@@ -1104,7 +1104,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
       
-      // Create cross-tabulation data
+      // Create cross-tabulation data with detailed submissions
       const crossTabData = {
         years: selectedYears.sort(),
         fields: formFields.map(field => ({
@@ -1126,7 +1126,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             acc[year] = total;
             return acc;
           }, {})
-        }))
+        })),
+        submissions: yearlyData  // Include raw submissions data for detailed table rendering
       };
       
       res.json(crossTabData);

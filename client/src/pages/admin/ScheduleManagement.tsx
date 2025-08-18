@@ -415,7 +415,7 @@ export const ScheduleManagement = () => {
                       <p className="text-gray-600 mb-2 ml-8">{schedule.description}</p>
                     )}
                     <div className="text-xs text-gray-500 ml-8 space-x-4">
-                      <span>Period: {new Date(schedule.start_date).toLocaleDateString()} - {new Date(schedule.end_date).toLocaleDateString()}</span>
+                      <span>Period: {new Date(schedule.start_date).getFullYear()} - {new Date(schedule.end_date).getFullYear()}</span>
                       <span>Created: {new Date(schedule.created_at).toLocaleDateString()}</span>
                     </div>
                   </div>

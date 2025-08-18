@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertProfileSchema, insertDepartmentSchema, insertDataBankSchema, insertDataBankEntrySchema, insertFormSchema, insertFormFieldSchema, insertFieldGroupSchema, insertScheduleSchema, insertScheduleFormSchema, insertFormSubmissionSchema, insertScheduleFormCompletionSchema, insertYearlySummaryReportSchema, insertSdgGoalSchema, insertSdgTargetSchema, insertSdgIndicatorSchema, insertSdgDataSourceSchema, insertSdgIndicatorValueSchema, insertSdgProgressCalculationSchema } from "@shared/schema";
+import { insertProfileSchema, insertDepartmentSchema, insertDataBankSchema, insertDataBankEntrySchema, insertFormSchema, insertFormFieldSchema, insertFieldGroupSchema, insertScheduleSchema, insertScheduleFormSchema, insertFormSubmissionSchema, insertScheduleFormCompletionSchema, insertSdgGoalSchema, insertSdgTargetSchema, insertSdgIndicatorSchema, insertSdgDataSourceSchema, insertSdgIndicatorValueSchema, insertSdgProgressCalculationSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Simple authentication routes for demo purposes
@@ -1025,613 +1025,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Yearly Summary Reports routes
-  app.get('/api/forms/:formId/yearly-data', requireAuth, async (req, res) => {
-    try {
-      const formId = req.params.formId;
-      
-      // Get all submissions for this form across all schedules
-      const submissions = await storage.getFormSubmissions();
-      const formSubmissions = submissions.filter(sub => sub.form_id === formId);
-      
-      // Get all schedules to extract years
-      const schedules = await storage.getSchedules();
-      const scheduleMap = Object.fromEntries(schedules.map(s => [s.id, s]));
-      
-      // Group submissions by year
-      const yearlyData: Record<string, any[]> = {};
-      
-      formSubmissions.forEach(submission => {
-        if (submission.schedule_id) {
-          const schedule = scheduleMap[submission.schedule_id];
-          if (schedule) {
-            const startYear = new Date(schedule.start_date).getFullYear();
-            const endYear = new Date(schedule.end_date).getFullYear();
-            const year = startYear === endYear ? startYear.toString() : `${startYear}-${endYear}`;
-            
-            if (!yearlyData[year]) {
-              yearlyData[year] = [];
-            }
-            yearlyData[year].push(submission);
-          }
-        }
-      });
-      
-      res.json(yearlyData);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch yearly data' });
-    }
-  });
-
-  app.post('/api/yearly-summary-reports/generate', requireAuth, async (req: any, res) => {
-    try {
-      const { formId, reportType, years, name, description } = req.body;
-      
-      // Get form and its fields
-      const form = await storage.getForm(formId);
-      if (!form) {
-        return res.status(404).json({ error: 'Form not found' });
-      }
-      
-      const formFields = await storage.getFormFields(formId);
-      
-      // Get yearly data
-      const submissions = await storage.getFormSubmissions();
-      const formSubmissions = submissions.filter(sub => sub.form_id === formId);
-      
-      const schedules = await storage.getSchedules();
-      const scheduleMap = Object.fromEntries(schedules.map(s => [s.id, s]));
-      
-      // Group submissions by year
-      const yearlyData: Record<string, any[]> = {};
-      formSubmissions.forEach(submission => {
-        if (submission.schedule_id) {
-          const schedule = scheduleMap[submission.schedule_id];
-          if (schedule) {
-            const startYear = new Date(schedule.start_date).getFullYear();
-            const endYear = new Date(schedule.end_date).getFullYear();
-            const year = startYear === endYear ? startYear.toString() : `${startYear}-${endYear}`;
-            
-            if (years.includes(year)) {
-              if (!yearlyData[year]) {
-                yearlyData[year] = [];
-              }
-              yearlyData[year].push(submission);
-            }
-          }
-        }
-      });
-      
-      let reportData: any = {};
-      
-      if (reportType === 'vertical') {
-        // Vertical layout: Years as rows, fields as columns
-        reportData = {
-          headers: formFields.map(field => field.field_label),
-          rows: years.map((year: string) => {
-            const yearSubmissions = yearlyData[year] || [];
-            const totals: Record<string, number> = {};
-            
-            // Calculate totals for each field
-            formFields.forEach(field => {
-              let total = 0;
-              yearSubmissions.forEach(submission => {
-                const value = submission.data?.[field.field_name];
-                if (value && !isNaN(Number(value))) {
-                  total += Number(value);
-                }
-              });
-              totals[field.field_name] = total;
-            });
-            
-            return {
-              year,
-              data: totals,
-              total: Object.values(totals).reduce((sum, val) => sum + val, 0)
-            };
-          })
-        };
-        
-        // Add totals row
-        const grandTotals: Record<string, number> = {};
-        formFields.forEach(field => {
-          grandTotals[field.field_name] = reportData.rows.reduce((sum: number, row: any) => 
-            sum + (row.data[field.field_name] || 0), 0);
-        });
-        
-        reportData.totalsRow = {
-          year: 'TOTAL',
-          data: grandTotals,
-          total: Object.values(grandTotals).reduce((sum, val) => sum + val, 0)
-        };
-        
-      } else if (reportType === 'horizontal') {
-        // Horizontal layout: Forms/entities as rows, years as columns (totals only)
-        const numericFields = formFields.filter(field => 
-          field.field_type === 'number' || field.field_type === 'integer'
-        );
-        
-        reportData = {
-          headers: ['Entity', ...years, 'TOTAL'],
-          rows: []
-        };
-        
-        // For horizontal layout, we need to group by entities (primary field values)
-        const primaryField = formFields.find(field => field.is_primary_column);
-        if (primaryField) {
-          const entities = new Set<string>();
-          Object.values(yearlyData).flat().forEach(submission => {
-            const entityValue = submission.data?.[primaryField.field_name];
-            if (entityValue) entities.add(entityValue);
-          });
-          
-          Array.from(entities).forEach(entity => {
-            const row: any = { entity, yearlyTotals: {}, grandTotal: 0 };
-            
-            years.forEach((year: string) => {
-              const yearSubmissions = yearlyData[year] || [];
-              const entitySubmissions = yearSubmissions.filter(sub => 
-                sub.data?.[primaryField.field_name] === entity
-              );
-              
-              let yearTotal = 0;
-              numericFields.forEach(field => {
-                entitySubmissions.forEach(submission => {
-                  const value = submission.data?.[field.field_name];
-                  if (value && !isNaN(Number(value))) {
-                    yearTotal += Number(value);
-                  }
-                });
-              });
-              
-              row.yearlyTotals[year] = yearTotal;
-              row.grandTotal += yearTotal;
-            });
-            
-            reportData.rows.push(row);
-          });
-          
-          // Add totals row for horizontal layout
-          const columnTotals: Record<string, number> = {};
-          years.forEach((year: string) => {
-            columnTotals[year] = reportData.rows.reduce((sum: number, row: any) => 
-              sum + (row.yearlyTotals[year] || 0), 0);
-          });
-          
-          reportData.totalsRow = {
-            entity: 'TOTAL',
-            yearlyTotals: columnTotals,
-            grandTotal: Object.values(columnTotals).reduce((sum, val) => sum + val, 0)
-          };
-        }
-      }
-      
-      // Save the report to database
-      const savedReport = await storage.createYearlySummaryReport({
-        name: name || `${form.name} - ${reportType.charAt(0).toUpperCase() + reportType.slice(1)} Summary`,
-        description,
-        form_id: formId,
-        report_type: reportType,
-        years_included: years,
-        report_data: reportData,
-        created_by: req.userId
-      });
-      
-      res.status(201).json(savedReport);
-    } catch (error) {
-      console.error('Error generating yearly summary report:', error);
-      res.status(500).json({ error: 'Failed to generate yearly summary report' });
-    }
-  });
-
-  app.get('/api/yearly-summary-reports', requireAuth, async (req, res) => {
-    try {
-      const reports = await storage.getYearlySummaryReports();
-      res.json(reports);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch yearly summary reports' });
-    }
-  });
-
-  app.get('/api/yearly-summary-reports/:id', requireAuth, async (req, res) => {
-    try {
-      const report = await storage.getYearlySummaryReport(req.params.id);
-      if (!report) {
-        return res.status(404).json({ error: 'Report not found' });
-      }
-      res.json(report);
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch yearly summary report' });
-    }
-  });
-
-  app.delete('/api/yearly-summary-reports/:id', requireAuth, async (req, res) => {
-    try {
-      const success = await storage.deleteYearlySummaryReport(req.params.id);
-      if (!success) {
-        return res.status(404).json({ error: 'Report not found' });
-      }
-      res.json({ success: true });
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to delete yearly summary report' });
-    }
-  });
-
-  app.delete('/api/schedule-forms/:scheduleFormId/completions/:userId', requireAuth, async (req, res) => {
-    try {
-      const success = await storage.deleteScheduleFormCompletion(
-        req.params.scheduleFormId,
-        req.params.userId
-      );
-      if (!success) {
-        return res.status(404).json({ error: 'Schedule form completion not found' });
-      }
-      res.status(204).send();
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to delete schedule form completion' });
-    }
-  });
-
-  // Public API endpoints (no authentication required)
-  app.get('/api/public/published-schedules', async (req, res) => {
-    try {
-      const schedules = await storage.getSchedules();
-      const publishedSchedules = schedules.filter(schedule => schedule.status === 'published');
-      
-      // Add department information to each schedule
-      const schedulesWithDepartments = await Promise.all(
-        publishedSchedules.map(async (schedule) => {
-          // Get a form from this schedule to determine the department
-          const scheduleForms = await storage.getScheduleForms(schedule.id);
-          if (scheduleForms.length > 0) {
-            const form = await storage.getForm(scheduleForms[0].form_id);
-            if (form && form.department_id) {
-              const departments = await storage.getDepartments();
-              const department = departments.find(d => d.id === form.department_id);
-              return {
-                ...schedule,
-                department: department ? { name: department.name } : null
-              };
-            }
-          }
-          return { ...schedule, department: null };
-        })
-      );
-      
-      res.json(schedulesWithDepartments);
-    } catch (error) {
-      console.error('Error fetching published schedules:', error);
-      res.status(500).json({ error: 'Failed to fetch published schedules' });
-    }
-  });
-
-  app.get('/api/public/departments', async (req, res) => {
-    try {
-      const departments = await storage.getDepartments();
-      res.json(departments);
-    } catch (error) {
-      console.error('Error fetching departments:', error);
-      res.status(500).json({ error: 'Failed to fetch departments' });
-    }
-  });
-
-  app.get('/api/public/schedules/:scheduleId', async (req, res) => {
-    try {
-      const schedule = await storage.getSchedule(req.params.scheduleId);
-      if (!schedule || schedule.status !== 'published') {
-        return res.status(404).json({ error: 'Published schedule not found' });
-      }
-      res.json(schedule);
-    } catch (error) {
-      console.error('Error fetching schedule:', error);
-      res.status(500).json({ error: 'Failed to fetch schedule' });
-    }
-  });
-
-  app.get('/api/public/schedules/:scheduleId/forms', async (req, res) => {
-    try {
-      const schedule = await storage.getSchedule(req.params.scheduleId);
-      if (!schedule || schedule.status !== 'published') {
-        return res.status(404).json({ error: 'Published schedule not found' });
-      }
-
-      const scheduleForms = await storage.getScheduleForms(req.params.scheduleId);
-      const formsWithDetails = await Promise.all(
-        scheduleForms.map(async (scheduleForm: any) => {
-          const form = await storage.getForm(scheduleForm.form_id);
-          if (!form) return null;
-          
-          const fieldGroups = await storage.getFieldGroups(form.id);
-          const formFields = await storage.getFormFields(form.id);
-          
-          return {
-            ...form,
-            field_groups: fieldGroups,
-            form_fields: formFields
-          };
-        })
-      );
-
-      const validForms = formsWithDetails.filter(form => form !== null);
-      res.json(validForms);
-    } catch (error) {
-      console.error('Error fetching schedule forms:', error);
-      res.status(500).json({ error: 'Failed to fetch schedule forms' });
-    }
-  });
-
-  app.get('/api/public/schedules/:scheduleId/submissions', async (req, res) => {
-    try {
-      const schedule = await storage.getSchedule(req.params.scheduleId);
-      if (!schedule || schedule.status !== 'published') {
-        return res.status(404).json({ error: 'Published schedule not found' });
-      }
-
-      const submissions = await storage.getFormSubmissions(undefined, req.params.scheduleId);
-      res.json(submissions);
-    } catch (error) {
-      console.error('Error fetching submissions:', error);
-      res.status(500).json({ error: 'Failed to fetch submissions' });
-    }
-  });
-
-  // SDG API Routes
-  app.get('/api/sdg/goals', requireAuth, async (req, res) => {
+  // SDG Routes
+  app.get('/api/sdg-goals', requireAuth, async (req, res) => {
     try {
       const goals = await storage.getSdgGoals();
       res.json(goals);
     } catch (error) {
-      console.error('Error fetching SDG goals:', error);
       res.status(500).json({ error: 'Failed to fetch SDG goals' });
     }
   });
 
-  app.post('/api/sdg/goals', requireAuth, async (req, res) => {
+  app.get('/api/sdg-targets/:goalId', requireAuth, async (req, res) => {
     try {
-      const validatedData = insertSdgGoalSchema.parse(req.body);
-      const goal = await storage.createSdgGoal(validatedData);
-      res.status(201).json(goal);
-    } catch (error) {
-      console.error('Error creating SDG goal:', error);
-      res.status(400).json({ error: 'Invalid SDG goal data' });
-    }
-  });
-
-  app.get('/api/sdg/targets', requireAuth, async (req, res) => {
-    try {
-      const goalId = req.query.goalId ? parseInt(req.query.goalId as string) : undefined;
+      const goalId = parseInt(req.params.goalId);
       const targets = await storage.getSdgTargets(goalId);
       res.json(targets);
     } catch (error) {
-      console.error('Error fetching SDG targets:', error);
       res.status(500).json({ error: 'Failed to fetch SDG targets' });
     }
   });
 
-  app.post('/api/sdg/targets', requireAuth, async (req, res) => {
+  app.get('/api/sdg-indicators/:targetId', requireAuth, async (req, res) => {
     try {
-      const validatedData = insertSdgTargetSchema.parse(req.body);
-      const target = await storage.createSdgTarget(validatedData);
-      res.status(201).json(target);
-    } catch (error) {
-      console.error('Error creating SDG target:', error);
-      res.status(400).json({ error: 'Invalid SDG target data' });
-    }
-  });
-
-  app.get('/api/sdg/indicators', requireAuth, async (req, res) => {
-    try {
-      const targetId = req.query.targetId as string;
+      const targetId = req.params.targetId;
       const indicators = await storage.getSdgIndicators(targetId);
       res.json(indicators);
     } catch (error) {
-      console.error('Error fetching SDG indicators:', error);
       res.status(500).json({ error: 'Failed to fetch SDG indicators' });
     }
   });
 
-  app.get('/api/sdg/indicators/:id', requireAuth, async (req, res) => {
+  app.get('/api/sdg-data-sources', requireAuth, async (req, res) => {
     try {
-      const indicator = await storage.getSdgIndicator(req.params.id);
-      if (!indicator) {
-        return res.status(404).json({ error: 'SDG indicator not found' });
-      }
-      res.json(indicator);
+      const dataSources = await storage.getSdgDataSources();
+      res.json(dataSources);
     } catch (error) {
-      console.error('Error fetching SDG indicator:', error);
-      res.status(500).json({ error: 'Failed to fetch SDG indicator' });
-    }
-  });
-
-  app.post('/api/sdg/indicators', requireAuth, async (req, res) => {
-    try {
-      const validatedData = insertSdgIndicatorSchema.parse({
-        ...req.body,
-        created_by: (req as any).userId
-      });
-      const indicator = await storage.createSdgIndicator(validatedData);
-      res.status(201).json(indicator);
-    } catch (error) {
-      console.error('Error creating SDG indicator:', error);
-      res.status(400).json({ error: 'Invalid SDG indicator data' });
-    }
-  });
-
-  app.get('/api/sdg/data-sources', requireAuth, async (req, res) => {
-    try {
-      const sources = await storage.getSdgDataSources();
-      res.json(sources);
-    } catch (error) {
-      console.error('Error fetching SDG data sources:', error);
       res.status(500).json({ error: 'Failed to fetch SDG data sources' });
     }
   });
 
-  app.post('/api/sdg/data-sources', requireAuth, async (req, res) => {
+  app.get('/api/sdg-indicator-values/:indicatorId', requireAuth, async (req, res) => {
     try {
-      const validatedData = insertSdgDataSourceSchema.parse(req.body);
-      const source = await storage.createSdgDataSource(validatedData);
-      res.status(201).json(source);
-    } catch (error) {
-      console.error('Error creating SDG data source:', error);
-      res.status(400).json({ error: 'Invalid SDG data source data' });
-    }
-  });
-
-  app.get('/api/sdg/indicator-values/:indicatorId', requireAuth, async (req, res) => {
-    try {
-      const values = await storage.getSdgIndicatorValues(req.params.indicatorId);
+      const indicatorId = req.params.indicatorId;
+      const values = await storage.getSdgIndicatorValues(indicatorId);
       res.json(values);
     } catch (error) {
-      console.error('Error fetching SDG indicator values:', error);
       res.status(500).json({ error: 'Failed to fetch SDG indicator values' });
     }
   });
 
-  app.post('/api/sdg/indicator-values', requireAuth, async (req, res) => {
+  app.post('/api/sdg-indicator-values', requireAuth, async (req, res) => {
     try {
       const validatedData = insertSdgIndicatorValueSchema.parse(req.body);
       const value = await storage.createSdgIndicatorValue(validatedData);
       res.status(201).json(value);
     } catch (error) {
-      console.error('Error creating SDG indicator value:', error);
       res.status(400).json({ error: 'Invalid SDG indicator value data' });
     }
   });
 
-  app.get('/api/sdg/progress-calculations', requireAuth, async (req, res) => {
-    try {
-      const goalId = req.query.goalId ? parseInt(req.query.goalId as string) : undefined;
-      const calculations = await storage.getSdgProgressCalculations(goalId);
-      res.json(calculations);
-    } catch (error) {
-      console.error('Error fetching SDG progress calculations:', error);
-      res.status(500).json({ error: 'Failed to fetch SDG progress calculations' });
-    }
-  });
-
-  // Calculate real progress for SDG goals based on indicators  
-  app.get('/api/sdg/goals-with-progress', requireAuth, async (req, res) => {
-    try {
-      console.log('=== Starting SDG progress calculation ===');
-      const goals = await storage.getSdgGoals();
-      const targets = await storage.getSdgTargets();
-      const indicators = await storage.getSdgIndicators();
-      
-      console.log(`Found ${goals.length} goals, ${targets.length} targets, ${indicators.length} indicators`);
-      
-      // Import Balochistan indicator data for calculations
-      const { balochistandIndicatorData } = await import('@shared/balochistandIndicatorData');
-      console.log(`Loaded ${balochistandIndicatorData.length} Balochistan indicator records`);
-      
-      const goalsWithProgress = goals.map(goal => {
-        // Get targets for this goal
-        const goalTargets = targets.filter(target => target.sdg_goal_id === goal.id);
-        
-        // Get indicators for this goal's targets
-        const goalIndicators = indicators.filter(ind => 
-          goalTargets.some(target => target.id === ind.sdg_target_id)
-        );
-        
-        let totalProgress = 0;
-        let validIndicatorCount = 0;
-        
-        // Calculate progress based on Balochistan data
-        goalIndicators.forEach(indicator => {
-          const indicatorCode = indicator.indicator_code;
-          const balochistandData = balochistandIndicatorData.find(
-            data => data.indicator_code === indicatorCode
-          );
-          
-          if (balochistandData) {
-            console.log(`Found Balochistan data for ${indicatorCode}:`, balochistandData.baseline.value, '->', balochistandData.progress.value);
-            
-            // Calculate progress from baseline to progress (more reliable than latest which might be "In Process")
-            const baselineValue = parseFloat(String(balochistandData.baseline.value).replace(/[%,]/g, '')) || 0;
-            const progressValue = parseFloat(String(balochistandData.progress.value).replace(/[%,]/g, '')) || 0;
-            
-            let progress = 0;
-            
-            if (indicatorCode.startsWith('1.')) {
-              // For poverty indicators, reduction is improvement
-              if (baselineValue > 0 && progressValue > 0 && baselineValue > progressValue) {
-                progress = ((baselineValue - progressValue) / baselineValue) * 100;
-                console.log(`Poverty reduction calculation for ${indicatorCode}: ${baselineValue} -> ${progressValue} = ${progress}% improvement`);
-              }
-            } else if (indicatorCode.startsWith('2.') || indicatorCode.startsWith('3.')) {
-              // For nutrition/health indicators, increase is improvement  
-              if (baselineValue > 0 && progressValue > baselineValue) {
-                progress = ((progressValue - baselineValue) / baselineValue) * 100;
-              } else if (progressValue > 0) {
-                // Use progress value as baseline if baseline not available
-                progress = Math.min(progressValue, 80);
-              }
-            } else {
-              // For other indicators, generally increase is improvement
-              if (progressValue > baselineValue && baselineValue > 0) {
-                progress = ((progressValue - baselineValue) / baselineValue) * 100;
-              } else if (progressValue > 0) {
-                progress = Math.min(progressValue, 80);
-              }
-            }
-            
-            // Cap progress at reasonable levels
-            progress = Math.min(Math.max(progress, 0), 95);
-            totalProgress += progress;
-            validIndicatorCount++;
-            
-            console.log(`Final progress for ${indicatorCode}: ${progress}%`);
-          } else {
-            console.log(`No Balochistan data found for indicator: ${indicatorCode}`);
-          }
-        });
-        
-        // Calculate average progress for the goal
-        const averageProgress = validIndicatorCount > 0 ? 
-          Math.round(totalProgress / validIndicatorCount) : 
-          0; // No fallback - show 0 if no real data available
-        
-        console.log(`Goal ${goal.id} (${goal.title}): ${validIndicatorCount} indicators, average progress: ${averageProgress}%`);
-        
-        return {
-          ...goal,
-          progress: Math.min(100, Math.max(0, averageProgress)),
-          indicator_count: goalIndicators.length,
-          data_points: validIndicatorCount
-        };
-      });
-      
-      res.json(goalsWithProgress);
-    } catch (error) {
-      console.error('Failed to calculate SDG progress:', error);
-      console.error('Error details:', error instanceof Error ? error.message : String(error));
-      res.status(500).json({ error: 'Failed to calculate progress' });
-    }
-  });
-
-  // SDG Data Seeding Route (admin only)
-  app.post('/api/sdg/seed-data', requireAuth, async (req: any, res) => {
-    try {
-      // Check if user is admin
-      const userProfile = await storage.getProfile(req.session.userId);
-      if (!userProfile || userProfile.role !== 'admin') {
-        return res.status(403).json({ error: 'Admin access required' });
-      }
-
-      const { seedSDGData } = await import('./seedData');
-      const result = await seedSDGData();
-      
-      if (result.success) {
-        res.json({ message: 'SDG data seeded successfully' });
-      } else {
-        res.status(500).json({ error: 'Failed to seed SDG data', details: result.error });
-      }
-    } catch (error) {
-      console.error('Error in seed data route:', error);
-      res.status(500).json({ error: 'Failed to seed SDG data' });
-    }
-  });
-
-  const httpServer = createServer(app);
-  return httpServer;
+  const server = createServer(app);
+  return server;
 }
+

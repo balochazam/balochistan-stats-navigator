@@ -157,19 +157,7 @@ export const schedule_form_completions = pgTable("schedule_form_completions", {
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
-// Yearly summary reports table
-export const yearly_summary_reports = pgTable("yearly_summary_reports", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  name: text("name").notNull(),
-  description: text("description"),
-  form_id: uuid("form_id").notNull().references(() => forms.id),
-  report_type: text("report_type").notNull(), // 'vertical' or 'horizontal'
-  years_included: jsonb("years_included").notNull(), // Array of years included in report
-  report_data: jsonb("report_data").notNull(), // The generated report data with totals
-  created_by: uuid("created_by").notNull().references(() => profiles.id),
-  created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-});
+
 
 // Define relations
 export const departmentsRelations = relations(departments, ({ many }) => ({
@@ -280,16 +268,7 @@ export const schedule_form_completionsRelations = relations(schedule_form_comple
   }),
 }));
 
-export const yearly_summary_reportsRelations = relations(yearly_summary_reports, ({ one }) => ({
-  form: one(forms, {
-    fields: [yearly_summary_reports.form_id],
-    references: [forms.id],
-  }),
-  creator: one(profiles, {
-    fields: [yearly_summary_reports.created_by],
-    references: [profiles.id],
-  }),
-}));
+
 
 // Insert schemas
 export const insertDepartmentSchema = createInsertSchema(departments).omit({
@@ -376,11 +355,7 @@ export const insertScheduleFormCompletionSchema = createInsertSchema(schedule_fo
   created_at: true,
 });
 
-export const insertYearlySummaryReportSchema = createInsertSchema(yearly_summary_reports).omit({
-  id: true,
-  created_at: true,
-  updated_at: true,
-});
+
 
 // Types
 export type Department = typeof departments.$inferSelect;
@@ -416,8 +391,7 @@ export type InsertFormSubmission = z.infer<typeof insertFormSubmissionSchema>;
 export type ScheduleFormCompletion = typeof schedule_form_completions.$inferSelect;
 export type InsertScheduleFormCompletion = z.infer<typeof insertScheduleFormCompletionSchema>;
 
-export type YearlySummaryReport = typeof yearly_summary_reports.$inferSelect;
-export type InsertYearlySummaryReport = z.infer<typeof insertYearlySummaryReportSchema>;
+
 
 // SDG Goals table (17 UN Sustainable Development Goals)
 export const sdg_goals = pgTable("sdg_goals", {

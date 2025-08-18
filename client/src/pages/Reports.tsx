@@ -1160,7 +1160,10 @@ export const Reports = () => {
                         {/* First header row - Years as main headers */}
                         <tr className="bg-gray-100">
                           <th rowSpan={2} className="border border-gray-300 p-3 text-center font-semibold bg-blue-50 align-middle">
-                            CROPS
+                            {(() => {
+                              const primaryField = crossTabData.fields.find((field: any) => field.is_primary_column);
+                              return primaryField ? primaryField.field_label.toUpperCase() : 'ITEMS';
+                            })()}
                           </th>
                           {crossTabData.years.map((year: string) => {
                             // Each year spans across all the data fields for that year

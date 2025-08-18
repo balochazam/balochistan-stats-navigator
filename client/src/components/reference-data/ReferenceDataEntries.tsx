@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit2, Trash2, Tag, Save, X } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Plus, Edit2, Trash2, Tag, Save, X, AlertTriangle } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 
@@ -41,6 +42,11 @@ export const ReferenceDataEntries = ({ referenceData }: ReferenceDataEntriesProp
   const [bulkEntries, setBulkEntries] = useState('');
   const [editValues, setEditValues] = useState<{ [key: string]: string }>({});
   const [isAddingBulk, setIsAddingBulk] = useState(false);
+  const [deleteConfirmDialog, setDeleteConfirmDialog] = useState<{ isOpen: boolean; entryId: string | null; entryValue: string }>({ 
+    isOpen: false, 
+    entryId: null, 
+    entryValue: '' 
+  });
 
   useEffect(() => {
     fetchEntries();
@@ -165,18 +171,26 @@ export const ReferenceDataEntries = ({ referenceData }: ReferenceDataEntriesProp
     }
   }
 
-  async function handleDeleteEntry(entryId: string) {
-    if (!confirm('Are you sure you want to delete this option?')) {
-      return;
-    }
+  const openDeleteConfirmation = (entryId: string, entryValue: string) => {
+    setDeleteConfirmDialog({ isOpen: true, entryId, entryValue });
+  };
 
+  const closeDeleteConfirmation = () => {
+    setDeleteConfirmDialog({ isOpen: false, entryId: null, entryValue: '' });
+  };
+
+  const confirmDeleteEntry = async () => {
+    if (!deleteConfirmDialog.entryId) return;
+    
     try {
-      await simpleApiClient.delete(`/api/data-banks/${referenceData.id}/entries/${entryId}`);
+      await simpleApiClient.delete(`/api/data-banks/${referenceData.id}/entries/${deleteConfirmDialog.entryId}`);
 
       toast({
         title: "Success",
         description: "Option deleted successfully",
       });
+      
+      closeDeleteConfirmation();
       fetchEntries();
     } catch (error) {
       console.error('Error deleting entry:', error);
@@ -185,8 +199,9 @@ export const ReferenceDataEntries = ({ referenceData }: ReferenceDataEntriesProp
         description: "Failed to delete option",
         variant: "destructive",
       });
+      closeDeleteConfirmation();
     }
-  }
+  };
 
   function cancelEdit(entryId: string) {
     setEditingEntry(null);
@@ -343,7 +358,7 @@ export const ReferenceDataEntries = ({ referenceData }: ReferenceDataEntriesProp
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleDeleteEntry(entry.id)}
+                            onClick={() => openDeleteConfirmation(entry.id, entry.value)}
                             className="h-7 w-7 p-0 text-red-600 hover:text-red-800"
                           >
                             <Trash2 className="h-3 w-3" />
@@ -358,6 +373,37 @@ export const ReferenceDataEntries = ({ referenceData }: ReferenceDataEntriesProp
           )}
         </div>
       </CardContent>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteConfirmDialog.isOpen} onOpenChange={closeDeleteConfirmation}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              Confirm Delete
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-gray-600 mb-2">
+              Are you sure you want to delete this option?
+            </p>
+            <div className="bg-gray-50 p-3 rounded border">
+              <p className="font-medium text-sm">Option: {deleteConfirmDialog.entryValue}</p>
+            </div>
+            <p className="text-xs text-red-600 mt-2">
+              This action cannot be undone.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeDeleteConfirmation}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmDeleteEntry}>
+              Delete Option
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };

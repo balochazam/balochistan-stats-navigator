@@ -1192,8 +1192,9 @@ export const Reports = () => {
                           const uniquePrimaryValues = Array.from(new Set(
                             Object.values(crossTabData.submissions || {}).flat().map((submission: any) => {
                               if (primaryField && submission.data) {
+                                // Find the actual primary field key in submission data
                                 const primaryKey = Object.keys(submission.data).find(key => 
-                                  key.includes(primaryField.field_name)
+                                  key.includes(primaryField.field_name) || key.includes(primaryField.field_label)
                                 );
                                 return primaryKey ? submission.data[primaryKey] : 'Unknown';
                               }
@@ -1214,19 +1215,22 @@ export const Reports = () => {
                                     const yearSubmissions = crossTabData.submissions?.[year] || [];
                                     const matchingSubmission = yearSubmissions.find((submission: any) => {
                                       if (!submission.data || !primaryField) return false;
+                                      // Find the actual primary field key in submission data
                                       const primaryKey = Object.keys(submission.data).find(key => 
-                                        key.includes(primaryField.field_name)
+                                        key.includes(primaryField.field_name) || key.includes(primaryField.field_label)
                                       );
                                       return primaryKey && submission.data[primaryKey] === primaryValue;
                                     });
                                     
                                     let value = 0;
                                     if (matchingSubmission?.data) {
+                                      // Find the actual field key in submission data (format: "fieldName_FieldLabel_type")
                                       const fieldKey = Object.keys(matchingSubmission.data).find(key => 
-                                        key.includes(field.field_name)
+                                        key.includes(field.field_name) || key.includes(field.field_label)
                                       );
                                       if (fieldKey) {
-                                        value = parseFloat(matchingSubmission.data[fieldKey]) || 0;
+                                        const rawValue = matchingSubmission.data[fieldKey];
+                                        value = parseFloat(rawValue) || 0;
                                       }
                                     }
                                     

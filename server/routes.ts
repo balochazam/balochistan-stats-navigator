@@ -1117,9 +1117,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             let total = 0;
             
             yearSubmissions.forEach(submission => {
-              const value = submission.data?.[field.field_name];
-              if (value && !isNaN(Number(value))) {
-                total += Number(value);
+              if (!submission.data) return;
+              
+              // Find the actual field key in submission data (format: "fieldName_FieldLabel_type")
+              const dataKey = Object.keys(submission.data).find(key => 
+                key.includes(field.field_name) || key.includes(field.field_label)
+              );
+              
+              if (dataKey) {
+                const value = submission.data[dataKey];
+                if (value && !isNaN(Number(value))) {
+                  total += Number(value);
+                }
               }
             });
             
@@ -1127,7 +1136,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return acc;
           }, {})
         })),
-        submissions: yearlyData  // Include raw submissions data for detailed table rendering
+        submissions: yearlyData,  // Include raw submissions data for detailed table rendering
+        debug: {
+          totalSubmissions: formSubmissions.length,
+          yearlySubmissionCounts: Object.entries(yearlyData).map(([year, subs]) => ({
+            year,
+            count: subs.length
+          })),
+          sampleSubmissionKeys: formSubmissions.length > 0 ? Object.keys(formSubmissions[0].data || {}) : []
+        }
       };
       
       res.json(crossTabData);

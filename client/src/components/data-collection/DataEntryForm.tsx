@@ -110,6 +110,60 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
   const [showApprovalDialog, setShowApprovalDialog] = useState(false);
   const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
 
+  // Create expanded field list including sub-header fields for table display
+  const getExpandedFields = () => {
+    const expandedFields: Array<{
+      key: string;
+      label: string;
+      field_name: string;
+      sub_field_name?: string;
+      sub_header_name?: string;
+    }> = [];
+    
+    formFields.forEach(field => {
+      if (field.has_sub_headers && field.sub_headers) {
+        // For fields with sub-headers, add each sub-field
+        field.sub_headers.forEach(subHeader => {
+          subHeader.fields.forEach(subField => {
+            expandedFields.push({
+              key: `${field.field_name}_${subHeader.name}_${subField.field_name}`,
+              label: subField.field_label,
+              field_name: field.field_name,
+              sub_field_name: subField.field_name,
+              sub_header_name: subHeader.name
+            });
+          });
+        });
+      } else {
+        // For regular fields, add directly
+        expandedFields.push({
+          key: field.field_name,
+          label: field.field_label,
+          field_name: field.field_name
+        });
+      }
+    });
+    
+    return expandedFields;
+  };
+
+  const expandedFields = getExpandedFields();
+
+  // Function to get value from submission data based on field structure
+  const getSubmissionValue = (submission: any, expandedField: any) => {
+    if (expandedField.sub_field_name && expandedField.sub_header_name) {
+      // For sub-header fields, look in the nested structure
+      const fieldData = submission.data?.[expandedField.field_name];
+      if (typeof fieldData === 'object' && fieldData !== null) {
+        return fieldData[expandedField.sub_field_name] || '-';
+      }
+      return '-';
+    } else {
+      // For regular fields, get directly
+      return submission.data?.[expandedField.field_name] || '-';
+    }
+  };
+
   // Memoize the fetch function to prevent unnecessary re-renders
   const fetchFormFields = useCallback(async () => {
     if (!scheduleForm.form_id) return;
@@ -1483,9 +1537,9 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
                       <table className="w-full text-sm">
                         <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0">
                           <tr>
-                            {formFields.map((field, index) => (
+                            {expandedFields.map((field, index) => (
                               <th key={index} className="px-4 py-2 text-left font-medium border-b">
-                                {field.field_label}
+                                {field.label}
                               </th>
                             ))}
                             <th className="px-4 py-2 text-center font-medium border-b w-20">
@@ -1496,9 +1550,9 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
                         <tbody>
                           {existingSubmissions.map((submission, rowIndex) => (
                             <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-800'}>
-                              {formFields.map((field, cellIndex) => (
+                              {expandedFields.map((field, cellIndex) => (
                                 <td key={cellIndex} className="px-4 py-2 border-b">
-                                  {submission.data?.[field.field_name] || '-'}
+                                  {getSubmissionValue(submission, field)}
                                 </td>
                               ))}
                               <td className="px-4 py-2 border-b text-center">
@@ -1711,9 +1765,9 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
                   <table className="w-full text-xs">
                     <thead className="bg-gray-100 dark:bg-gray-700 sticky top-0">
                       <tr>
-                        {existingSubmissions.length > 0 && formFields.map((field, index) => (
+                        {existingSubmissions.length > 0 && expandedFields.map((field, index) => (
                           <th key={index} className="px-2 py-1 text-left font-medium border-b">
-                            {field.field_label}
+                            {field.label}
                           </th>
                         ))}
                       </tr>
@@ -1721,9 +1775,9 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
                     <tbody>
                       {existingSubmissions.map((submission, rowIndex) => (
                         <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-800'}>
-                          {formFields.map((field, cellIndex) => (
+                          {expandedFields.map((field, cellIndex) => (
                             <td key={cellIndex} className="px-2 py-1 border-b text-xs">
-                              {submission.data?.[field.field_name] || '-'}
+                              {getSubmissionValue(submission, field)}
                             </td>
                           ))}
                         </tr>

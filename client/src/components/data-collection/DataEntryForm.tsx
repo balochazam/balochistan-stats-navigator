@@ -505,10 +505,24 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
     }
   };
 
-  // Generate CSV template with Excel formulas for aggregate columns
-  const generateCSVTemplate = () => {
+  // Generate CSV template with Excel formulas for aggregate columns and primary column reference data
+  const generateCSVTemplate = async () => {
     const allHeaders: string[] = [];
     const formulaMapping: Record<number, string> = {}; // Column index to formula mapping
+    const primaryColumnData: Record<string, any[]> = {}; // Store reference data for primary columns
+    
+    // Fetch reference data for primary columns
+    const primaryColumns = formFields.filter(field => field.is_primary_column && field.reference_data_name);
+    for (const primaryCol of primaryColumns) {
+      if (primaryCol.reference_data_name) {
+        try {
+          const refData = await fetchReferenceData(primaryCol.reference_data_name);
+          primaryColumnData[primaryCol.field_name] = refData;
+        } catch (error) {
+          console.error(`Failed to fetch reference data for ${primaryCol.field_label}:`, error);
+        }
+      }
+    }
     
     // Process all fields, including sub-header fields
     formFields.forEach(field => {
@@ -596,6 +610,19 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
       if (formulaMapping[index]) {
         return formulaMapping[index];
       }
+      
+      // Check if this header corresponds to a primary column with reference data
+      const primaryField = formFields.find(field => 
+        field.is_primary_column && 
+        (field.field_label === header || field.field_name === header) &&
+        primaryColumnData[field.field_name]
+      );
+      
+      if (primaryField && primaryColumnData[primaryField.field_name]?.length > 0) {
+        // For primary columns with reference data, use the first value as example
+        return primaryColumnData[primaryField.field_name][0].value;
+      }
+      
       // For non-formula columns, provide helpful placeholder text
       if (header.toLowerCase().includes('district') || header.toLowerCase().includes('province')) {
         return 'Enter_Location_Name';
@@ -610,6 +637,20 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
     
     csvContent += exampleRow.join(',') + '\n';
     
+    // Add reference data section as comments for primary columns
+    if (Object.keys(primaryColumnData).length > 0) {
+      csvContent += '\n# PRIMARY COLUMN REFERENCE DATA\n';
+      csvContent += '# Use the exact values listed below for primary columns to avoid validation errors\n\n';
+      
+      for (const [fieldName, refData] of Object.entries(primaryColumnData)) {
+        const field = formFields.find(f => f.field_name === fieldName);
+        if (field && refData.length > 0) {
+          csvContent += `# ${field.field_label} - Available Values:\n`;
+          csvContent += `# ${refData.map(item => item.value).join(', ')}\n\n`;
+        }
+      }
+    }
+    
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -621,12 +662,15 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
     document.body.removeChild(link);
     
     const hasFormulas = Object.keys(formulaMapping).length > 0;
+    const hasPrimaryData = Object.keys(primaryColumnData).length > 0;
     
     toast({
       title: "Template Downloaded!",
       description: hasFormulas 
-        ? "CSV template downloaded with Excel formulas for total columns. Open in Excel to see automatic calculations."
-        : "CSV template downloaded with example data. Fill it out and upload using the CSV tab.",
+        ? "CSV template downloaded with Excel formulas for total columns and primary column reference data. Check the bottom of the file for allowed values."
+        : hasPrimaryData 
+          ? "CSV template downloaded with primary column reference data. Check the bottom of the file for exact values to use."
+          : "CSV template downloaded with example data. Fill it out and upload using the CSV tab.",
     });
   };
 
@@ -1505,7 +1549,7 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
                   </p>
                 </div>
                 <Button
-                  onClick={generateCSVTemplate}
+                  onClick={() => generateCSVTemplate()}
                   variant="outline"
                   size="sm"
                   className="flex items-center gap-2"

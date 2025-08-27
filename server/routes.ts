@@ -1104,8 +1104,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
       
-      // Extract all data columns (both main fields and sub-fields)
-      const allDataColumns: any[] = [];
+      // Extract only numeric sub-fields (skip parent headers and non-numeric fields)
+      const numericDataColumns: any[] = [];
       
       formFields.forEach(field => {
         if (field.is_primary_column) {
@@ -1114,45 +1114,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         if (field.has_sub_headers && field.sub_headers && typeof field.sub_headers === 'string') {
-          // Parse sub_headers JSON and extract sub-fields
+          // Parse sub_headers JSON and extract ONLY numeric sub-fields
           try {
             const subHeadersData = JSON.parse(field.sub_headers);
             if (subHeadersData.length > 0 && subHeadersData[0].fields) {
               subHeadersData[0].fields.forEach((subField: any) => {
-                allDataColumns.push({
-                  field_name: `${field.field_name}_${field.field_label}_${subField.field_name}`,
-                  field_label: subField.field_label,
-                  field_type: subField.field_type,
-                  parent_field_name: field.field_name,
-                  parent_field_label: field.field_label,
-                  is_sub_field: true
-                });
+                // Only include numeric fields (these are the actual data we care about)
+                if (subField.field_type === 'number') {
+                  numericDataColumns.push({
+                    field_name: `${field.field_name}_${field.field_label}_${subField.field_name}`,
+                    field_label: subField.field_label, // "Hospitals", "Beds"
+                    field_type: subField.field_type,
+                    parent_field_name: field.field_name,
+                    parent_field_label: field.field_label,
+                    is_sub_field: true
+                  });
+                }
               });
             }
           } catch (e) {
-            // If parsing fails, treat as regular field
-            allDataColumns.push({
-              field_name: field.field_name,
-              field_label: field.field_label,
-              field_type: field.field_type,
-              is_sub_field: false
-            });
+            // If parsing fails and it's a numeric field, include it
+            if (field.field_type === 'number') {
+              numericDataColumns.push({
+                field_name: field.field_name,
+                field_label: field.field_label,
+                field_type: field.field_type,
+                is_sub_field: false
+              });
+            }
           }
-        } else {
-          // Regular field without sub-headers
-          allDataColumns.push({
+        } else if (field.field_type === 'number') {
+          // Regular numeric field without sub-headers
+          numericDataColumns.push({
             field_name: field.field_name,
             field_label: field.field_label,
             field_type: field.field_type,
             is_sub_field: false
           });
         }
+        // Skip non-numeric fields completely
       });
 
       // Create cross-tabulation data with detailed submissions
       const crossTabData = {
         years: selectedYears.sort(),
-        fields: allDataColumns,
+        fields: numericDataColumns, // Only numeric sub-fields like "Hospitals", "Beds"
         primaryField: formFields.find(field => field.is_primary_column),
         submissions: yearlyData,
         debug: {
@@ -1162,7 +1168,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             count: subs.length
           })),
           sampleSubmissionKeys: formSubmissions.length > 0 ? Object.keys(formSubmissions[0].data || {}) : [],
-          allDataColumns: allDataColumns
+          numericDataColumns: numericDataColumns
         }
       };
       

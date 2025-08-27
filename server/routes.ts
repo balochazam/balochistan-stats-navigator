@@ -1107,7 +1107,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Extract only numeric sub-fields (skip parent headers and non-numeric fields)
       const numericDataColumns: any[] = [];
       
-      formFields.forEach(field => {
+      console.log('=== FIELD PROCESSING DEBUG ===');
+      console.log('Total form fields:', formFields.length);
+      console.log('Form fields details:', JSON.stringify(formFields.map(f => ({ 
+        name: f.field_name, 
+        type: f.field_type, 
+        has_sub: f.has_sub_headers, 
+        is_primary: f.is_primary_column,
+        sub_headers: f.sub_headers && typeof f.sub_headers === 'string' ? f.sub_headers.substring(0, 100) + '...' : null
+      })), null, 2));
+      
+      formFields.forEach((field, index) => {
+        console.log(`\n--- Processing field ${index + 1}: ${field.field_name} ---`);
+        console.log('Field type:', field.field_type);
+        console.log('Has sub headers:', field.has_sub_headers);
+        console.log('Is primary column:', field.is_primary_column);
         if (field.is_primary_column) {
           // Skip primary column as it will be used for rows
           return;

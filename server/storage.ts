@@ -360,11 +360,8 @@ export class DatabaseStorage implements IStorage {
       sub_headers: r.sub_headers
     })));
     
-    // Ensure sub_headers is properly handled as JSONB
-    return result.map(field => ({
-      ...field,
-      sub_headers: field.sub_headers || null
-    }));
+    // Return fields as-is - Drizzle handles JSONB correctly
+    return result;
   }
 
   async createFormField(field: InsertFormField): Promise<FormField> {

@@ -1172,6 +1172,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       };
       
+      console.log('Debug - Generated fields:', numericDataColumns);
+      console.log('Debug - Sample submission data keys:', formSubmissions.length > 0 ? Object.keys(formSubmissions[0].data || {}) : []);
       res.json(crossTabData);
     } catch (error) {
       res.status(500).json({ error: 'Failed to generate cross-tabulation report' });

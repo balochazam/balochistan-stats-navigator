@@ -100,12 +100,8 @@ export const Reports = () => {
   const [submissionDateFilter, setSubmissionDateFilter] = useState('all');
   const [tableSearchFilter, setTableSearchFilter] = useState('');
   
-  // Year filter states for cross-tabulation
-  const [availableYears, setAvailableYears] = useState<string[]>([]);
-  const [selectedYears, setSelectedYears] = useState<string[]>([]);
-  const [showCrossTabulation, setShowCrossTabulation] = useState(false);
-  const [crossTabData, setCrossTabData] = useState<any>(null);
-  const [loadingCrossTab, setLoadingCrossTab] = useState(false);
+
+
   
 
 
@@ -273,43 +269,11 @@ export const Reports = () => {
     scheduleForms.map(form => form.form.department?.name).filter((name): name is string => Boolean(name))
   ));
 
-  // Fetch available years for a form
-  const fetchAvailableYears = async (formId: string) => {
-    try {
-      const yearlyData = await simpleApiClient.get(`/api/forms/${formId}/yearly-data`);
-      const years = Object.keys(yearlyData).sort();
-      setAvailableYears(years);
-      setSelectedYears(years.length > 0 ? [years[0]] : []); // Default to first year
-    } catch (error) {
-      console.error('Error fetching yearly data:', error);
-      setAvailableYears([]);
-      setSelectedYears([]);
-    }
-  };
 
-  // Generate cross-tabulation report
-  const generateCrossTabulation = async () => {
-    if (!selectedForm || selectedYears.length === 0) return;
-    
-    setLoadingCrossTab(true);
-    try {
-      const data = await simpleApiClient.post(`/api/forms/${selectedForm.form_id}/cross-tabulation`, {
-        selectedYears
-      });
-      setCrossTabData(data);
-      setShowCrossTabulation(true);
-    } catch (error) {
-      console.error('Error generating cross-tabulation:', error);
-    } finally {
-      setLoadingCrossTab(false);
-    }
-  };
 
   const handleViewSchedule = async (schedule: Schedule) => {
     setSelectedSchedule(schedule);
     setSelectedForm(null);
-    setShowCrossTabulation(false);
-    setCrossTabData(null);
     setLoadingData(true);
     
     try {
@@ -333,8 +297,6 @@ export const Reports = () => {
 
   const handleViewFormData = async (scheduleForm: ScheduleForm) => {
     setSelectedForm(scheduleForm);
-    setShowCrossTabulation(false);
-    setCrossTabData(null);
     setLoadingData(true);
     
     try {
@@ -345,9 +307,6 @@ export const Reports = () => {
       // Fetch form submissions for this schedule and form
       const submissions = await simpleApiClient.get(`/api/form-submissions?formId=${scheduleForm.form_id}&scheduleId=${selectedSchedule?.id}`);
       setFormSubmissions(submissions || []);
-      
-      // Fetch available years for cross-tabulation
-      await fetchAvailableYears(scheduleForm.form_id);
     } catch (error) {
       console.error('Error fetching form data:', error);
     } finally {
@@ -1064,204 +1023,10 @@ export const Reports = () => {
               </CardContent>
             </Card>
 
-            {/* Year Filter for Cross-Tabulation */}
-            {availableYears.length > 1 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    Cross-Year Analysis
-                  </CardTitle>
-                  <CardDescription>
-                    Compare data across multiple years - select 2 or more years to generate a cross-tabulation report
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                      {availableYears.map((year) => (
-                        <div key={year} className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            id={`year-${year}`}
-                            checked={selectedYears.includes(year)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedYears([...selectedYears, year]);
-                              } else {
-                                setSelectedYears(selectedYears.filter(y => y !== year));
-                              }
-                            }}
-                            className="rounded border-gray-300"
-                          />
-                          <label htmlFor={`year-${year}`} className="text-sm font-medium">
-                            {year}
-                          </label>
-                        </div>
-                      ))}
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <Button 
-                        onClick={generateCrossTabulation}
-                        disabled={selectedYears.length < 2 || loadingCrossTab}
-                        variant={selectedYears.length >= 2 ? "default" : "outline"}
-                      >
-                        {loadingCrossTab ? 'Generating...' : 'Generate Cross-Year Report'}
-                      </Button>
-                      {showCrossTabulation && (
-                        <Button 
-                          variant="outline"
-                          onClick={() => setShowCrossTabulation(false)}
-                        >
-                          Show Regular View
-                        </Button>
-                      )}
-                      {selectedYears.length > 0 && (
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => setSelectedYears([])}
-                        >
-                          Clear selection
-                        </Button>
-                      )}
-                    </div>
-                    
-                    {selectedYears.length > 0 && (
-                      <div className="text-sm text-gray-600">
-                        Selected years: {selectedYears.sort().join(', ')}
-                        {selectedYears.length === 1 && ' (select at least 2 years for comparison)'}
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+
 
             {loadingData ? (
               <div className="text-center py-8">Loading data...</div>
-            ) : showCrossTabulation && crossTabData ? (
-              // Cross-Tabulation View
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    Cross-Year Analysis: {selectedForm.form.name}
-                  </CardTitle>
-                  <CardDescription>
-                    Comparative data across {crossTabData.years.join(', ')} - showing totals by year
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse border border-gray-300">
-                      <thead>
-                        {/* First header row - Years as main headers */}
-                        <tr className="bg-gray-100">
-                          <th rowSpan={2} className="border border-gray-300 p-3 text-center font-semibold bg-blue-50 align-middle">
-                            {(() => {
-                              const primaryField = crossTabData.primaryField;
-                              return primaryField ? primaryField.field_label.toUpperCase() : 'ITEMS';
-                            })()}
-                          </th>
-                          {crossTabData.years.map((year: string) => {
-                            // Each year spans across all the data fields for that year
-                            const fieldsCount = crossTabData.fields.length;
-                            return (
-                              <th key={year} colSpan={fieldsCount} className="border border-gray-300 p-2 text-center font-semibold bg-gray-100">
-                                {year}
-                              </th>
-                            );
-                          })}
-                        </tr>
-                        {/* Second header row - Field names under each year */}
-                        <tr className="bg-gray-50">
-                          {crossTabData.years.map((year: string) => 
-                            crossTabData.fields
-                              .map((field: any) => (
-                                <th key={`${year}-${field.field_name}`} className="border border-gray-300 p-2 text-center font-medium text-sm">
-                                  {field.field_label}
-                                </th>
-                              ))
-                          )}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {/* Get unique primary values (crop names) */}
-                        {(() => {
-                          const primaryField = crossTabData.primaryField;
-                          const uniquePrimaryValues = Array.from(new Set(
-                            Object.values(crossTabData.submissions || {}).flat().map((submission: any) => {
-                              if (primaryField && submission.data) {
-                                // Find the actual primary field key in submission data
-                                const primaryKey = Object.keys(submission.data).find(key => 
-                                  key.includes(primaryField.field_name) || key.includes(primaryField.field_label)
-                                );
-                                return primaryKey ? submission.data[primaryKey] : 'Unknown';
-                              }
-                              return 'Unknown';
-                            })
-                          )).filter(Boolean);
-
-                          return uniquePrimaryValues.map((primaryValue: any, index: number) => (
-                            <tr key={primaryValue} className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-                              <td className="border border-gray-300 p-3 font-medium">
-                                {primaryValue}
-                              </td>
-                              {crossTabData.years.map((year: string) => 
-                                crossTabData.fields
-                                  .map((field: any) => {
-                                    // Find submissions for this year and primary value
-                                    const yearSubmissions = crossTabData.submissions?.[year] || [];
-                                    const matchingSubmission = yearSubmissions.find((submission: any) => {
-                                      if (!submission.data || !primaryField) return false;
-                                      // Find the actual primary field key in submission data
-                                      const primaryKey = Object.keys(submission.data).find(key => 
-                                        key.includes(primaryField.field_name) || key.includes(primaryField.field_label)
-                                      );
-                                      return primaryKey && submission.data[primaryKey] === primaryValue;
-                                    });
-                                    
-                                    let value = 0;
-                                    if (matchingSubmission?.data) {
-                                      // Look for the exact field key in submission data
-                                      const fieldKey = Object.keys(matchingSubmission.data).find(key => 
-                                        key === field.field_name
-                                      );
-                                      if (fieldKey) {
-                                        const rawValue = matchingSubmission.data[fieldKey];
-                                        value = parseFloat(rawValue) || 0;
-                                      }
-                                    }
-                                    
-                                    // Debug - console log to see what's happening
-                                    if (matchingSubmission?.data) {
-                                      console.log('Field name:', field.field_name);
-                                      console.log('Available keys:', Object.keys(matchingSubmission.data));
-                                      console.log('Found value:', value);
-                                    }
-                                    
-                                    return (
-                                      <td key={`${year}-${field.field_name}`} className="border border-gray-300 p-2 text-center text-sm">
-                                        {value > 0 ? value.toLocaleString() : (value === 0 ? '0' : '-')}
-                                      </td>
-                                    );
-                                  })
-                              )}
-                            </tr>
-                          ));
-                        })()}
-                      </tbody>
-                    </table>
-                  </div>
-                  
-                  <div className="mt-4 text-sm text-gray-600">
-                    <p><strong>Note:</strong> This cross-tabulation shows aggregated totals for numeric fields across the selected years. 
-                    Primary columns (typically names/locations) are excluded from the analysis.</p>
-                  </div>
-                </CardContent>
-              </Card>
             ) : filteredSubmissions.length === 0 ? (
               <Card>
                 <CardContent className="text-center py-8">

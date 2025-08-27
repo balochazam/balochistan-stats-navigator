@@ -1235,6 +1235,13 @@ export const Reports = () => {
                                       }
                                     }
                                     
+                                    // Debug - console log to see what's happening
+                                    if (matchingSubmission?.data) {
+                                      console.log('Field name:', field.field_name);
+                                      console.log('Available keys:', Object.keys(matchingSubmission.data));
+                                      console.log('Found value:', value);
+                                    }
+                                    
                                     return (
                                       <td key={`${year}-${field.field_name}`} className="border border-gray-300 p-2 text-center text-sm">
                                         {value > 0 ? value.toLocaleString() : (value === 0 ? '0' : '-')}

@@ -1117,12 +1117,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Parse sub_headers JSON and extract ONLY numeric sub-fields
           try {
             const subHeadersData = JSON.parse(field.sub_headers);
-            if (subHeadersData.length > 0 && subHeadersData[0].fields) {
+            console.log('Parsed sub_headers for', field.field_name, ':', subHeadersData);
+            if (Array.isArray(subHeadersData) && subHeadersData.length > 0 && subHeadersData[0].fields) {
               subHeadersData[0].fields.forEach((subField: any) => {
+                console.log('Processing subField:', subField);
                 // Only include numeric fields (these are the actual data we care about)
                 if (subField.field_type === 'number') {
+                  const fieldName = `${field.field_name}_${field.field_label}_${subField.field_name}`;
+                  console.log('Adding numeric field:', fieldName);
                   numericDataColumns.push({
-                    field_name: `${field.field_name}_${field.field_label}_${subField.field_name}`,
+                    field_name: fieldName,
                     field_label: subField.field_label, // "Hospitals", "Beds"
                     field_type: subField.field_type,
                     parent_field_name: field.field_name,

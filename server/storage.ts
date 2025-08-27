@@ -349,9 +349,22 @@ export class DatabaseStorage implements IStorage {
 
   // Form Field methods
   async getFormFields(formId: string): Promise<FormField[]> {
-    return await db.select().from(form_fields)
+    console.log('=== STORAGE getFormFields DEBUG ===');
+    const result = await db.select().from(form_fields)
       .where(eq(form_fields.form_id, formId))
       .orderBy(asc(form_fields.field_order));
+    
+    console.log('Raw DB result:', result.map(r => ({
+      name: r.field_name,
+      type: typeof r.sub_headers,
+      sub_headers: r.sub_headers
+    })));
+    
+    // Ensure sub_headers is properly handled as JSONB
+    return result.map(field => ({
+      ...field,
+      sub_headers: field.sub_headers || null
+    }));
   }
 
   async createFormField(field: InsertFormField): Promise<FormField> {

@@ -1225,9 +1225,9 @@ export const Reports = () => {
                                     
                                     let value = 0;
                                     if (matchingSubmission?.data) {
-                                      // Find the actual field key in submission data (format: "fieldName_FieldLabel_type")
+                                      // Look for the exact field key in submission data
                                       const fieldKey = Object.keys(matchingSubmission.data).find(key => 
-                                        key.includes(field.field_name) || key.includes(field.field_label)
+                                        key === field.field_name
                                       );
                                       if (fieldKey) {
                                         const rawValue = matchingSubmission.data[fieldKey];

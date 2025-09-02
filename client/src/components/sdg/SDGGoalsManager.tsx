@@ -351,9 +351,7 @@ export const SDGGoalsManager = () => {
                       }}
                     />
                   </div>
-                  <div className="text-xs text-gray-600 text-center leading-tight">
-                    {sdg.title.split(' ').slice(0, 2).join(' ')}
-                  </div>
+
                 </div>
               ))}
             </div>
@@ -390,49 +388,25 @@ export const SDGGoalsManager = () => {
                   style={{ borderColor: sdg.color }}
                   onClick={() => navigate(`/goals/${sdg.id}`)}
                 >
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-12 h-12 rounded-lg overflow-hidden border border-gray-200">
-                        <img 
-                          src={sdg.iconUrl}
-                          alt={`SDG ${sdg.id}: ${sdg.title}`}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            // Fallback to colored square with number if image fails
-                            const target = e.target as HTMLImageElement;
-                            const parent = target.parentElement;
-                            if (parent) {
-                              target.style.display = 'none';
-                              parent.style.backgroundColor = sdg.color;
-                              parent.className = parent.className.replace('border border-gray-200', '');
-                              parent.innerHTML = `<div class="w-full h-full flex items-center justify-center text-white font-bold text-lg">${sdg.id}</div>`;
-                            }
-                          }}
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-sm leading-tight">{sdg.title}</h3>
-                      </div>
+                  <CardContent className="p-4 flex items-center justify-center">
+                    <div className="w-20 h-20 rounded-lg overflow-hidden border border-gray-200">
+                      <img 
+                        src={sdg.iconUrl}
+                        alt={`SDG ${sdg.id}: ${sdg.title}`}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // Fallback to colored square with number if image fails
+                          const target = e.target as HTMLImageElement;
+                          const parent = target.parentElement;
+                          if (parent) {
+                            target.style.display = 'none';
+                            parent.style.backgroundColor = sdg.color;
+                            parent.className = parent.className.replace('border border-gray-200', '');
+                            parent.innerHTML = `<div class="w-full h-full flex items-center justify-center text-white font-bold text-xl">${sdg.id}</div>`;
+                          }
+                        }}
+                      />
                     </div>
-                    
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span>Progress</span>
-                        <span className="font-medium">{sdg.progress}%</span>
-                      </div>
-                      <Progress value={sdg.progress} className="h-2" />
-                      
-                      <div className="flex items-center justify-between text-xs text-gray-500">
-                        <span>Target: {sdg.target}%</span>
-                        <span className={sdg.progress >= sdg.target ? 'text-green-600' : 'text-orange-600'}>
-                          {sdg.progress >= sdg.target ? '✓ Achieved' : 'In Progress'}
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <p className="text-xs text-gray-600 mt-2 line-clamp-2">
-                      {sdg.description}
-                    </p>
                   </CardContent>
                 </Card>
               ))}

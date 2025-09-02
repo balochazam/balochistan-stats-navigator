@@ -85,7 +85,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     {
       title: 'SDG Management',
       icon: Target,
-      path: '/admin/sdg-management',
+      path: '/sdg-management',
       roles: ['admin', 'department_head', 'data_entry_user']
     },
     {

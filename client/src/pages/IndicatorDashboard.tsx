@@ -429,7 +429,7 @@ export const IndicatorDashboard: React.FC<IndicatorDashboardProps> = ({ indicato
         <div className="max-w-4xl mx-auto">
           <Button 
             variant="ghost" 
-            onClick={() => navigate('/admin/sdg-management')}
+            onClick={() => navigate('/sdg-management')}
             className="mb-6"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -464,7 +464,7 @@ export const IndicatorDashboard: React.FC<IndicatorDashboardProps> = ({ indicato
             <div className="flex items-center gap-4">
               <Button 
                 variant="ghost" 
-                onClick={() => navigate('/admin/sdg-management')}
+                onClick={() => navigate('/sdg-management')}
                 className="flex items-center gap-2"
               >
                 <ArrowLeft className="h-4 w-4" />

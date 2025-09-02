@@ -16,6 +16,7 @@ This is a full-stack data collection management system with a public-first appro
 - **Schedule Date System Updated**: Modified schedule creation to use year-only inputs (start year/end year) instead of full dates, with automatic conversion to ISO date format for database storage, comprehensive year validation (1900-2050), and updated UI displays
 - **Data Bank Delete Confirmation Fixed**: Replaced browser alert with elegant confirmation dialog for data bank entry deletion, fixed API client calls throughout the component, added proper error handling with toast notifications
 - **Ready for Goal-by-Goal Finalization**: Systematic approach to finalize data collection forms for each remaining goal
+- **September 2025 Updates**: Fixed routing inconsistencies - SDG Management moved from `/admin/sdg-management` to `/sdg-management`, all indicator detail pages now use consistent `/indicator/{code}` format instead of UUID-based routing, resolved PostgreSQL database migration from problematic Neon to stable Replit PostgreSQL
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.

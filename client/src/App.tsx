@@ -94,7 +94,7 @@ const App = () => (
             <Route path="/admin/data-banks" element={<DataBankManagement />} />
             <Route path="/admin/forms" element={<FormManagement />} />
             <Route path="/admin/schedules" element={<ScheduleManagement />} />
-            <Route path="/admin/sdg-management" element={<SDGManagement />} />
+            <Route path="/sdg-management" element={<SDGManagement />} />
             <Route path="/goals/:goalId" element={<GoalDetailPage />} />
             <Route path="/indicators/:id" element={<IndicatorDetailsPage />} />
             <Route path="/indicator/:indicatorCode" element={<IndicatorDashboardWrapper />} />

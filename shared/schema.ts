@@ -23,6 +23,7 @@ export const sdgIndicatorTypeEnum = pgEnum("sdg_indicator_type", [
 ]);
 export const dataSourceTypeEnum = pgEnum("data_source_type", ["MICS", "PDHS", "PSLM", "NNS", "NDMA", "PBS", "Custom"]);
 export const formCategoryEnum = pgEnum("form_category", ["bbos", "sdg"]);
+export const improvementDirectionEnum = pgEnum("improvement_direction", ["increase", "decrease"]);
 
 // Departments table
 export const departments = pgTable("departments", {
@@ -428,6 +429,7 @@ export const sdg_indicators = pgTable("sdg_indicators", {
   unit: text("unit"), // e.g., "percentage", "per 100,000", "PKR million"
   methodology: text("methodology"), // How the indicator is measured
   data_collection_frequency: text("data_collection_frequency"), // Annual, quarterly, etc.
+  improvement_direction: improvementDirectionEnum("improvement_direction").notNull().default("decrease"), // Whether higher values are better (increase) or lower values are better (decrease)
   responsible_departments: jsonb("responsible_departments"), // Array of department IDs
   // Enhanced fields for complex indicators
   data_structure: jsonb("data_structure"), // Schema for multi-dimensional data

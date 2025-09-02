@@ -1,6 +1,8 @@
 import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { BalochistandDatabaseFormRenderer } from './BalochistandDatabaseFormRenderer';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
+import { SimpleFormRenderer } from '@/components/forms/SimpleFormRenderer';
 
 interface DynamicDataEntryProps {
   indicatorCode: string;
@@ -17,6 +19,8 @@ export const DynamicDataEntry: React.FC<DynamicDataEntryProps> = ({
   onSubmit,
   onCancel
 }) => {
+  const { toast } = useToast();
+
   if (!formId) {
     return (
       <Card>
@@ -30,12 +34,30 @@ export const DynamicDataEntry: React.FC<DynamicDataEntryProps> = ({
   }
 
   return (
-    <BalochistandDatabaseFormRenderer
-      indicatorCode={indicatorCode}
-      indicatorTitle={indicatorTitle}
-      formId={formId}
-      onSubmit={onSubmit}
-      onCancel={onCancel}
-    />
+    <div className="space-y-4">
+      {/* Header with indicator info */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Badge variant="outline">{indicatorCode}</Badge>
+            Data Entry for {indicatorCode}
+          </CardTitle>
+          <p className="text-sm text-gray-600">{indicatorTitle}</p>
+        </CardHeader>
+      </Card>
+
+      {/* Use the working SimpleFormRenderer */}
+      <SimpleFormRenderer 
+        formId={formId} 
+        onSubmissionSuccess={() => {
+          toast({
+            title: "Success!",
+            description: `Data submitted successfully for indicator ${indicatorCode}.`,
+          });
+          onSubmit({ indicator_code: indicatorCode });
+        }}
+        onCancel={onCancel}
+      />
+    </div>
   );
 };

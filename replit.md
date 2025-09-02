@@ -17,6 +17,7 @@ This is a full-stack data collection management system with a public-first appro
 - **Data Bank Delete Confirmation Fixed**: Replaced browser alert with elegant confirmation dialog for data bank entry deletion, fixed API client calls throughout the component, added proper error handling with toast notifications
 - **Ready for Goal-by-Goal Finalization**: Systematic approach to finalize data collection forms for each remaining goal
 - **September 2025 Updates**: Fixed routing inconsistencies - SDG Management moved from `/admin/sdg-management` to `/sdg-management`, all indicator detail pages now use consistent `/indicator/{code}` format instead of UUID-based routing, resolved PostgreSQL database migration from problematic Neon to stable Replit PostgreSQL
+- **BBOS/SDG Form Distinction**: Added database-level form categorization with `form_category` enum ("bbos", "sdg") to prevent accidental cross-deletion, restored BBOS forms that were mistakenly deleted, properly categorized existing SDG indicator forms
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.

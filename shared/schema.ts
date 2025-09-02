@@ -22,6 +22,7 @@ export const sdgIndicatorTypeEnum = pgEnum("sdg_indicator_type", [
   "survey_based"
 ]);
 export const dataSourceTypeEnum = pgEnum("data_source_type", ["MICS", "PDHS", "PSLM", "NNS", "NDMA", "PBS", "Custom"]);
+export const formCategoryEnum = pgEnum("form_category", ["bbos", "sdg"]);
 
 // Departments table
 export const departments = pgTable("departments", {
@@ -73,6 +74,7 @@ export const forms = pgTable("forms", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   description: text("description"),
+  category: formCategoryEnum("category").notNull().default("bbos"), // distinguish between BBOS and SDG forms
   department_id: uuid("department_id").references(() => departments.id),
   created_by: uuid("created_by").notNull(),
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),

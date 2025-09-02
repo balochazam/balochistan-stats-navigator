@@ -2,13 +2,22 @@ import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import ConnectPgSimple from "connect-pg-simple";
+import { pool } from "./db";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Session configuration
+// Configure PostgreSQL session store
+const PostgreSqlStore = ConnectPgSimple(session);
+
+// Session configuration with persistent PostgreSQL store
 app.use(session({
+  store: new PostgreSqlStore({
+    pool: pool,
+    createTableIfMissing: true,
+  }),
   secret: 'your-secret-key-change-in-production',
   resave: false,
   saveUninitialized: false,

@@ -234,7 +234,7 @@ export default function GoalDetailPage() {
                     </div>
                     <div className="flex flex-col gap-2">
                       {indicator.has_data ? (
-                        <Link to={`/indicators/${indicator.id}`}>
+                        <Link to={`/indicator/${indicator.indicator_code}`}>
                           <Button size="sm" variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50">
                             View Details
                           </Button>

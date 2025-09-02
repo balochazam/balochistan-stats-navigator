@@ -1257,6 +1257,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all SDG indicators (for ComprehensiveSDGSystem)
+  app.get('/api/sdg/indicators', async (req, res) => {
+    try {
+      const indicators = await storage.getAllSdgIndicators();
+      res.json(indicators);
+    } catch (error) {
+      console.error('Error fetching all SDG indicators:', error);
+      res.status(500).json({ error: 'Failed to fetch SDG indicators' });
+    }
+  });
+
+  // Get all SDG targets (for ComprehensiveSDGSystem)  
+  app.get('/api/sdg/targets', async (req, res) => {
+    try {
+      const targets = await storage.getAllSdgTargets();
+      res.json(targets);
+    } catch (error) {
+      console.error('Error fetching all SDG targets:', error);
+      res.status(500).json({ error: 'Failed to fetch SDG targets' });
+    }
+  });
+
   // Get SDG goals with data availability statistics
   app.get('/api/sdg/goals-with-progress', async (req, res) => {
     try {

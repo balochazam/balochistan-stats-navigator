@@ -131,11 +131,13 @@ export interface IStorage {
   updateSdgGoal(id: number, updates: Partial<SdgGoal>): Promise<SdgGoal | undefined>;
 
   getSdgTargets(goalId?: number): Promise<SdgTarget[]>;
+  getAllSdgTargets(): Promise<SdgTarget[]>;
   createSdgTarget(target: InsertSdgTarget): Promise<SdgTarget>;
   updateSdgTarget(id: string, updates: Partial<SdgTarget>): Promise<SdgTarget | undefined>;
   deleteSdgTarget(id: string): Promise<boolean>;
 
   getSdgIndicators(targetId?: string): Promise<SdgIndicator[]>;
+  getAllSdgIndicators(): Promise<SdgIndicator[]>;
   getSdgIndicator(id: string): Promise<SdgIndicator | undefined>;
   createSdgIndicator(indicator: InsertSdgIndicator): Promise<SdgIndicator>;
   updateSdgIndicator(id: string, updates: Partial<SdgIndicator>): Promise<SdgIndicator | undefined>;
@@ -613,6 +615,17 @@ export class DatabaseStorage implements IStorage {
     });
 
     return indicatorsWithProgress as SdgIndicator[];
+  }
+
+  async getAllSdgTargets(): Promise<SdgTarget[]> {
+    return await db.select().from(sdg_targets)
+      .orderBy(asc(sdg_targets.target_number));
+  }
+
+  async getAllSdgIndicators(): Promise<SdgIndicator[]> {
+    return await db.select().from(sdg_indicators)
+      .where(eq(sdg_indicators.is_active, true))
+      .orderBy(asc(sdg_indicators.indicator_code));
   }
 
   async getSdgIndicator(id: string): Promise<SdgIndicator | undefined> {

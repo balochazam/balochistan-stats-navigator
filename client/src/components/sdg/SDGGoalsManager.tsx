@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Target, TrendingUp, Database, AlertCircle } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts';
 import { getSDGIcon } from '@/assets/sdg-icons';
 
 
@@ -173,7 +173,7 @@ export const SDGGoalsManager = () => {
     retry: 1,
   });
 
-  // Use real progress data if available, otherwise fall back to default data
+  // Use real data availability data if available, otherwise fall back to default data
   const goalsArray = Array.isArray(goalsWithProgress) ? goalsWithProgress : [];
   
   const sdgData = goalsArray.length > 0 ? goalsArray.map((goal: any) => {
@@ -181,15 +181,25 @@ export const SDGGoalsManager = () => {
     
     return {
       ...goal,
-      progress: goal.progress || defaultGoal?.progress || 0,
-      target: defaultGoal?.target || 100,
+      indicatorsWithData: goal.indicatorsWithData || 0,
+      indicatorsWithoutData: goal.indicatorsWithoutData || 0,
+      totalIndicators: goal.totalIndicators || 0,
+      dataAvailabilityPercentage: goal.dataAvailabilityPercentage || 0,
       iconUrl: getSDGIcon(goal.id),
       color: defaultGoal?.color || '#3b82f6'
     };
-  }) : defaultSDGData;
+  }) : defaultSDGData.map((goal: any) => ({
+    ...goal,
+    indicatorsWithData: 0,
+    indicatorsWithoutData: 0,
+    totalIndicators: 0,
+    dataAvailabilityPercentage: 0
+  }));
 
-  const avgProgress = Math.round(sdgData.reduce((acc: number, sdg: any) => acc + sdg.progress, 0) / sdgData.length);
-  const onTrackCount = sdgData.filter((sdg: any) => sdg.progress >= (sdg.target * 0.7)).length;
+  const totalIndicators = sdgData.reduce((acc: number, sdg: any) => acc + sdg.totalIndicators, 0);
+  const totalIndicatorsWithData = sdgData.reduce((acc: number, sdg: any) => acc + sdg.indicatorsWithData, 0);
+  const avgDataAvailability = totalIndicators > 0 ? Math.round((totalIndicatorsWithData / totalIndicators) * 100) : 0;
+  const goalsWithData = sdgData.filter((sdg: any) => sdg.indicatorsWithData > 0).length;
 
   if (isLoading) {
     return (
@@ -241,9 +251,9 @@ export const SDGGoalsManager = () => {
         <Card>
           <CardContent className="pt-6">
             <div className="text-center">
-              <div className="text-3xl font-bold text-green-600 mb-2">{onTrackCount}</div>
-              <div className="text-sm text-gray-600">On Track</div>
-              <p className="text-xs text-gray-500 mt-1">Making progress</p>
+              <div className="text-3xl font-bold text-green-600 mb-2">{goalsWithData}</div>
+              <div className="text-sm text-gray-600">Goals with Data</div>
+              <p className="text-xs text-gray-500 mt-1">Have indicators</p>
             </div>
           </CardContent>
         </Card>
@@ -251,9 +261,9 @@ export const SDGGoalsManager = () => {
         <Card>
           <CardContent className="pt-6">
             <div className="text-center">
-              <div className="text-3xl font-bold text-orange-600 mb-2">{avgProgress}%</div>
-              <div className="text-sm text-gray-600">Avg Progress</div>
-              <p className="text-xs text-gray-500 mt-1">Overall completion</p>
+              <div className="text-3xl font-bold text-orange-600 mb-2">{totalIndicatorsWithData}</div>
+              <div className="text-sm text-gray-600">Indicators with Data</div>
+              <p className="text-xs text-gray-500 mt-1">Out of {totalIndicators}</p>
             </div>
           </CardContent>
         </Card>
@@ -274,10 +284,10 @@ export const SDGGoalsManager = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5" />
-            SDG Progress Overview
+            SDG Data Availability Overview
           </CardTitle>
           <p className="text-sm text-gray-600">
-            Current progress across all 17 Sustainable Development Goals
+            Indicator data availability across all 17 Sustainable Development Goals
             {error && " (using default data - API unavailable)"}
           </p>
         </CardHeader>
@@ -300,27 +310,25 @@ export const SDGGoalsManager = () => {
                   />
                   <YAxis 
                     tick={{ fontSize: 12 }}
-                    tickFormatter={(value) => `${value}%`}
-                    domain={[0, 100]}
+                    label={{ value: 'Number of Indicators', angle: -90, position: 'insideLeft' }}
                   />
                   <Tooltip 
-                    formatter={(value, name, props) => [
-                      `${value}%`, 
-                      `SDG ${props.payload.id}: ${props.payload.title}`
-                    ]}
+                    formatter={(value, name) => [value, name]}
                     labelFormatter={(label) => `SDG ${label}`}
                   />
+                  <Legend />
                   <Bar 
-                    dataKey="progress" 
-                    stroke="#fff"
-                    strokeWidth={1}
-                    radius={[4, 4, 0, 0]}
-                    cursor="pointer"
-                  >
-                    {sdgData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Bar>
+                    dataKey="indicatorsWithData" 
+                    stackId="a"
+                    fill="#22c55e"
+                    name="Has Data"
+                  />
+                  <Bar 
+                    dataKey="indicatorsWithoutData" 
+                    stackId="a"
+                    fill="#ef4444"
+                    name="No Data"
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </div>

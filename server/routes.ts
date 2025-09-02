@@ -1257,6 +1257,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get SDG goals with data availability statistics
+  app.get('/api/sdg/goals-with-progress', async (req, res) => {
+    try {
+      const goals = await storage.getSdgGoals();
+      const goalsWithDataAvailability = [];
+
+      for (const goal of goals) {
+        // Get all targets for this goal
+        const targets = await storage.getSdgTargets(goal.id);
+        
+        let totalIndicators = 0;
+        let indicatorsWithData = 0;
+
+        // Count indicators and data availability for each target
+        for (const target of targets) {
+          const indicators = await storage.getSdgIndicators(target.id);
+          totalIndicators += indicators.length;
+
+          // Check which indicators have data
+          for (const indicator of indicators) {
+            const values = await storage.getSdgIndicatorValues(indicator.id);
+            if (values.length > 0) {
+              indicatorsWithData++;
+            }
+          }
+        }
+
+        goalsWithDataAvailability.push({
+          id: goal.id,
+          title: goal.title,
+          description: goal.description,
+          totalIndicators,
+          indicatorsWithData,
+          indicatorsWithoutData: totalIndicators - indicatorsWithData,
+          dataAvailabilityPercentage: totalIndicators > 0 ? Math.round((indicatorsWithData / totalIndicators) * 100) : 0
+        });
+      }
+
+      res.json(goalsWithDataAvailability);
+    } catch (error) {
+      console.error('Error fetching SDG goals with data availability:', error);
+      res.status(500).json({ error: 'Failed to fetch SDG goals with data availability' });
+    }
+  });
+
   const server = createServer(app);
   return server;
 }

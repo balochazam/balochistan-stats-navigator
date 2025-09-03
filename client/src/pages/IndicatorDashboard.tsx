@@ -386,7 +386,7 @@ export const IndicatorDashboard: React.FC<IndicatorDashboardProps> = ({ indicato
     queryFn: async () => {
       const submissions = [];
       for (const form of indicatorForms) {
-        const response = await fetch(`/api/forms/${form.id}/submissions`);
+        const response = await fetch(`/api/form-submissions?formId=${form.id}`);
         if (response.ok) {
           const formSubs = await response.json();
           submissions.push(...formSubs.map((sub: any) => ({ ...sub, form_name: form.name })));

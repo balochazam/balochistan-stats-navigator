@@ -402,20 +402,37 @@ export const IndicatorDashboard: React.FC<IndicatorDashboardProps> = ({ indicato
     
     // Extract chronological numeric values from form submissions
     const extractChronologicalValues = () => {
-      const submissionsWithValues: Array<{submission: any, numericValue: number, date: Date}> = [];
+      const submissionsWithValues: Array<{submission: any, numericValue: number, date: Date, fieldName?: string}> = [];
       
       formSubmissions.forEach((submission: any) => {
         if (submission.data && typeof submission.data === 'object') {
-          // Look for the first number type field in submission data
-          const numericEntry = Object.entries(submission.data).find(([key, value]) => 
-            typeof value === 'number' && !isNaN(value)
-          );
+          console.log('Processing submission data:', submission.data);
           
-          if (numericEntry) {
+          // Look for numeric fields - check both direct numbers and parseable strings
+          const numericEntries = Object.entries(submission.data).filter(([key, value]) => {
+            // Check for direct numbers
+            if (typeof value === 'number' && !isNaN(value)) {
+              return true;
+            }
+            // Check for string numbers that can be parsed
+            if (typeof value === 'string' && value.trim() !== '' && !isNaN(Number(value))) {
+              return true;
+            }
+            return false;
+          });
+          
+          console.log('Found numeric entries:', numericEntries);
+          
+          if (numericEntries.length > 0) {
+            // Use the first numeric field found
+            const [key, value] = numericEntries[0];
+            const numericValue = typeof value === 'number' ? value : Number(value);
+            
             submissionsWithValues.push({
               submission,
-              numericValue: numericEntry[1] as number,
-              date: new Date(submission.submitted_at)
+              numericValue,
+              date: new Date(submission.submitted_at),
+              fieldName: key
             });
           }
         }

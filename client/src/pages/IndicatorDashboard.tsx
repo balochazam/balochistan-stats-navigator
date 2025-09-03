@@ -492,15 +492,10 @@ export const IndicatorDashboard: React.FC<IndicatorDashboardProps> = ({ indicato
     return { percentages, total };
   };
 
-  // Format values to show percentages for the main cards
+  // Format values to show individual field values, not percentages
   const formatMultiFieldValue = (yearData: any) => {
     if (!yearData) return 'No data';
     
-    const { percentages, total } = calculateFieldPercentages(yearData);
-    
-    if (total === 0) return 'No numeric data';
-    
-    // Show percentages for multiple fields, or raw value for single field
     const fieldCount = Object.keys(yearData.allFields).length;
     
     if (fieldCount === 1) {
@@ -508,14 +503,12 @@ export const IndicatorDashboard: React.FC<IndicatorDashboardProps> = ({ indicato
       const label = fieldMapping[fieldName] || fieldName;
       return `${label}: ${value}`;
     } else {
-      // Show first field as percentage with most significant value
-      const sortedFields = Object.entries(percentages || {}).sort(([,a], [,b]) => b - a);
-      if (sortedFields.length > 0) {
-        const [topFieldName, topPercentage] = sortedFields[0];
-        const topLabel = fieldMapping[topFieldName] || topFieldName;
-        return `${topPercentage.toFixed(1)}%`;
-      }
-      return 'No data';
+      // Show all field values for multi-field data
+      const fieldValues = Object.entries(yearData.allFields).map(([fieldName, value]) => {
+        const label = fieldMapping[fieldName] || fieldName;
+        return `${label}: ${value}`;
+      }).join(', ');
+      return fieldValues || 'No data';
     }
   };
   
@@ -814,39 +807,51 @@ export const IndicatorDashboard: React.FC<IndicatorDashboardProps> = ({ indicato
                   />
                 </div>
 
-                {/* Latest Breakdown - Enhanced Table */}
-                {latestYear && (
+                {/* Historical Data Table - All Years */}
+                {hasData && (
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <BarChart3 className="h-5 w-5 text-green-600" />
-                        Latest Breakdown
+                        Historical Data Overview
                       </CardTitle>
                       <p className="text-sm text-gray-600">
-                        {latestYear.year} • {latestYear.source}
+                        All years: {yearlyData.map(y => y.year).join(', ')} • Source: {yearlyData[0]?.source}
                       </p>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid grid-cols-2 gap-6">
-                        {Object.entries(latestYear.allFields).map(([fieldName, value]) => {
-                          const label = fieldMapping[fieldName] || fieldName.replace(/field_\d+/, 'Field');
-                          const { percentages, total } = calculateFieldPercentages(latestYear);
-                          const percentage = percentages[fieldName] || 0;
-                          
-                          return (
-                            <div key={fieldName} className="flex justify-between items-center py-3 border-b border-gray-200 dark:border-gray-700">
-                              <span className="font-medium text-gray-900 dark:text-gray-100 capitalize">{label}</span>
-                              <div className="text-right">
-                                <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                                  {percentage.toFixed(1)}%
-                                </span>
-                                <div className="text-xs text-gray-500 dark:text-gray-400">
-                                  ({value} of {total})
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
+                      <div className="overflow-x-auto">
+                        <table className="w-full border-collapse">
+                          <thead>
+                            <tr className="border-b border-gray-200 dark:border-gray-700">
+                              <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">Field</th>
+                              {yearlyData.map(yearData => (
+                                <th key={yearData.year} className="text-center py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
+                                  {yearData.year}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {/* Get all unique field names across all years */}
+                            {Object.keys(yearlyData[0]?.allFields || {}).map(fieldName => {
+                              const label = fieldMapping[fieldName] || fieldName.replace(/field_\d+/, 'Field');
+                              
+                              return (
+                                <tr key={fieldName} className="border-b border-gray-100 dark:border-gray-800">
+                                  <td className="py-3 px-4 font-medium text-gray-900 dark:text-gray-100 capitalize">
+                                    {label}
+                                  </td>
+                                  {yearlyData.map(yearData => (
+                                    <td key={`${fieldName}-${yearData.year}`} className="text-center py-3 px-4 text-gray-700 dark:text-gray-300">
+                                      {yearData.allFields[fieldName] || '-'}
+                                    </td>
+                                  ))}
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
                       </div>
                     </CardContent>
                   </Card>

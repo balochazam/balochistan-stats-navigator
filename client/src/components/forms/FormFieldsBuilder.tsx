@@ -206,7 +206,9 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
       placeholder_text: '',
       field_order: fields.length,
       has_sub_headers: false,
-      sub_headers: []
+      sub_headers: [],
+      // Add a unique key to ensure proper React re-rendering
+      id: `field_${Date.now()}_${Math.random()}`
     };
     onChange([...fields, newField]);
   };
@@ -253,7 +255,9 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
       aggregate_fields: [],
       is_secondary_column: false,
       has_sub_headers: false,
-      sub_headers: []
+      sub_headers: [],
+      // Add unique ID for proper React rendering
+      id: `subfield_${Date.now()}_${Math.random()}`
     };
     const updatedFields = [...fields];
     if (updatedFields[fieldIndex].sub_headers?.[subIndex]) {
@@ -386,7 +390,7 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
       )}
 
       {fields.map((field, index) => (
-        <Card key={index}>
+        <Card key={field.id || `field-${index}`}>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm">Field {index + 1}</CardTitle>

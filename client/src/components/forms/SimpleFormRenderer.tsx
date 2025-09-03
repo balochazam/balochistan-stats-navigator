@@ -486,7 +486,17 @@ export const SimpleFormRenderer: React.FC<SimpleFormRendererProps> = ({
         );
 
       case 'select':
-        const options = field.reference_data_name ? field.reference_data_name.split(',') : [];
+        // Special handling for data_source field with predefined options
+        let options: string[] = [];
+        
+        if (field.field_name === 'data_source') {
+          // Predefined data source options from shared schema
+          options = ['MICS', 'PDHS', 'PSLM', 'NNS', 'NDMA', 'PBS', 'Custom'];
+        } else if (field.reference_data_name) {
+          // Use reference data for other select fields
+          options = field.reference_data_name.split(',').map(opt => opt.trim()).filter(opt => opt);
+        }
+        
         return (
           <Select
             value={value}
@@ -497,11 +507,17 @@ export const SimpleFormRenderer: React.FC<SimpleFormRendererProps> = ({
               <SelectValue placeholder="Select an option..." />
             </SelectTrigger>
             <SelectContent>
-              {options.map((option) => (
-                <SelectItem key={option} value={option}>
-                  {option}
+              {options.length > 0 ? (
+                options.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem key="no-options" value="" disabled>
+                  No options available
                 </SelectItem>
-              ))}
+              )}
             </SelectContent>
           </Select>
         );

@@ -571,6 +571,8 @@ export class DatabaseStorage implements IStorage {
     .where(eq(forms.category, 'sdg'))
     .groupBy(forms.id, forms.name);
 
+    console.log('DEBUG: SDG forms with submissions:', sdgFormsWithSubmissions);
+
     // Import Balochistan data for progress calculations
     const { balochistandIndicatorData } = await import('@shared/balochistandIndicatorData');
     

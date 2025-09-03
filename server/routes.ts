@@ -1261,6 +1261,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/sdg/indicators', async (req, res) => {
     try {
       const indicators = await storage.getAllSdgIndicators();
+      console.log('DEBUG: API returning indicators. 1.1.1 has_data:', indicators.find(i => i.indicator_code === '1.1.1')?.has_data);
       res.json(indicators);
     } catch (error) {
       console.error('Error fetching all SDG indicators:', error);

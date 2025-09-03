@@ -493,48 +493,95 @@ export const IndicatorDashboard: React.FC<IndicatorDashboardProps> = ({ indicato
     return { percentages, total };
   };
 
-  // Calculate overall progress across intermediate years
+  // Calculate realistic overall progress with proper validation
   const calculateOverallProgress = (
     data: Array<{year: string, allFields: Record<string, number>}>,
     baseline: {year: string, allFields: Record<string, number>} | null,
     latest: {year: string, allFields: Record<string, number>} | null
   ): string => {
-    if (!baseline || !latest || data.length < 3) return 'Insufficient data';
+    if (!baseline || !latest || data.length < 2) return 'Insufficient data';
     
+    // For simple baseline to latest comparison when we have limited data
+    if (data.length === 2) {
+      const fieldNames = Object.keys(baseline.allFields);
+      let totalChange = 0;
+      let validCalculations = 0;
+      
+      fieldNames.forEach(fieldName => {
+        const baselineValue = baseline.allFields[fieldName];
+        const latestValue = latest.allFields[fieldName];
+        
+        if (typeof baselineValue === 'number' && typeof latestValue === 'number' && baselineValue > 0) {
+          const change = ((latestValue - baselineValue) / baselineValue) * 100;
+          // Cap extreme changes to realistic ranges
+          const cappedChange = Math.max(-90, Math.min(200, change));
+          totalChange += cappedChange;
+          validCalculations++;
+        }
+      });
+      
+      if (validCalculations === 0) return 'No valid data';
+      
+      const avgChange = totalChange / validCalculations;
+      const direction = avgChange > 5 ? '↗' : avgChange < -5 ? '↘' : '→';
+      
+      return `${Math.round(avgChange * 10) / 10}% ${direction}`;
+    }
+    
+    // For multiple years, use a more sophisticated trend analysis
     const intermediateYears = data.filter(year => 
       year.year !== baseline.year && year.year !== latest.year
     );
     
-    if (intermediateYears.length === 0) return 'No intermediate data';
+    if (intermediateYears.length === 0) {
+      // Fall back to baseline-to-latest comparison
+      return calculateOverallProgress([baseline, latest], baseline, latest);
+    }
     
     const fieldNames = Object.keys(baseline.allFields);
-    let totalProgress = 0;
+    let overallTrend = 0;
     let validCalculations = 0;
     
     fieldNames.forEach(fieldName => {
       const baselineValue = baseline.allFields[fieldName];
       const latestValue = latest.allFields[fieldName];
       
-      if (typeof baselineValue === 'number' && typeof latestValue === 'number' && baselineValue !== 0) {
-        const intermediateSum = intermediateYears.reduce((sum, year) => {
-          const value = year.allFields[fieldName];
-          return sum + (typeof value === 'number' ? value : 0);
-        }, 0);
+      if (typeof baselineValue === 'number' && typeof latestValue === 'number' && baselineValue > 0) {
+        // Calculate year-over-year changes to get trend
+        const yearlyChanges: number[] = [];
+        let previousValue = baselineValue;
         
-        const avgIntermediate = intermediateSum / intermediateYears.length;
-        const progressRate = ((avgIntermediate - baselineValue) / baselineValue) * 100;
+        // Add intermediate years in chronological order
+        const sortedYears = [baseline, ...intermediateYears, latest].sort((a, b) => 
+          parseInt(a.year) - parseInt(b.year)
+        );
         
-        totalProgress += progressRate;
-        validCalculations++;
+        for (let i = 1; i < sortedYears.length; i++) {
+          const currentValue = sortedYears[i].allFields[fieldName];
+          if (typeof currentValue === 'number' && previousValue > 0) {
+            const yearChange = ((currentValue - previousValue) / previousValue) * 100;
+            // Cap extreme single-year changes
+            const cappedChange = Math.max(-50, Math.min(100, yearChange));
+            yearlyChanges.push(cappedChange);
+            previousValue = currentValue;
+          }
+        }
+        
+        if (yearlyChanges.length > 0) {
+          // Average the year-over-year changes for this field
+          const avgYearlyChange = yearlyChanges.reduce((sum, change) => sum + change, 0) / yearlyChanges.length;
+          overallTrend += avgYearlyChange;
+          validCalculations++;
+        }
       }
     });
     
     if (validCalculations === 0) return 'No valid data';
     
-    const avgProgress = totalProgress / validCalculations;
-    const direction = avgProgress > 0 ? '↗' : avgProgress < 0 ? '↘' : '→';
+    const avgTrend = overallTrend / validCalculations;
+    const direction = avgTrend > 5 ? '↗' : avgTrend < -5 ? '↘' : '→';
     
-    return `${Math.round(avgProgress * 10) / 10}% ${direction}`;
+    return `${Math.round(avgTrend * 10) / 10}% ${direction}`;
   };
 
   // Format values to show individual field values with line breaks
@@ -841,7 +888,7 @@ export const IndicatorDashboard: React.FC<IndicatorDashboardProps> = ({ indicato
                   <MetricCard
                     title="Overall Progress"
                     value={calculateOverallProgress(yearlyData, baselineYear, latestYear)}
-                    period="Journey between baseline & latest"
+                    period={yearlyData.length > 2 ? `Trend across ${yearlyData.length} years` : "Change from baseline"}
                     icon={BarChart3}
                     color="bg-yellow-500"
                   />

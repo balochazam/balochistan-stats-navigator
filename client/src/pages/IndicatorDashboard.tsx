@@ -899,12 +899,22 @@ export const IndicatorDashboard: React.FC<IndicatorDashboardProps> = ({ indicato
             </Card>
 
             {/* Dynamic Charts */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <ProgressChart data={indicatorData} />
-              <UrbanRuralChart data={indicatorData} />
-            </div>
-            
-            <BreakdownChart data={indicatorData} />
+            {hasUserData ? (
+              /* User Form Charts */
+              <div className="space-y-6">
+                <UserFormProgressChart yearlyData={yearlyData} fieldMapping={fieldMapping} />
+                <UserFormBreakdownChart latestYear={latestYear} fieldMapping={fieldMapping} />
+              </div>
+            ) : (
+              /* Balochistan Static Data Charts */
+              <div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <ProgressChart data={indicatorData} />
+                  <UrbanRuralChart data={indicatorData} />
+                </div>
+                <BreakdownChart data={indicatorData} />
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="timeline" className="space-y-6">
@@ -1025,3 +1035,102 @@ export const IndicatorDashboard: React.FC<IndicatorDashboardProps> = ({ indicato
     </div>
   );
 };
+
+// User Form Chart Components
+const UserFormProgressChart: React.FC<{
+  yearlyData: Array<{year: string, allFields: Record<string, number>}>;
+  fieldMapping: Record<string, string>;
+}> = ({ yearlyData, fieldMapping }) => {
+  // Transform data for chart
+  const chartData = yearlyData.map(yearData => {
+    const dataPoint: any = { year: yearData.year };
+    Object.entries(yearData.allFields).forEach(([fieldName, value]) => {
+      const label = fieldMapping[fieldName] || fieldName.replace(/field_\d+/, 'Field');
+      dataPoint[label] = value;
+    });
+    return dataPoint;
+  });
+
+  // Get field names for lines
+  const fieldNames = Object.keys(yearlyData[0]?.allFields || {}).map(fieldName => 
+    fieldMapping[fieldName] || fieldName.replace(/field_\d+/, 'Field')
+  );
+
+  const colors = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#8dd1e1'];
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <BarChart3 className="h-5 w-5" />
+          Progress Trend Analysis
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="year" />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            {fieldNames.map((fieldName, index) => (
+              <Line 
+                key={fieldName}
+                type="monotone" 
+                dataKey={fieldName} 
+                stroke={colors[index % colors.length]}
+                strokeWidth={2}
+                dot={{ r: 6 }}
+              />
+            ))}
+          </LineChart>
+        </ResponsiveContainer>
+      </CardContent>
+    </Card>
+  );
+};
+
+const UserFormBreakdownChart: React.FC<{
+  latestYear: {allFields: Record<string, number>} | null;
+  fieldMapping: Record<string, string>;
+}> = ({ latestYear, fieldMapping }) => {
+  if (!latestYear) return null;
+
+  // Transform data for bar chart
+  const chartData = Object.entries(latestYear.allFields).map(([fieldName, value]) => ({
+    field: fieldMapping[fieldName] || fieldName.replace(/field_\d+/, 'Field'),
+    value: value
+  }));
+
+  const colors = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#8dd1e1'];
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <BarChart3 className="h-5 w-5" />
+          Latest Year Field Breakdown
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="field" />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            <Bar dataKey="value" fill="#8884d8">
+              {chartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default IndicatorDashboard;

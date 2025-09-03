@@ -407,93 +407,129 @@ export const IndicatorDashboard: React.FC<IndicatorDashboardProps> = ({ indicato
     }
   });
 
-  // Create indicator data structure from form submissions
-  const createFormBasedData = () => {
-    const totalSubmissions = formSubmissions.length;
+  // Process all form submissions to extract multi-field data by year - GLOBAL SCOPE
+  const processSubmissionsByYear = () => {
+    const yearlyData: Array<{year: string, data: any, source: string, allFields: Record<string, number>}> = [];
     
-    // Process all form submissions to extract multi-field data by year
-    const processSubmissionsByYear = () => {
-      const yearlyData: Array<{year: string, data: any, source: string, allFields: Record<string, number>}> = [];
-      
-      formSubmissions.forEach((submission: any) => {
-        if (submission.data && typeof submission.data === 'object') {
-          console.log('Processing submission data:', submission.data);
-          
-          // Extract year from data_year field
-          const yearValue = submission.data.data_year;
-          const year = yearValue ? new Date(yearValue).getFullYear().toString() : new Date(submission.submitted_at).getFullYear().toString();
-          
-          // Get data source
-          const source = submission.data.data_source || 'Form submission';
-          
-          // Extract all numeric fields (excluding system fields)
-          const allFields: Record<string, number> = {};
-          Object.entries(submission.data).forEach(([key, value]) => {
-            // Skip system fields
-            if (key === 'data_year' || key === 'data_source') {
-              return;
-            }
-            
-            // Parse numeric values
-            if (typeof value === 'number' && !isNaN(value)) {
-              allFields[key] = value;
-            } else if (typeof value === 'string' && value.trim() !== '' && !isNaN(Number(value))) {
-              allFields[key] = Number(value);
-            }
-          });
-          
-          console.log(`Year ${year} fields:`, allFields);
-          
-          if (Object.keys(allFields).length > 0) {
-            yearlyData.push({
-              year,
-              data: submission.data,
-              source,
-              allFields
-            });
+    formSubmissions.forEach((submission: any) => {
+      if (submission.data && typeof submission.data === 'object') {
+        console.log('Processing submission data:', submission.data);
+        
+        // Extract year from data_year field
+        const yearValue = submission.data.data_year;
+        const year = yearValue ? new Date(yearValue).getFullYear().toString() : new Date(submission.submitted_at).getFullYear().toString();
+        
+        // Get data source
+        const source = submission.data.data_source || 'Form submission';
+        
+        // Extract all numeric fields (excluding system fields)
+        const allFields: Record<string, number> = {};
+        Object.entries(submission.data).forEach(([key, value]) => {
+          // Skip system fields
+          if (key === 'data_year' || key === 'data_source') {
+            return;
           }
+          
+          // Parse numeric values
+          if (typeof value === 'number' && !isNaN(value)) {
+            allFields[key] = value;
+          } else if (typeof value === 'string' && value.trim() !== '' && !isNaN(Number(value))) {
+            allFields[key] = Number(value);
+          }
+        });
+        
+        console.log(`Year ${year} fields:`, allFields);
+        
+        if (Object.keys(allFields).length > 0) {
+          yearlyData.push({
+            year,
+            data: submission.data,
+            source,
+            allFields
+          });
         }
-      });
-      
-      // Sort by year
-      return yearlyData.sort((a, b) => parseInt(a.year) - parseInt(b.year));
-    };
-    
-    const yearlyData = processSubmissionsByYear();
-    const hasData = yearlyData.length > 0;
-    
-    // Create baseline, progress, latest from yearly data
-    const baselineYear = hasData ? yearlyData[0] : null;
-    const latestYear = hasData ? yearlyData[yearlyData.length - 1] : null;
-    const progressYear = hasData && yearlyData.length > 2 
-      ? yearlyData[Math.floor(yearlyData.length / 2)] 
-      : (hasData && yearlyData.length === 2 ? yearlyData[0] : latestYear);
-    
-    // Create field mapping from auto-generated names to user labels
-    const fieldMapping: Record<string, string> = {};
-    formFields.forEach((field: any) => {
-      if (field.field_name && field.field_label) {
-        fieldMapping[field.field_name] = field.field_label;
       }
     });
     
-    // Format values to show all fields with proper labels
-    const formatMultiFieldValue = (yearData: any) => {
-      if (!yearData) return 'No data';
-      const fieldValues = Object.entries(yearData.allFields).map(([fieldName, value]) => {
-        const label = fieldMapping[fieldName] || fieldName;
-        return `${label}: ${value}`;
-      }).join(', ');
-      return fieldValues || 'No numeric data';
-    };
+    // Sort by year
+    return yearlyData.sort((a, b) => parseInt(a.year) - parseInt(b.year));
+  };
+  
+  // Global data processing variables
+  const yearlyData = processSubmissionsByYear();
+  const hasData = yearlyData.length > 0;
+  const hasUserData = formSubmissions.length > 0;
+  const totalSubmissions = formSubmissions.length;
+  
+  // Create baseline, progress, latest from yearly data
+  const baselineYear = hasData ? yearlyData[0] : null;
+  const latestYear = hasData ? yearlyData[yearlyData.length - 1] : null;
+  const progressYear = hasData && yearlyData.length > 2 
+    ? yearlyData[Math.floor(yearlyData.length / 2)] 
+    : (hasData && yearlyData.length === 2 ? yearlyData[0] : latestYear);
+  
+  // Create field mapping from auto-generated names to user labels
+  const fieldMapping: Record<string, string> = {};
+  formFields.forEach((field: any) => {
+    if (field.field_name && field.field_label) {
+      fieldMapping[field.field_name] = field.field_label;
+    }
+  });
+  
+  // Calculate totals and percentages for user forms
+  const calculateFieldPercentages = (yearData: any) => {
+    if (!yearData || !yearData.allFields) return { percentages: {}, total: 0 };
     
-    const formatFieldBreakdown = (yearData: any) => {
-      if (!yearData) return '';
-      return Object.entries(yearData.allFields).map(([fieldName, value]) => {
-        const label = fieldMapping[fieldName] || fieldName;
-        return `${label}: ${value}`;
-      }).join(' | ');
-    };
+    const values = Object.values(yearData.allFields).map(v => Number(v) || 0);
+    const total = values.reduce((sum, val) => sum + val, 0);
+    
+    const percentages: Record<string, number> = {};
+    Object.entries(yearData.allFields).forEach(([fieldName, value]) => {
+      const numValue = Number(value) || 0;
+      percentages[fieldName] = total > 0 ? (numValue / total) * 100 : 0;
+    });
+    
+    return { percentages, total };
+  };
+
+  // Format values to show percentages for the main cards
+  const formatMultiFieldValue = (yearData: any) => {
+    if (!yearData) return 'No data';
+    
+    const { percentages, total } = calculateFieldPercentages(yearData);
+    
+    if (total === 0) return 'No numeric data';
+    
+    // Show percentages for multiple fields, or raw value for single field
+    const fieldCount = Object.keys(yearData.allFields).length;
+    
+    if (fieldCount === 1) {
+      const [fieldName, value] = Object.entries(yearData.allFields)[0];
+      const label = fieldMapping[fieldName] || fieldName;
+      return `${label}: ${value}`;
+    } else {
+      // Show first field as percentage with most significant value
+      const sortedFields = Object.entries(percentages || {}).sort(([,a], [,b]) => b - a);
+      if (sortedFields.length > 0) {
+        const [topFieldName, topPercentage] = sortedFields[0];
+        const topLabel = fieldMapping[topFieldName] || topFieldName;
+        return `${topPercentage.toFixed(1)}%`;
+      }
+      return 'No data';
+    }
+  };
+  
+  const formatFieldBreakdown = (yearData: any) => {
+    if (!yearData) return '';
+    const { percentages } = calculateFieldPercentages(yearData);
+    return Object.entries(percentages || {}).map(([fieldName, percentage]) => {
+      const label = fieldMapping[fieldName] || fieldName;
+      return `${label}: ${percentage.toFixed(1)}%`;
+    }).join(' | ');
+  };
+
+  // Create indicator data structure from form submissions
+  const createFormBasedData = () => {
     
     return {
       indicator_code: indicatorCode,
@@ -722,24 +758,101 @@ export const IndicatorDashboard: React.FC<IndicatorDashboardProps> = ({ indicato
               />
             </div>
 
-            {/* Data Breakdowns */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <DataBreakdownCard
-                title="Baseline"
-                data={indicatorData.baseline}
-                color="bg-blue-500"
-              />
-              <DataBreakdownCard
-                title="Progress"
-                data={indicatorData.progress}
-                color="bg-yellow-500"
-              />
-              <DataBreakdownCard
-                title="Latest"
-                data={indicatorData.latest}
-                color="bg-green-500"
-              />
-            </div>
+            {/* Data Breakdowns - for Balochistan static data */}
+            {!hasUserData && (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <DataBreakdownCard
+                  title="Baseline"
+                  data={indicatorData.baseline}
+                  color="bg-blue-500"
+                />
+                <DataBreakdownCard
+                  title="Progress"
+                  data={indicatorData.progress}
+                  color="bg-yellow-500"
+                />
+                <DataBreakdownCard
+                  title="Latest"
+                  data={indicatorData.latest}
+                  color="bg-green-500"
+                />
+              </div>
+            )}
+
+            {/* User Form Data with Enhanced Visualization */}
+            {hasUserData && (
+              <div className="space-y-6">
+                {/* Main Data Cards for User Forms */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <MetricCard
+                    title="Baseline Value"
+                    value={formatMultiFieldValue(baselineYear)}
+                    period={baselineYear ? `${baselineYear.year} • ${baselineYear.source}` : 'No data'}
+                    icon={Calendar}
+                    color="bg-blue-500"
+                  />
+                  <MetricCard
+                    title="Progress Value"
+                    value={formatMultiFieldValue(progressYear)}
+                    period={progressYear ? `${progressYear.year} • ${progressYear.source}` : 'No data'}
+                    icon={BarChart3}
+                    color="bg-yellow-500"
+                  />
+                  <MetricCard
+                    title="Latest Value"
+                    value={formatMultiFieldValue(latestYear)}
+                    period={latestYear ? `${latestYear.year} • ${latestYear.source}` : 'No data'}
+                    icon={TrendingUp}
+                    color="bg-green-500"
+                  />
+                  <MetricCard
+                    title="Measurement Unit"
+                    value="Multiple Types"
+                    period="Field-based Data"
+                    icon={Percent}
+                    color="bg-purple-500"
+                  />
+                </div>
+
+                {/* Latest Breakdown - Enhanced Table */}
+                {latestYear && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <BarChart3 className="h-5 w-5 text-green-600" />
+                        Latest Breakdown
+                      </CardTitle>
+                      <p className="text-sm text-gray-600">
+                        {latestYear.year} • {latestYear.source}
+                      </p>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 gap-6">
+                        {Object.entries(latestYear.allFields).map(([fieldName, value]) => {
+                          const label = fieldMapping[fieldName] || fieldName.replace(/field_\d+/, 'Field');
+                          const { percentages, total } = calculateFieldPercentages(latestYear);
+                          const percentage = percentages[fieldName] || 0;
+                          
+                          return (
+                            <div key={fieldName} className="flex justify-between items-center py-3 border-b border-gray-200 dark:border-gray-700">
+                              <span className="font-medium text-gray-900 dark:text-gray-100 capitalize">{label}</span>
+                              <div className="text-right">
+                                <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                                  {percentage.toFixed(1)}%
+                                </span>
+                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                  ({value} of {total})
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            )}
 
             {/* Quick Insights */}
             <Card>

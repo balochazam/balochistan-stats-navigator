@@ -494,6 +494,7 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
                               key={indicator.code}
                               indicator={indicator}
                               hasForm={hasIndicatorForm(indicator.code)}
+                              hasIndicatorForm={hasIndicatorForm}
                               onEnterData={() => {
                                 setSelectedIndicator(indicator);
                                 setViewMode('data_entry');
@@ -519,6 +520,7 @@ export const ComprehensiveSDGSystem: React.FC<ComprehensiveSDGSystemProps> = ({ 
                       key={indicator.code}
                       indicator={indicator}
                       hasForm={hasIndicatorForm(indicator.code)}
+                      hasIndicatorForm={hasIndicatorForm}
                       onEnterData={() => {
                         setSelectedIndicator(indicator);
                         setViewMode('data_entry');
@@ -568,9 +570,10 @@ interface IndicatorCardProps {
   onCreateForm: () => void;
   onViewDetails: () => void;
   hasForm: boolean;
+  hasIndicatorForm: (code: string) => boolean;
 }
 
-const IndicatorCard: React.FC<IndicatorCardProps> = ({ indicator, onEnterData, onCreateForm, onViewDetails, hasForm }) => {
+const IndicatorCard: React.FC<IndicatorCardProps> = ({ indicator, onEnterData, onCreateForm, onViewDetails, hasForm, hasIndicatorForm }) => {
   const getTierColor = (tier: string) => {
     switch (tier) {
       case 'I': return 'bg-green-100 text-green-800';
@@ -600,7 +603,7 @@ const IndicatorCard: React.FC<IndicatorCardProps> = ({ indicator, onEnterData, o
                   Form Ready
                 </Badge>
               )}
-              {getAvailableIndicatorCodes().includes(indicator.code) && (
+              {hasIndicatorForm(indicator.code) && (
                 <Badge className="text-xs bg-blue-100 text-blue-800">
                   Data Available
                 </Badge>
@@ -653,7 +656,7 @@ const IndicatorCard: React.FC<IndicatorCardProps> = ({ indicator, onEnterData, o
             size="sm" 
             variant="outline"
             onClick={onViewDetails}
-            disabled={!getAvailableIndicatorCodes().includes(indicator.code)}
+            disabled={!hasIndicatorForm(indicator.code)}
           >
             <Target className="h-3 w-3 mr-1" />
             View Details

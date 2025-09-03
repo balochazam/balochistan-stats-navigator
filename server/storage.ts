@@ -1,4 +1,4 @@
-import { eq, and, desc, asc } from "drizzle-orm";
+import { eq, and, desc, asc, sql, count } from "drizzle-orm";
 import { db } from "./db";
 import {
   profiles,
@@ -561,20 +561,39 @@ export class DatabaseStorage implements IStorage {
         .orderBy(asc(sdg_indicators.indicator_code));
     }
 
+    // Get all SDG forms with submissions
+    const sdgFormsWithSubmissions = await db.select({
+      form_name: forms.name,
+      form_id: forms.id
+    })
+    .from(forms)
+    .innerJoin(form_submissions, eq(forms.id, form_submissions.form_id))
+    .where(eq(forms.category, 'sdg'))
+    .groupBy(forms.id, forms.name);
+
     // Import Balochistan data for progress calculations
     const { balochistandIndicatorData } = await import('@shared/balochistandIndicatorData');
     
-    // Add has_data and progress fields based on Balochistan data
+    // Add has_data and progress fields based on Balochistan data AND form submissions
     const indicatorsWithProgress = baseQuery.map(indicator => {
       const balochistandData = balochistandIndicatorData.find(
         data => data.indicator_code === indicator.indicator_code
       );
       
+      // Check if there's a form with submissions for this indicator
+      const hasFormData = sdgFormsWithSubmissions.some(form => 
+        form.form_name.includes(indicator.indicator_code)
+      );
+      
       let progress = 0;
       let has_data = false;
       
-      if (balochistandData) {
+      // Set has_data to true if there's either Balochistan data OR form submissions
+      if (balochistandData || hasFormData) {
         has_data = true;
+      }
+      
+      if (balochistandData) {
         const baselineValue = parseFloat(String(balochistandData.baseline.value).replace(/[%,]/g, '')) || 0;
         const progressValue = parseFloat(String(balochistandData.progress.value).replace(/[%,]/g, '')) || 0;
         
@@ -627,20 +646,39 @@ export class DatabaseStorage implements IStorage {
       .where(eq(sdg_indicators.is_active, true))
       .orderBy(asc(sdg_indicators.indicator_code));
 
+    // Get all SDG forms with submissions
+    const sdgFormsWithSubmissions = await db.select({
+      form_name: forms.name,
+      form_id: forms.id
+    })
+    .from(forms)
+    .innerJoin(form_submissions, eq(forms.id, form_submissions.form_id))
+    .where(eq(forms.category, 'sdg'))
+    .groupBy(forms.id, forms.name);
+
     // Import Balochistan data for progress calculations
     const { balochistandIndicatorData } = await import('@shared/balochistandIndicatorData');
     
-    // Add has_data and progress fields based on Balochistan data
+    // Add has_data and progress fields based on Balochistan data AND form submissions
     const indicatorsWithProgress = baseQuery.map(indicator => {
       const balochistandData = balochistandIndicatorData.find(
         data => data.indicator_code === indicator.indicator_code
       );
       
+      // Check if there's a form with submissions for this indicator
+      const hasFormData = sdgFormsWithSubmissions.some(form => 
+        form.form_name.includes(indicator.indicator_code)
+      );
+      
       let progress = 0;
       let has_data = false;
       
-      if (balochistandData) {
+      // Set has_data to true if there's either Balochistan data OR form submissions
+      if (balochistandData || hasFormData) {
         has_data = true;
+      }
+      
+      if (balochistandData) {
         const baselineValue = parseFloat(String(balochistandData.baseline.value).replace(/[%,]/g, '')) || 0;
         const progressValue = parseFloat(String(balochistandData.progress.value).replace(/[%,]/g, '')) || 0;
         

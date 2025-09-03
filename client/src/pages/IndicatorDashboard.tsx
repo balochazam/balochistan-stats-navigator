@@ -409,7 +409,13 @@ export const IndicatorDashboard: React.FC<IndicatorDashboardProps> = ({ indicato
           console.log('Processing submission data:', submission.data);
           
           // Look for numeric fields - check both direct numbers and parseable strings
+          // Exclude system fields like data_year, data_source
           const numericEntries = Object.entries(submission.data).filter(([key, value]) => {
+            // Skip system fields
+            if (key === 'data_year' || key === 'data_source') {
+              return false;
+            }
+            
             // Check for direct numbers
             if (typeof value === 'number' && !isNaN(value)) {
               return true;

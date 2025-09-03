@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -357,7 +358,25 @@ export const IndicatorDashboard: React.FC<IndicatorDashboardProps> = ({ indicato
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
   
-  const indicatorData = getIndicatorData(indicatorCode);
+  // Try to get Balochistan static data first
+  const balochistandData = getIndicatorData(indicatorCode);
+  
+  // Fetch database indicators to check if this indicator exists
+  const { data: indicators = [] } = useQuery({
+    queryKey: ['/api/sdg/indicators'],
+  });
+  
+  // Find the indicator in the database
+  const databaseIndicator = indicators.find((ind: any) => ind.indicator_code === indicatorCode);
+  
+  // Use Balochistan data if available, otherwise create basic structure from database indicator
+  const indicatorData = balochistandData || (databaseIndicator ? {
+    title: databaseIndicator.title,
+    baseline: { value: 'Not Available', year: '-', source: 'No data' },
+    progress: { value: 'Not Available', year: '-', source: 'No data' },
+    latest: { value: 'Not Available', year: '-', source: 'No data' },
+    trend_analysis: 'No trend analysis available - user form data exists but no Balochistan baseline data.'
+  } : null);
 
   const exportToPDF = () => {
     if (!indicatorData) return;

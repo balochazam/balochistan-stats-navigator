@@ -396,44 +396,88 @@ export const IndicatorDashboard: React.FC<IndicatorDashboardProps> = ({ indicato
     }
   });
 
-  // Create indicator data structure
+  // Create indicator data structure from form submissions
   const createFormBasedData = () => {
     const totalSubmissions = formSubmissions.length;
+    
+    // Extract chronological numeric values from form submissions
+    const extractChronologicalValues = () => {
+      const submissionsWithValues: Array<{submission: any, numericValue: number, date: Date}> = [];
+      
+      formSubmissions.forEach((submission: any) => {
+        if (submission.data && typeof submission.data === 'object') {
+          // Look for the first number type field in submission data
+          const numericEntry = Object.entries(submission.data).find(([key, value]) => 
+            typeof value === 'number' && !isNaN(value)
+          );
+          
+          if (numericEntry) {
+            submissionsWithValues.push({
+              submission,
+              numericValue: numericEntry[1] as number,
+              date: new Date(submission.submitted_at)
+            });
+          }
+        }
+      });
+      
+      // Sort by submission date (chronological order)
+      return submissionsWithValues.sort((a, b) => a.date.getTime() - b.date.getTime());
+    };
+    
+    const chronologicalData = extractChronologicalValues();
+    const hasNumericData = chronologicalData.length > 0;
+    
+    // Calculate baseline (first), progress (middle), latest (most recent) based on time
+    const baselineData = hasNumericData ? chronologicalData[0] : null;
+    const latestData = hasNumericData ? chronologicalData[chronologicalData.length - 1] : null;
+    const progressData = hasNumericData && chronologicalData.length > 2 
+      ? chronologicalData[Math.floor(chronologicalData.length / 2)] 
+      : (hasNumericData && chronologicalData.length === 2 ? chronologicalData[0] : latestData);
+    
     const latestSubmission = formSubmissions.length > 0 
       ? formSubmissions[formSubmissions.length - 1] 
       : null;
     
     return {
+      indicator_code: indicatorCode,
       title: databaseIndicator.title,
+      unit: databaseIndicator.measurement_unit || 'Standard Unit',
       baseline: { 
-        value: totalSubmissions > 0 ? `${totalSubmissions} submissions` : 'No submissions yet', 
-        year: totalSubmissions > 0 ? 'Multiple periods' : '-', 
-        source: `${indicatorForms.length} active form(s)` 
+        value: baselineData ? baselineData.numericValue.toString() : 'No numeric data', 
+        year: baselineData ? baselineData.date.getFullYear().toString() : '-', 
+        source: hasNumericData ? `${totalSubmissions} submission(s)` : `${indicatorForms.length} active form(s)` 
       },
       progress: { 
-        value: totalSubmissions > 0 ? 'Data Collection Active' : 'Ready for data entry', 
-        year: 'Ongoing', 
-        source: 'User-created forms' 
+        value: progressData ? progressData.numericValue.toString() : 'No numeric data', 
+        year: progressData ? progressData.date.getFullYear().toString() : 'Ongoing', 
+        source: hasNumericData ? 'Form submissions' : 'User-created forms' 
       },
       latest: { 
-        value: latestSubmission ? 'Recent submission' : 'No submissions yet', 
-        year: latestSubmission ? new Date(latestSubmission.created_at).getFullYear().toString() : '-', 
-        source: latestSubmission ? latestSubmission.form_name : 'Active data collection' 
+        value: latestData ? latestData.numericValue.toString() : 'No numeric data', 
+        year: latestData ? latestData.date.getFullYear().toString() : '-', 
+        source: latestData ? latestData.submission.form_name || 'Form submission' : 'Active data collection' 
       },
-      trend_analysis: totalSubmissions > 0 
-        ? `This indicator has ${totalSubmissions} data submissions across ${indicatorForms.length} form(s). Latest submission on ${latestSubmission ? new Date(latestSubmission.created_at).toLocaleDateString() : 'N/A'}. Data is collected through user-created forms.`
-        : `This indicator has ${indicatorForms.length} active data collection form(s) but no submissions yet. Use the data entry forms to submit values for analysis.`
+      trend_analysis: hasNumericData 
+        ? `This indicator shows chronological progression: Baseline (${baselineData?.numericValue}) → Progress (${progressData?.numericValue}) → Latest (${latestData?.numericValue}). Total of ${totalSubmissions} submissions with ${chronologicalData.length} numeric values collected over time.`
+        : totalSubmissions > 0 
+          ? `This indicator has ${totalSubmissions} submissions but no numeric data found. Forms may contain text/categorical data rather than numeric values.`
+          : `This indicator has ${indicatorForms.length} active data collection form(s) but no submissions yet. Use the data entry forms to submit values for analysis.`,
+      data_quality: hasNumericData ? 'Good' : 'No data'
     };
   };
 
   // Use Balochistan data if available, otherwise create structure from form data
   const indicatorData = balochistandData || (databaseIndicator && indicatorForms.length > 0 ? createFormBasedData() : 
     databaseIndicator ? {
+      indicator_code: indicatorCode,
       title: databaseIndicator.title,
+      unit: databaseIndicator.measurement_unit || 'Standard Unit',
       baseline: { value: 'Not Available', year: '-', source: 'No data' },
       progress: { value: 'Not Available', year: '-', source: 'No data' },
       latest: { value: 'Not Available', year: '-', source: 'No data' },
-      trend_analysis: 'No data collection forms exist for this indicator.'
+      trend_analysis: 'No data collection forms exist for this indicator.',
+      data_quality: 'No data'
     } : null);
 
   const exportToPDF = () => {

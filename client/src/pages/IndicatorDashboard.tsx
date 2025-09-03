@@ -492,7 +492,7 @@ export const IndicatorDashboard: React.FC<IndicatorDashboardProps> = ({ indicato
     return { percentages, total };
   };
 
-  // Format values to show individual field values, not percentages
+  // Format values to show individual field values with line breaks
   const formatMultiFieldValue = (yearData: any) => {
     if (!yearData) return 'No data';
     
@@ -503,12 +503,19 @@ export const IndicatorDashboard: React.FC<IndicatorDashboardProps> = ({ indicato
       const label = fieldMapping[fieldName] || fieldName;
       return `${label}: ${value}`;
     } else {
-      // Show all field values for multi-field data
-      const fieldValues = Object.entries(yearData.allFields).map(([fieldName, value]) => {
-        const label = fieldMapping[fieldName] || fieldName;
-        return `${label}: ${value}`;
-      }).join(', ');
-      return fieldValues || 'No data';
+      // Show all field values for multi-field data with line breaks
+      return (
+        <div className="space-y-1">
+          {Object.entries(yearData.allFields).map(([fieldName, value]) => {
+            const label = fieldMapping[fieldName] || fieldName;
+            return (
+              <div key={fieldName} className="text-lg font-bold">
+                {label}: {value}
+              </div>
+            );
+          })}
+        </div>
+      );
     }
   };
   
@@ -718,38 +725,40 @@ export const IndicatorDashboard: React.FC<IndicatorDashboardProps> = ({ indicato
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
-            {/* Key Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <MetricCard
-                title="Baseline Value"
-                value={indicatorData.baseline.value}
-                period={`${indicatorData.baseline.year} • ${indicatorData.baseline.source}`}
-                icon={Calendar}
-                color="bg-blue-500"
-              />
-              <MetricCard
-                title="Progress Value"
-                value={indicatorData.progress.value}
-                period={`${indicatorData.progress.year} • ${indicatorData.progress.source}`}
-                icon={BarChart3}
-                color="bg-yellow-500"
-              />
-              <MetricCard
-                title="Latest Value"
-                value={indicatorData.latest.value}
-                trend={getTrendDirection()}
-                period={`${indicatorData.latest.year} • ${indicatorData.latest.source}`}
-                icon={TrendingUp}
-                color="bg-green-500"
-              />
-              <MetricCard
-                title="Measurement Unit"
-                value={indicatorData.unit}
-                period="Standard Unit"
-                icon={Percent}
-                color="bg-purple-500"
-              />
-            </div>
+            {/* Key Metrics - Only show if NOT user data */}
+            {!hasUserData && (
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <MetricCard
+                  title="Baseline Value"
+                  value={indicatorData.baseline.value}
+                  period={`${indicatorData.baseline.year} • ${indicatorData.baseline.source}`}
+                  icon={Calendar}
+                  color="bg-blue-500"
+                />
+                <MetricCard
+                  title="Progress Value"
+                  value={indicatorData.progress.value}
+                  period={`${indicatorData.progress.year} • ${indicatorData.progress.source}`}
+                  icon={BarChart3}
+                  color="bg-yellow-500"
+                />
+                <MetricCard
+                  title="Latest Value"
+                  value={indicatorData.latest.value}
+                  trend={getTrendDirection()}
+                  period={`${indicatorData.latest.year} • ${indicatorData.latest.source}`}
+                  icon={TrendingUp}
+                  color="bg-green-500"
+                />
+                <MetricCard
+                  title="Measurement Unit"
+                  value={indicatorData.unit}
+                  period="Standard Unit"
+                  icon={Percent}
+                  color="bg-purple-500"
+                />
+              </div>
+            )}
 
             {/* Data Breakdowns - for Balochistan static data */}
             {!hasUserData && (

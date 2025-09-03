@@ -24,7 +24,8 @@ import {
   Globe,
   Activity,
   Percent,
-  Hash
+  Hash,
+  Search
 } from 'lucide-react';
 import { LineChart, Line, AreaChart, Area, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { getIndicatorData, type IndicatorTimeSeries } from '@shared/balochistandIndicatorData';
@@ -492,6 +493,50 @@ export const IndicatorDashboard: React.FC<IndicatorDashboardProps> = ({ indicato
     return { percentages, total };
   };
 
+  // Calculate overall progress across intermediate years
+  const calculateOverallProgress = (
+    data: Array<{year: string, allFields: Record<string, number>}>,
+    baseline: {year: string, allFields: Record<string, number>} | null,
+    latest: {year: string, allFields: Record<string, number>} | null
+  ): string => {
+    if (!baseline || !latest || data.length < 3) return 'Insufficient data';
+    
+    const intermediateYears = data.filter(year => 
+      year.year !== baseline.year && year.year !== latest.year
+    );
+    
+    if (intermediateYears.length === 0) return 'No intermediate data';
+    
+    const fieldNames = Object.keys(baseline.allFields);
+    let totalProgress = 0;
+    let validCalculations = 0;
+    
+    fieldNames.forEach(fieldName => {
+      const baselineValue = baseline.allFields[fieldName];
+      const latestValue = latest.allFields[fieldName];
+      
+      if (typeof baselineValue === 'number' && typeof latestValue === 'number' && baselineValue !== 0) {
+        const intermediateSum = intermediateYears.reduce((sum, year) => {
+          const value = year.allFields[fieldName];
+          return sum + (typeof value === 'number' ? value : 0);
+        }, 0);
+        
+        const avgIntermediate = intermediateSum / intermediateYears.length;
+        const progressRate = ((avgIntermediate - baselineValue) / baselineValue) * 100;
+        
+        totalProgress += progressRate;
+        validCalculations++;
+      }
+    });
+    
+    if (validCalculations === 0) return 'No valid data';
+    
+    const avgProgress = totalProgress / validCalculations;
+    const direction = avgProgress > 0 ? '↗' : avgProgress < 0 ? '↘' : '→';
+    
+    return `${Math.round(avgProgress * 10) / 10}% ${direction}`;
+  };
+
   // Format values to show individual field values with line breaks
   const formatMultiFieldValue = (yearData: any) => {
     if (!yearData) return 'No data';
@@ -794,9 +839,9 @@ export const IndicatorDashboard: React.FC<IndicatorDashboardProps> = ({ indicato
                     color="bg-blue-500"
                   />
                   <MetricCard
-                    title="Progress Value"
-                    value={formatMultiFieldValue(progressYear)}
-                    period={progressYear ? `${progressYear.year} • ${progressYear.source}` : 'No data'}
+                    title="Overall Progress"
+                    value={calculateOverallProgress(yearlyData, baselineYear, latestYear)}
+                    period="Journey between baseline & latest"
                     icon={BarChart3}
                     color="bg-yellow-500"
                   />
@@ -1114,6 +1159,8 @@ const ScalableDataTable: React.FC<{
     </div>
   );
 };
+
+
 
 // User Form Chart Components
 const UserFormProgressChart: React.FC<{

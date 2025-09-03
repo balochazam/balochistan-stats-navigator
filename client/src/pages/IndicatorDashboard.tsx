@@ -378,29 +378,63 @@ export const IndicatorDashboard: React.FC<IndicatorDashboardProps> = ({ indicato
   const indicatorForms = forms.filter((form: any) => 
     form.name && form.name.toLowerCase().includes(indicatorCode.toLowerCase())
   );
-  
-  // Use Balochistan data if available, otherwise create structure from database indicator with form info
-  const indicatorData = balochistandData || (databaseIndicator ? {
-    title: databaseIndicator.title,
-    baseline: { 
-      value: indicatorForms.length > 0 ? 'User Form Available' : 'Not Available', 
-      year: indicatorForms.length > 0 ? 'Various' : '-', 
-      source: indicatorForms.length > 0 ? `${indicatorForms.length} form(s) created` : 'No data' 
-    },
-    progress: { 
-      value: indicatorForms.length > 0 ? 'Data Collection Active' : 'Not Available', 
-      year: indicatorForms.length > 0 ? 'Ongoing' : '-', 
-      source: indicatorForms.length > 0 ? 'User-created forms' : 'No data' 
-    },
-    latest: { 
-      value: indicatorForms.length > 0 ? 'Form-based Data' : 'Not Available', 
-      year: indicatorForms.length > 0 ? new Date().getFullYear().toString() : '-', 
-      source: indicatorForms.length > 0 ? 'Active data collection' : 'No data' 
-    },
-    trend_analysis: indicatorForms.length > 0 
-      ? `This indicator has ${indicatorForms.length} active data collection form(s). Data is being collected through user-created forms rather than Balochistan baseline surveys. Use the data entry forms to submit values for analysis.`
-      : 'No trend analysis available - no data collection forms exist for this indicator.'
-  } : null);
+
+  // Fetch form submissions for this indicator if forms exist
+  const { data: formSubmissions = [] } = useQuery({
+    queryKey: [`/api/form-submissions`, indicatorForms.map(f => f.id)],
+    enabled: indicatorForms.length > 0,
+    queryFn: async () => {
+      const submissions = [];
+      for (const form of indicatorForms) {
+        const response = await fetch(`/api/forms/${form.id}/submissions`);
+        if (response.ok) {
+          const formSubs = await response.json();
+          submissions.push(...formSubs.map((sub: any) => ({ ...sub, form_name: form.name })));
+        }
+      }
+      return submissions;
+    }
+  });
+
+  // Create indicator data structure
+  const createFormBasedData = () => {
+    const totalSubmissions = formSubmissions.length;
+    const latestSubmission = formSubmissions.length > 0 
+      ? formSubmissions[formSubmissions.length - 1] 
+      : null;
+    
+    return {
+      title: databaseIndicator.title,
+      baseline: { 
+        value: totalSubmissions > 0 ? `${totalSubmissions} submissions` : 'No submissions yet', 
+        year: totalSubmissions > 0 ? 'Multiple periods' : '-', 
+        source: `${indicatorForms.length} active form(s)` 
+      },
+      progress: { 
+        value: totalSubmissions > 0 ? 'Data Collection Active' : 'Ready for data entry', 
+        year: 'Ongoing', 
+        source: 'User-created forms' 
+      },
+      latest: { 
+        value: latestSubmission ? 'Recent submission' : 'No submissions yet', 
+        year: latestSubmission ? new Date(latestSubmission.created_at).getFullYear().toString() : '-', 
+        source: latestSubmission ? latestSubmission.form_name : 'Active data collection' 
+      },
+      trend_analysis: totalSubmissions > 0 
+        ? `This indicator has ${totalSubmissions} data submissions across ${indicatorForms.length} form(s). Latest submission on ${latestSubmission ? new Date(latestSubmission.created_at).toLocaleDateString() : 'N/A'}. Data is collected through user-created forms.`
+        : `This indicator has ${indicatorForms.length} active data collection form(s) but no submissions yet. Use the data entry forms to submit values for analysis.`
+    };
+  };
+
+  // Use Balochistan data if available, otherwise create structure from form data
+  const indicatorData = balochistandData || (databaseIndicator && indicatorForms.length > 0 ? createFormBasedData() : 
+    databaseIndicator ? {
+      title: databaseIndicator.title,
+      baseline: { value: 'Not Available', year: '-', source: 'No data' },
+      progress: { value: 'Not Available', year: '-', source: 'No data' },
+      latest: { value: 'Not Available', year: '-', source: 'No data' },
+      trend_analysis: 'No data collection forms exist for this indicator.'
+    } : null);
 
   const exportToPDF = () => {
     if (!indicatorData) return;

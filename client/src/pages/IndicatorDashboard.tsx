@@ -400,93 +400,107 @@ export const IndicatorDashboard: React.FC<IndicatorDashboardProps> = ({ indicato
   const createFormBasedData = () => {
     const totalSubmissions = formSubmissions.length;
     
-    // Extract chronological numeric values from form submissions
-    const extractChronologicalValues = () => {
-      const submissionsWithValues: Array<{submission: any, numericValue: number, date: Date, fieldName?: string}> = [];
+    // Process all form submissions to extract multi-field data by year
+    const processSubmissionsByYear = () => {
+      const yearlyData: Array<{year: string, data: any, source: string, allFields: Record<string, number>}> = [];
       
       formSubmissions.forEach((submission: any) => {
         if (submission.data && typeof submission.data === 'object') {
           console.log('Processing submission data:', submission.data);
           
-          // Look for numeric fields - check both direct numbers and parseable strings
-          // Exclude system fields like data_year, data_source
-          const numericEntries = Object.entries(submission.data).filter(([key, value]) => {
+          // Extract year from data_year field
+          const yearValue = submission.data.data_year;
+          const year = yearValue ? new Date(yearValue).getFullYear().toString() : new Date(submission.submitted_at).getFullYear().toString();
+          
+          // Get data source
+          const source = submission.data.data_source || 'Form submission';
+          
+          // Extract all numeric fields (excluding system fields)
+          const allFields: Record<string, number> = {};
+          Object.entries(submission.data).forEach(([key, value]) => {
             // Skip system fields
             if (key === 'data_year' || key === 'data_source') {
-              return false;
+              return;
             }
             
-            // Check for direct numbers
+            // Parse numeric values
             if (typeof value === 'number' && !isNaN(value)) {
-              return true;
+              allFields[key] = value;
+            } else if (typeof value === 'string' && value.trim() !== '' && !isNaN(Number(value))) {
+              allFields[key] = Number(value);
             }
-            // Check for string numbers that can be parsed
-            if (typeof value === 'string' && value.trim() !== '' && !isNaN(Number(value))) {
-              return true;
-            }
-            return false;
           });
           
-          console.log('Found numeric entries:', numericEntries);
+          console.log(`Year ${year} fields:`, allFields);
           
-          if (numericEntries.length > 0) {
-            // Use the first numeric field found
-            const [key, value] = numericEntries[0];
-            const numericValue = typeof value === 'number' ? value : Number(value);
-            
-            submissionsWithValues.push({
-              submission,
-              numericValue,
-              date: new Date(submission.submitted_at),
-              fieldName: key
+          if (Object.keys(allFields).length > 0) {
+            yearlyData.push({
+              year,
+              data: submission.data,
+              source,
+              allFields
             });
           }
         }
       });
       
-      // Sort by submission date (chronological order)
-      return submissionsWithValues.sort((a, b) => a.date.getTime() - b.date.getTime());
+      // Sort by year
+      return yearlyData.sort((a, b) => parseInt(a.year) - parseInt(b.year));
     };
     
-    const chronologicalData = extractChronologicalValues();
-    const hasNumericData = chronologicalData.length > 0;
+    const yearlyData = processSubmissionsByYear();
+    const hasData = yearlyData.length > 0;
     
-    // Calculate baseline (first), progress (middle), latest (most recent) based on time
-    const baselineData = hasNumericData ? chronologicalData[0] : null;
-    const latestData = hasNumericData ? chronologicalData[chronologicalData.length - 1] : null;
-    const progressData = hasNumericData && chronologicalData.length > 2 
-      ? chronologicalData[Math.floor(chronologicalData.length / 2)] 
-      : (hasNumericData && chronologicalData.length === 2 ? chronologicalData[0] : latestData);
+    // Create baseline, progress, latest from yearly data
+    const baselineYear = hasData ? yearlyData[0] : null;
+    const latestYear = hasData ? yearlyData[yearlyData.length - 1] : null;
+    const progressYear = hasData && yearlyData.length > 2 
+      ? yearlyData[Math.floor(yearlyData.length / 2)] 
+      : (hasData && yearlyData.length === 2 ? yearlyData[0] : latestYear);
     
-    const latestSubmission = formSubmissions.length > 0 
-      ? formSubmissions[formSubmissions.length - 1] 
-      : null;
+    // Format values to show all fields
+    const formatMultiFieldValue = (yearData: any) => {
+      if (!yearData) return 'No data';
+      const fieldValues = Object.entries(yearData.allFields).map(([field, value]) => `${value}`).join(', ');
+      return fieldValues || 'No numeric data';
+    };
+    
+    const formatFieldBreakdown = (yearData: any) => {
+      if (!yearData) return '';
+      return Object.entries(yearData.allFields).map(([field, value]) => `Field: ${value}`).join(' | ');
+    };
     
     return {
       indicator_code: indicatorCode,
       title: databaseIndicator.title,
       unit: databaseIndicator.measurement_unit || 'Standard Unit',
       baseline: { 
-        value: baselineData ? baselineData.numericValue.toString() : 'No numeric data', 
-        year: baselineData ? baselineData.date.getFullYear().toString() : '-', 
-        source: hasNumericData ? `${totalSubmissions} submission(s)` : `${indicatorForms.length} active form(s)` 
+        value: formatMultiFieldValue(baselineYear), 
+        year: baselineYear ? baselineYear.year : '-', 
+        source: baselineYear ? baselineYear.source : `${indicatorForms.length} active form(s)` 
       },
       progress: { 
-        value: progressData ? progressData.numericValue.toString() : 'No numeric data', 
-        year: progressData ? progressData.date.getFullYear().toString() : 'Ongoing', 
-        source: hasNumericData ? 'Form submissions' : 'User-created forms' 
+        value: formatMultiFieldValue(progressYear), 
+        year: progressYear ? progressYear.year : 'Ongoing', 
+        source: progressYear ? progressYear.source : 'User-created forms' 
       },
       latest: { 
-        value: latestData ? latestData.numericValue.toString() : 'No numeric data', 
-        year: latestData ? latestData.date.getFullYear().toString() : '-', 
-        source: latestData ? latestData.submission.form_name || 'Form submission' : 'Active data collection' 
+        value: formatMultiFieldValue(latestYear), 
+        year: latestYear ? latestYear.year : '-', 
+        source: latestYear ? latestYear.source : 'Active data collection' 
       },
-      trend_analysis: hasNumericData 
-        ? `This indicator shows chronological progression: Baseline (${baselineData?.numericValue}) → Progress (${progressData?.numericValue}) → Latest (${latestData?.numericValue}). Total of ${totalSubmissions} submissions with ${chronologicalData.length} numeric values collected over time.`
+      trend_analysis: hasData 
+        ? `Multi-field data across ${yearlyData.length} years (${yearlyData.map(y => y.year).join(', ')}). Each year contains: ${formatFieldBreakdown(yearlyData[0])}. Total submissions: ${totalSubmissions}.`
         : totalSubmissions > 0 
-          ? `This indicator has ${totalSubmissions} submissions but no numeric data found. Forms may contain text/categorical data rather than numeric values.`
-          : `This indicator has ${indicatorForms.length} active data collection form(s) but no submissions yet. Use the data entry forms to submit values for analysis.`,
-      data_quality: hasNumericData ? 'Good' : 'No data'
+          ? `This indicator has ${totalSubmissions} submissions but no numeric data found.`
+          : `This indicator has ${indicatorForms.length} active data collection form(s) but no submissions yet.`,
+      data_quality: hasData ? 'Good' : 'No data',
+      // Add breakdown data for detailed view
+      breakdown: hasData ? {
+        years: yearlyData.map(y => y.year),
+        fields: yearlyData.length > 0 ? Object.keys(yearlyData[0].allFields) : [],
+        data: yearlyData.map(y => ({ year: y.year, values: y.allFields, source: y.source }))
+      } : null
     };
   };
 

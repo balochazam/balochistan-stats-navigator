@@ -366,16 +366,40 @@ export const IndicatorDashboard: React.FC<IndicatorDashboardProps> = ({ indicato
     queryKey: ['/api/sdg/indicators'],
   });
   
+  // Fetch forms to check for user-created forms
+  const { data: forms = [] } = useQuery({
+    queryKey: ['/api/forms'],
+  });
+  
   // Find the indicator in the database
   const databaseIndicator = indicators.find((ind: any) => ind.indicator_code === indicatorCode);
   
-  // Use Balochistan data if available, otherwise create basic structure from database indicator
+  // Find user-created forms for this indicator
+  const indicatorForms = forms.filter((form: any) => 
+    form.name && form.name.toLowerCase().includes(indicatorCode.toLowerCase())
+  );
+  
+  // Use Balochistan data if available, otherwise create structure from database indicator with form info
   const indicatorData = balochistandData || (databaseIndicator ? {
     title: databaseIndicator.title,
-    baseline: { value: 'Not Available', year: '-', source: 'No data' },
-    progress: { value: 'Not Available', year: '-', source: 'No data' },
-    latest: { value: 'Not Available', year: '-', source: 'No data' },
-    trend_analysis: 'No trend analysis available - user form data exists but no Balochistan baseline data.'
+    baseline: { 
+      value: indicatorForms.length > 0 ? 'User Form Available' : 'Not Available', 
+      year: indicatorForms.length > 0 ? 'Various' : '-', 
+      source: indicatorForms.length > 0 ? `${indicatorForms.length} form(s) created` : 'No data' 
+    },
+    progress: { 
+      value: indicatorForms.length > 0 ? 'Data Collection Active' : 'Not Available', 
+      year: indicatorForms.length > 0 ? 'Ongoing' : '-', 
+      source: indicatorForms.length > 0 ? 'User-created forms' : 'No data' 
+    },
+    latest: { 
+      value: indicatorForms.length > 0 ? 'Form-based Data' : 'Not Available', 
+      year: indicatorForms.length > 0 ? new Date().getFullYear().toString() : '-', 
+      source: indicatorForms.length > 0 ? 'Active data collection' : 'No data' 
+    },
+    trend_analysis: indicatorForms.length > 0 
+      ? `This indicator has ${indicatorForms.length} active data collection form(s). Data is being collected through user-created forms rather than Balochistan baseline surveys. Use the data entry forms to submit values for analysis.`
+      : 'No trend analysis available - no data collection forms exist for this indicator.'
   } : null);
 
   const exportToPDF = () => {

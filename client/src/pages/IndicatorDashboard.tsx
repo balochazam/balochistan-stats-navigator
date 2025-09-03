@@ -379,6 +379,17 @@ export const IndicatorDashboard: React.FC<IndicatorDashboardProps> = ({ indicato
     form.name && form.name.toLowerCase().includes(indicatorCode.toLowerCase())
   );
 
+  // Fetch form fields to get field labels for the first form
+  const { data: formFields = [] } = useQuery({
+    queryKey: ['/api/forms', indicatorForms[0]?.id, 'fields'],
+    enabled: indicatorForms.length > 0,
+    queryFn: async () => {
+      if (indicatorForms.length === 0) return [];
+      const response = await fetch(`/api/forms/${indicatorForms[0].id}/fields`);
+      return response.ok ? response.json() : [];
+    }
+  });
+
   // Fetch form submissions for this indicator if forms exist
   const { data: formSubmissions = [] } = useQuery({
     queryKey: [`/api/form-submissions`, indicatorForms.map(f => f.id)],
@@ -458,16 +469,30 @@ export const IndicatorDashboard: React.FC<IndicatorDashboardProps> = ({ indicato
       ? yearlyData[Math.floor(yearlyData.length / 2)] 
       : (hasData && yearlyData.length === 2 ? yearlyData[0] : latestYear);
     
-    // Format values to show all fields
+    // Create field mapping from auto-generated names to user labels
+    const fieldMapping: Record<string, string> = {};
+    formFields.forEach((field: any) => {
+      if (field.field_name && field.field_label) {
+        fieldMapping[field.field_name] = field.field_label;
+      }
+    });
+    
+    // Format values to show all fields with proper labels
     const formatMultiFieldValue = (yearData: any) => {
       if (!yearData) return 'No data';
-      const fieldValues = Object.entries(yearData.allFields).map(([field, value]) => `${value}`).join(', ');
+      const fieldValues = Object.entries(yearData.allFields).map(([fieldName, value]) => {
+        const label = fieldMapping[fieldName] || fieldName;
+        return `${label}: ${value}`;
+      }).join(', ');
       return fieldValues || 'No numeric data';
     };
     
     const formatFieldBreakdown = (yearData: any) => {
       if (!yearData) return '';
-      return Object.entries(yearData.allFields).map(([field, value]) => `Field: ${value}`).join(' | ');
+      return Object.entries(yearData.allFields).map(([fieldName, value]) => {
+        const label = fieldMapping[fieldName] || fieldName;
+        return `${label}: ${value}`;
+      }).join(' | ');
     };
     
     return {

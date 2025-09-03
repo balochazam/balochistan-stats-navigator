@@ -816,7 +816,7 @@ export const IndicatorDashboard: React.FC<IndicatorDashboardProps> = ({ indicato
                   />
                 </div>
 
-                {/* Historical Data Table - All Years */}
+                {/* Historical Data Table - Scalable for Large Datasets */}
                 {hasData && (
                   <Card>
                     <CardHeader>
@@ -825,43 +825,11 @@ export const IndicatorDashboard: React.FC<IndicatorDashboardProps> = ({ indicato
                         Historical Data Overview
                       </CardTitle>
                       <p className="text-sm text-gray-600">
-                        All years: {yearlyData.map(y => y.year).join(', ')} • Source: {yearlyData[0]?.source}
+                        {yearlyData.length} years of data: {yearlyData[0]?.year} - {yearlyData[yearlyData.length - 1]?.year} • Source: {yearlyData[0]?.source}
                       </p>
                     </CardHeader>
                     <CardContent>
-                      <div className="overflow-x-auto">
-                        <table className="w-full border-collapse">
-                          <thead>
-                            <tr className="border-b border-gray-200 dark:border-gray-700">
-                              <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-gray-100">Field</th>
-                              {yearlyData.map(yearData => (
-                                <th key={yearData.year} className="text-center py-3 px-4 font-medium text-gray-900 dark:text-gray-100">
-                                  {yearData.year}
-                                </th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {/* Get all unique field names across all years */}
-                            {Object.keys(yearlyData[0]?.allFields || {}).map(fieldName => {
-                              const label = fieldMapping[fieldName] || fieldName.replace(/field_\d+/, 'Field');
-                              
-                              return (
-                                <tr key={fieldName} className="border-b border-gray-100 dark:border-gray-800">
-                                  <td className="py-3 px-4 font-medium text-gray-900 dark:text-gray-100 capitalize">
-                                    {label}
-                                  </td>
-                                  {yearlyData.map(yearData => (
-                                    <td key={`${fieldName}-${yearData.year}`} className="text-center py-3 px-4 text-gray-700 dark:text-gray-300">
-                                      {yearData.allFields[fieldName] || '-'}
-                                    </td>
-                                  ))}
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
+                      <ScalableDataTable yearlyData={yearlyData} fieldMapping={fieldMapping} />
                     </CardContent>
                   </Card>
                 )}
@@ -1032,6 +1000,117 @@ export const IndicatorDashboard: React.FC<IndicatorDashboardProps> = ({ indicato
           </TabsContent>
         </Tabs>
       </div>
+    </div>
+  );
+};
+
+// Scalable Data Table for Large Datasets
+const ScalableDataTable: React.FC<{
+  yearlyData: Array<{year: string, allFields: Record<string, number>}>;
+  fieldMapping: Record<string, string>;
+}> = ({ yearlyData, fieldMapping }) => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [showAllYears, setShowAllYears] = useState(false);
+  const yearsPerPage = 10;
+  
+  // For large datasets, show pagination
+  const shouldPaginate = yearlyData.length > yearsPerPage;
+  
+  const displayedYears = shouldPaginate && !showAllYears
+    ? yearlyData.slice((currentPage - 1) * yearsPerPage, currentPage * yearsPerPage)
+    : yearlyData;
+    
+  const totalPages = Math.ceil(yearlyData.length / yearsPerPage);
+  
+  const fieldNames = Object.keys(yearlyData[0]?.allFields || {});
+
+  return (
+    <div className="space-y-4">
+      {/* Controls for large datasets */}
+      {shouldPaginate && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowAllYears(!showAllYears)}
+            >
+              {showAllYears ? 'Show Paginated' : 'Show All Years'}
+            </Button>
+            <span className="text-sm text-gray-600">
+              Showing {showAllYears ? yearlyData.length : displayedYears.length} of {yearlyData.length} years
+            </span>
+          </div>
+          
+          {!showAllYears && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+              >
+                Previous
+              </Button>
+              <span className="text-sm">
+                Page {currentPage} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+              >
+                Next
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Scrollable table container */}
+      <div className="overflow-x-auto max-h-96 overflow-y-auto border rounded-lg">
+        <table className="w-full border-collapse bg-white">
+          <thead className="sticky top-0 bg-gray-50 z-10">
+            <tr className="border-b border-gray-200">
+              <th className="text-left py-3 px-4 font-medium text-gray-900 bg-gray-50 sticky left-0 min-w-[120px] border-r">
+                Field
+              </th>
+              {displayedYears.map(yearData => (
+                <th key={yearData.year} className="text-center py-3 px-4 font-medium text-gray-900 min-w-[80px] border-r">
+                  {yearData.year}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {fieldNames.map(fieldName => {
+              const label = fieldMapping[fieldName] || fieldName.replace(/field_\d+/, 'Field');
+              
+              return (
+                <tr key={fieldName} className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="py-3 px-4 font-medium text-gray-900 capitalize bg-white sticky left-0 border-r">
+                    {label}
+                  </td>
+                  {displayedYears.map(yearData => (
+                    <td key={`${fieldName}-${yearData.year}`} className="text-center py-3 px-4 text-gray-700 border-r">
+                      {yearData.allFields[fieldName] || '-'}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      
+      {/* Summary for large datasets */}
+      {yearlyData.length > 5 && (
+        <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
+          <strong>Dataset Summary:</strong> {yearlyData.length} years of data from {yearlyData[0]?.year} to {yearlyData[yearlyData.length - 1]?.year}. 
+          Use the charts above for trend analysis, or export data for detailed analysis.
+        </div>
+      )}
     </div>
   );
 };

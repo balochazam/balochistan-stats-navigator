@@ -1,4 +1,4 @@
-import { createSDGForm, standardDemographicFields, standardPercentageFields } from "./createSDGForms";
+import { createSDGForm, standardDemographicFields, standardPercentageFields } from "./createSDGForms.js";
 
 // User ID who will be the creator of all forms
 const ADMIN_USER_ID = "bbb55fbb-dc8d-44a4-9389-5842618fb3a4";

@@ -1,4 +1,4 @@
-import { db } from "./db";
+import { db } from "./db.js";
 import { forms, form_fields, field_groups } from "@shared/schema";
 import { v4 as uuidv4 } from 'uuid';
 

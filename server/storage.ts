@@ -1,5 +1,5 @@
 import { eq, and, desc, asc, sql, count } from "drizzle-orm";
-import { db } from "./db";
+import { db } from "./db.js";
 import {
   profiles,
   departments,

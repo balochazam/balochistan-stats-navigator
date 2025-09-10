@@ -140,24 +140,91 @@ su - sdgapp
 git clone https://github.com/yourusername/sdg-platform.git
 cd sdg-platform
 
+# CRITICAL: Fix ES Modules Imports First (prevents all TypeScript errors)
+# Update all server imports to use .js extensions
+sed -i 's/from "\.\/\([^"]*\)";/from "./\1.js";/g' server/*.ts
+
 # Install dependencies
 npm install
+
+# Install TypeScript execution tools
+npm install -g tsx ts-node
 
 # Create production .env (using your generated values)
 nano .env
 # Paste your production configuration from Step 2
 
-# Build application
+# OPTION 1: Build application (Recommended)
 npm run build
+
+# OPTION 2: If build fails with esbuild/rollup errors, use direct TypeScript
+# Clean install to fix dependency issues
+rm -rf node_modules package-lock.json
+npm install --no-optional
+
+# Test TypeScript execution
+node --loader ts-node/esm --experimental-specifier-resolution=node server/index.ts
 
 # Test production database connection
 npm run db:push
 ```
 
-### Phase 5: systemd Service (As Requested)
+### Phase 5A: PM2 Process Manager (Recommended for TypeScript)
 
 ```bash
-# Create service file
+# Install PM2 globally
+npm install -g pm2
+
+# Create PM2 ecosystem configuration
+cat > ecosystem.config.cjs << 'EOF'
+module.exports = {
+  apps: [{
+    name: 'sdg-platform',
+    script: 'node',
+    args: '--loader ts-node/esm --experimental-specifier-resolution=node server/index.ts',
+    cwd: '/var/www/balochistan-stats-navigator',
+    env: {
+      NODE_ENV: 'production',
+      PORT: 3000
+    },
+    env_file: '/var/www/balochistan-stats-navigator/.env',
+    instances: 1,
+    exec_mode: 'fork',
+    autorestart: true,
+    watch: false,
+    max_memory_restart: '1G',
+    min_uptime: '10s',
+    max_restarts: 10,
+    error_file: '/var/www/balochistan-stats-navigator/logs/err.log',
+    out_file: '/var/www/balochistan-stats-navigator/logs/out.log',
+    log_file: '/var/www/balochistan-stats-navigator/logs/combined.log',
+    time: true
+  }]
+};
+EOF
+
+# Create logs directory
+mkdir -p logs
+
+# Start PM2 process
+pm2 start ecosystem.config.cjs
+
+# Check status
+pm2 status
+
+# View logs
+pm2 logs sdg-platform
+
+# Setup PM2 startup script
+pm2 startup
+# Follow the command it shows
+pm2 save
+```
+
+### Phase 5B: systemd Service (Alternative)
+
+```bash
+# Create service file (only if not using PM2)
 sudo nano /etc/systemd/system/sdg-platform.service
 
 [Unit]
@@ -172,7 +239,10 @@ Group=sdgapp
 WorkingDirectory=/home/sdgapp/sdg-platform
 Environment=NODE_ENV=production
 EnvironmentFile=/home/sdgapp/sdg-platform/.env
-ExecStart=/usr/bin/node server/index.js
+# OPTION 1: If build successful
+ExecStart=/usr/bin/node dist/index.js
+# OPTION 2: If using TypeScript directly
+# ExecStart=/usr/bin/node --loader ts-node/esm --experimental-specifier-resolution=node server/index.ts
 ExecReload=/bin/kill -HUP $MAINPID
 KillMode=mixed
 KillSignal=SIGINT
@@ -517,9 +587,63 @@ chmod +x /home/sdgapp/backup-production.sh
 
 ## 🚨 Troubleshooting Guide
 
-### Common Issues and Solutions
+### ⚡ TypeScript & ES Modules Issues (CRITICAL FIXES)
 
-1. **Database Connection Issues:**
+1. **ES Modules Import Errors:**
+   ```bash
+   # Error: Unknown file extension ".ts"
+   # Fix: Update all imports to use .js extensions
+   cd /var/www/balochistan-stats-navigator
+   
+   # Automated fix for all server files
+   find server -name "*.ts" -exec sed -i 's/from "\.\/\([^"]*\)";/from "./\1.js";/g' {} \;
+   
+   # Manual verification
+   grep -n 'from "\./.*[^js]"' server/*.ts
+   # Should return no results
+   ```
+
+2. **esbuild/rollup Dependency Errors:**
+   ```bash
+   # Error: Cannot find module @rollup/rollup-linux-x64-gnu
+   # Fix: Clean install dependencies
+   cd /var/www/balochistan-stats-navigator
+   rm -rf node_modules package-lock.json
+   npm install --no-optional
+   
+   # Alternative: Use TypeScript directly
+   node --loader ts-node/esm --experimental-specifier-resolution=node server/index.ts
+   ```
+
+3. **tsx Command Not Found:**
+   ```bash
+   # Install tsx globally
+   npm install -g tsx
+   
+   # Test execution
+   tsx server/index.ts
+   
+   # If global install fails, use npx
+   npx tsx server/index.ts
+   ```
+
+4. **PM2 TypeScript Execution:**
+   ```bash
+   # Working PM2 configurations
+   
+   # Option 1: Using tsx
+   pm2 start tsx --name sdg-platform -- server/index.ts
+   
+   # Option 2: Using ts-node/esm
+   pm2 start "node --loader ts-node/esm --experimental-specifier-resolution=node server/index.ts" --name sdg-platform
+   
+   # Option 3: Using ecosystem.config.cjs (recommended)
+   pm2 start ecosystem.config.cjs
+   ```
+
+### 🔧 Standard Issues and Solutions
+
+5. **Database Connection Issues:**
    ```bash
    # Check database status
    sudo systemctl status postgresql
@@ -531,14 +655,20 @@ chmod +x /home/sdgapp/backup-production.sh
    cat /home/sdgapp/sdg-platform/.env | grep -E "(DATABASE_URL|PG)"
    ```
 
-2. **Application Won't Start:**
+6. **Application Won't Start:**
    ```bash
-   # Check service logs
+   # Check PM2 logs
+   pm2 logs sdg-platform
+   
+   # Check systemd logs (if using systemd)
    sudo journalctl -u sdg-platform --no-pager -l
    
-   # Test manual start
+   # Test manual start with TypeScript
    cd /home/sdgapp/sdg-platform
-   NODE_ENV=production node server/index.js
+   NODE_ENV=production tsx server/index.ts
+   
+   # Test manual start with compiled JS
+   NODE_ENV=production node dist/index.js
    ```
 
 3. **SSL Certificate Issues:**
@@ -570,13 +700,17 @@ chmod +x /home/sdgapp/backup-production.sh
 
 ### Pre-Production
 - [ ] Database backup verified with all 588 targets + 85 indicators
+- [ ] **ES Modules imports fixed** (all .js extensions added)
+- [ ] **TypeScript execution working** (tsx or ts-node/esm tested)
 - [ ] .env file configured with production values
 - [ ] Secure session secret generated
 - [ ] SSL certificate installed and working
 - [ ] Database connectivity tested
 
 ### Production Launch
-- [ ] systemd service running and enabled
+- [ ] **PM2 or systemd service running** and enabled
+- [ ] **No TypeScript compilation errors**
+- [ ] **Application starts without ES module errors**
 - [ ] Apache2 proxy configuration working  
 - [ ] All environment variables loaded correctly
 - [ ] Admin login working
@@ -596,15 +730,33 @@ chmod +x /home/sdgapp/backup-production.sh
 ## 🎯 Quick Reference Commands
 
 ```bash
-# Service Management
+# PM2 Management (Recommended)
+pm2 status
+pm2 logs sdg-platform
+pm2 restart sdg-platform
+pm2 stop sdg-platform
+pm2 start ecosystem.config.cjs
+
+# systemd Service Management (Alternative)
 sudo systemctl restart sdg-platform
 sudo systemctl status sdg-platform
 sudo journalctl -u sdg-platform -f
+
+# TypeScript Testing
+cd /var/www/balochistan-stats-navigator
+tsx server/index.ts
+node --loader ts-node/esm --experimental-specifier-resolution=node server/index.ts
+
+# ES Modules Import Fix
+find server -name "*.ts" -exec sed -i 's/from "\.\/\([^"]*\)";/from "./\1.js";/g' {} \;
 
 # Database Access
 sudo -u postgres psql -d sdg_platform
 
 # Application Logs
+# PM2 logs
+pm2 logs sdg-platform --lines 100
+# systemd logs
 tail -f /var/log/syslog | grep sdg-platform
 
 # Resource Monitoring
@@ -614,6 +766,14 @@ sudo ss -tulpn | grep :3000
 
 # Backup Creation
 sudo -u postgres pg_dump -d sdg_platform > backup_$(date +%Y%m%d).sql
+
+# Emergency Reset (if all else fails)
+cd /var/www/balochistan-stats-navigator
+pm2 delete all
+rm -rf node_modules package-lock.json
+npm install --no-optional
+npm install -g tsx
+pm2 start ecosystem.config.cjs
 ```
 
 ---

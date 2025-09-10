@@ -5,6 +5,7 @@ import { registerRoutes } from "./routes.js";
 import { setupVite, serveStatic, log } from "./vite.js";
 import ConnectPgSimple from "connect-pg-simple";
 import { pool } from "./db.js";
+import path from "path";
 
 const app = express();
 app.use(express.json());
@@ -13,7 +14,6 @@ app.use(express.urlencoded({ extended: false }));
 // Configure PostgreSQL session store
 const PostgreSqlStore = ConnectPgSimple(session);
 
-// Session configuration with persistent PostgreSQL store
 app.use(session({
   store: new PostgreSqlStore({
     pool: pool,
@@ -23,15 +23,16 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: process.env.NODE_ENV === 'production', // Auto-enable HTTPS in production
+    secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    maxAge: 24 * 60 * 60 * 1000
   }
 }));
 
+// Logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
-  const path = req.path;
+  const pathReq = req.path;
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
   const originalResJson = res.json;
@@ -42,16 +43,10 @@ app.use((req, res, next) => {
 
   res.on("finish", () => {
     const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
+    if (pathReq.startsWith("/api")) {
+      let logLine = `${req.method} ${pathReq} ${res.statusCode} in ${duration}ms`;
+      if (capturedJsonResponse) logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+      if (logLine.length > 80) logLine = logLine.slice(0, 79) + "…";
       log(logLine);
     }
   });
@@ -62,26 +57,36 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
+  // Error handling middleware
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 
     res.status(status).json({ message });
-    throw err;
+    // removed throw err to prevent crashing
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
+  // Development / Vite
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
+
+    // Catch-all route: serve index.js instead of index.html
+    app.get('*', (_req: Request, res: Response) => {
+      const jsFile = path.resolve(__dirname, 'dist', 'index.js');
+      res.sendFile(jsFile, (err) => {
+        if (err) {
+          console.error("Error serving index.js:", err);
+          res.status(500).send("Internal Server Error");
+        }
+      });
+    });
   }
 
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
+  // Prevent hanging connections
+  server.setTimeout(60000); // 60s
+
   const port = 5000;
   server.listen({
     port,

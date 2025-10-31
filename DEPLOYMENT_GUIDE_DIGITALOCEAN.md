@@ -101,7 +101,8 @@ NODE_ENV=production
 PORT=5001
 
 # Remote PostgreSQL Database (Aiven)
-REMOTE_DATABASE_URL=postgresql://avnadmin:AVNS_VDsa_x3fCM-vlgPZpbX@pg-22e1d53b-syedazambaloch-be27.d.aivencloud.com:14517/bbos
+# Replace with your actual database connection string
+REMOTE_DATABASE_URL=postgresql://username:password@host:port/database
 
 # Session Secret (generate a strong random string)
 SESSION_SECRET=your-super-secret-random-string-change-this
@@ -448,8 +449,8 @@ sudo apache2ctl configtest
 
 ### Database Connection Issues
 ```bash
-# Test database connection
-psql "postgresql://avnadmin:AVNS_VDsa_x3fCM-vlgPZpbX@pg-22e1d53b-syedazambaloch-be27.d.aivencloud.com:14517/bbos"
+# Test database connection (replace with your actual credentials)
+psql "postgresql://username:password@host:port/database"
 ```
 
 ### SSL Certificate Issues

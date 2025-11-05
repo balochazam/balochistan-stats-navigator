@@ -4,6 +4,8 @@
 This is a full-stack data collection management system with a public-first approach, designed to enable organizations to create structured forms, manage data collection, and publish transparent reports for public access. It features interactive charts and visualizations for published reports and secure admin access for data management. The system supports role-based access control with department-based data isolation. The project aims to provide a comprehensive SDG Dashboard system, integrating authentic Balochistan data and supporting all phases of SDG implementation, from data entry to progress tracking and visualization.
 
 ## Recent Changes (November 2025)
+- **Critical Security Fix - Password Authentication**: Implemented proper password authentication using bcrypt (salt rounds: 10) with password hashing on user creation and password verification on login. Added password_hash field to profiles schema (nullable for legacy users). All API responses now sanitized to prevent password hash exposure. Added admin password reset endpoint for legacy user migration. Minimum password length: 6 characters enforced across all endpoints.
+- **Production Static File Serving Fix**: Corrected production build path from `dist/` to `dist/public/` to resolve blank screen deployment issue with MIME type errors
 - **Production Deployment Hardening**: Complete refactoring of configuration management to support deployment on any server environment (Digital Ocean, AWS, Azure, bare metal)
 - **Configuration Externalization**: Removed all hardcoded values (PORT, HOST, timeouts) and replaced with environment variables with sensible defaults
 - **Enhanced Database Configuration**: Smart SSL defaults (enabled for remote databases, disabled for localhost), support for custom CA certificates, connection pooling configuration, multiple PostgreSQL providers (Aiven, AWS RDS, Azure, self-hosted)
@@ -64,7 +66,7 @@ Preferred communication style: Simple, everyday language.
 - **Enhanced Indicator Schema**: Extended with `data_structure`, `validation_rules`, `aggregation_methods`, `disaggregation_categories`, and `data_quality_requirements` fields to support complex multi-dimensional indicators with 14+ comprehensive indicator types.
 
 ### Key Components & Features
-- **Authentication & Authorization**: Supabase Auth, admin-only user creation, two-tier role system (admin, data_entry_user), RLS, department-based access control.
+- **Authentication & Authorization**: Secure bcrypt-based password authentication with hashing (10 salt rounds), session-based authentication using PostgreSQL session store, admin-only user creation, two-tier role system (admin, data_entry_user), department-based access control, admin password reset functionality for legacy users.
 - **Form Management**: Dynamic builder with multiple field types, reference data integration, primary/secondary column designation, validation, hierarchical sub-headers, and auto-generated field names.
 - **Schedule Management**: Time-bounded collection periods, form association, status tracking, and business validation rules.
 - **Data Collection**: Dynamic form rendering, real-time submission tracking, progress monitoring, and department-based organization.

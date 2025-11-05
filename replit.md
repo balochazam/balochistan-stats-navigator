@@ -3,7 +3,17 @@
 ## Overview
 This is a full-stack data collection management system with a public-first approach, designed to enable organizations to create structured forms, manage data collection, and publish transparent reports for public access. It features interactive charts and visualizations for published reports and secure admin access for data management. The system supports role-based access control with department-based data isolation. The project aims to provide a comprehensive SDG Dashboard system, integrating authentic Balochistan data and supporting all phases of SDG implementation, from data entry to progress tracking and visualization.
 
-## Recent Changes (August 2025)
+## Recent Changes (November 2025)
+- **Production Deployment Hardening**: Complete refactoring of configuration management to support deployment on any server environment (Digital Ocean, AWS, Azure, bare metal)
+- **Configuration Externalization**: Removed all hardcoded values (PORT, HOST, timeouts) and replaced with environment variables with sensible defaults
+- **Enhanced Database Configuration**: Smart SSL defaults (enabled for remote databases, disabled for localhost), support for custom CA certificates, connection pooling configuration, multiple PostgreSQL providers (Aiven, AWS RDS, Azure, self-hosted)
+- **Session Management Improvements**: Trust proxy support for reverse proxies (nginx/Apache), configurable session TTL, cookie domain, and security settings
+- **Health Monitoring Endpoints**: Added `/health` and `/ready` endpoints for production monitoring, load balancers, and Kubernetes deployments
+- **Deployment Scripts**: Added PM2 integration scripts, database migration commands, and deployment setup automation
+- **Comprehensive Documentation**: Created detailed deployment checklist (DEPLOYMENT_CHECKLIST.md), comprehensive .env.example with all configuration options documented
+- **Secure Defaults**: SSL enabled by default for remote databases, localhost auto-detection, proper security headers and cookie configuration
+
+## Previous Changes (August-September 2025)
 - **Complete SDG Framework Implementation**: Successfully populated database with 81 authentic UN SDG indicators from Goals 1-5
 - **Authentic UN Data Structure**: All indicators include proper tier classification, custodian agencies, measurement units, and methodologies
 - **Comprehensive Indicator Coverage**: Goals 1-5 fully populated with all official targets and indicators (13+14+27+11+14 = 79 indicators)
@@ -40,11 +50,13 @@ Preferred communication style: Simple, everyday language.
 - **Dashboard-Style Management**: SDG Goals Management now features dashboard-style visualizations with progress charts, statistics cards, and grid layouts matching the original SDG Dashboard design
 
 ### Backend Architecture
-- **Runtime**: Node.js with Express framework
-- **Database**: PostgreSQL (via Supabase)
-- **ORM**: Drizzle ORM (configured, but primarily uses Supabase client)
-- **Authentication**: Supabase Auth with Row Level Security (RLS)
-- **API Architecture**: RESTful API design, including 15+ endpoints for the SDG Dashboard system.
+- **Runtime**: Node.js 20.x with Express framework
+- **Database**: PostgreSQL 14+ (remote Aiven or self-hosted)
+- **ORM**: Drizzle ORM for schema and migrations
+- **Session Store**: PostgreSQL (connect-pg-simple)
+- **API Architecture**: RESTful API design, including 15+ endpoints for the SDG Dashboard system
+- **Process Management**: PM2 cluster mode for production
+- **Deployment**: Supports Digital Ocean, AWS EC2, Azure VM, bare metal, Docker
 
 ### Database Design
 - **Core Entities**: Users, Profiles, Departments, Data Banks, Forms, Schedules, Form Submissions.
@@ -64,11 +76,13 @@ Preferred communication style: Simple, everyday language.
 ## External Dependencies
 
 ### Core Dependencies
-- **Supabase**: Backend-as-a-Service for database, authentication, and real-time features.
-- **Neon Database**: PostgreSQL hosting (configured in Drizzle, but using Supabase).
-- **Shadcn/ui**: Modern React component library.
-- **React Query**: Server state management and caching.
-- **Zod**: Schema validation.
+- **PostgreSQL**: Primary database (Aiven cloud hosting, supports any PostgreSQL 14+ provider)
+- **Shadcn/ui**: Modern React component library
+- **React Query (TanStack Query v5)**: Server state management and caching
+- **Zod**: Schema validation
+- **Drizzle ORM**: Type-safe database operations and migrations
+- **PM2**: Production process manager
+- **Express Session**: PostgreSQL-backed session management
 
 ### Development Tools
 - **TypeScript**: Type safety.

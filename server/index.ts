@@ -55,44 +55,56 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const server = await registerRoutes(app);
+  try {
+    log("Starting server initialization...");
+    
+    // Verify required environment variables
+    if (!process.env.SESSION_SECRET) {
+      log("WARNING: SESSION_SECRET not set, using fallback (not recommended for production)");
+    }
+    
+    if (!process.env.REMOTE_DATABASE_URL && !process.env.DATABASE_URL) {
+      throw new Error("Database connection not configured. Set REMOTE_DATABASE_URL or DATABASE_URL environment variable.");
+    }
+    
+    log("Registering routes...");
+    const server = await registerRoutes(app);
 
-  // Error handling middleware
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+    // Error handling middleware
+    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+      const status = err.status || err.statusCode || 500;
+      const message = err.message || "Internal Server Error";
 
-    res.status(status).json({ message });
-    // removed throw err to prevent crashing
-  });
-
-  // Development / Vite
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
-
-    // Catch-all route: serve index.js instead of index.html
-    app.get('*', (_req: Request, res: Response) => {
-      const jsFile = path.resolve(__dirname, 'dist', 'index.js');
-      res.sendFile(jsFile, (err) => {
-        if (err) {
-          console.error("Error serving index.js:", err);
-          res.status(500).send("Internal Server Error");
-        }
-      });
+      log(`Error: ${status} - ${message}`);
+      res.status(status).json({ message });
+      // removed throw err to prevent crashing
     });
+
+    // Development / Vite
+    if (app.get("env") === "development") {
+      log("Setting up Vite development server...");
+      await setupVite(app, server);
+    } else {
+      log("Setting up static file serving for production...");
+      serveStatic(app);
+    }
+
+    // Prevent hanging connections
+    server.setTimeout(60000); // 60s
+
+    const port = 5000;
+    server.listen({
+      port,
+      host: "0.0.0.0",
+      reusePort: true,
+    }, () => {
+      log(`✓ Server successfully started on port ${port}`);
+      log(`✓ Environment: ${app.get("env")}`);
+      log(`✓ Database connected: ${process.env.REMOTE_DATABASE_URL ? 'Remote PostgreSQL (Aiven)' : 'Local PostgreSQL'}`);
+    });
+  } catch (error) {
+    console.error("Fatal error during server initialization:");
+    console.error(error);
+    process.exit(1);
   }
-
-  // Prevent hanging connections
-  server.setTimeout(60000); // 60s
-
-  const port = 5000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
-  });
 })();

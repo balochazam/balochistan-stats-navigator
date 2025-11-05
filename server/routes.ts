@@ -4,6 +4,12 @@ import { storage } from "./storage.js";
 import { insertProfileSchema, insertDepartmentSchema, insertDataBankSchema, insertDataBankEntrySchema, insertFormSchema, insertFormFieldSchema, insertFieldGroupSchema, insertScheduleSchema, insertScheduleFormSchema, insertFormSubmissionSchema, insertScheduleFormCompletionSchema, insertSdgGoalSchema, insertSdgTargetSchema, insertSdgIndicatorSchema, insertSdgDataSourceSchema, insertSdgIndicatorValueSchema, insertSdgProgressCalculationSchema } from "@shared/schema";
 import bcrypt from "bcryptjs";
 
+// Helper function to sanitize profile data (remove sensitive fields)
+function sanitizeProfile(profile: any) {
+  const { password_hash, ...safeProfile } = profile;
+  return safeProfile;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Simple authentication routes for demo purposes
   app.post('/api/auth/register', async (req, res) => {
@@ -39,7 +45,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.status(201).json({ 
         user: { id: profile.id, email: profile.email },
-        profile,
+        profile: sanitizeProfile(profile),
         session: { access_token: userId, user: { id: profile.id, email: profile.email } }
       });
     } catch (error) {
@@ -78,7 +84,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.status(201).json({ 
         user: { id: profile.id, email: profile.email },
-        profile
+        profile: sanitizeProfile(profile)
       });
     } catch (error) {
       console.error('User creation failed:', error);
@@ -99,6 +105,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
+      // Check if user has a password set
+      if (!profile.password_hash) {
+        return res.status(403).json({ 
+          error: 'Password not set. Please contact an administrator to set your password.' 
+        });
+      }
+
       // Verify password
       const isValidPassword = await bcrypt.compare(password, profile.password_hash);
       if (!isValidPassword) {
@@ -110,7 +123,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({
         user: { id: profile.id, email: profile.email },
-        profile,
+        profile: sanitizeProfile(profile),
         session: { access_token: profile.id, user: { id: profile.id, email: profile.email } }
       });
     } catch (error) {
@@ -138,7 +151,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({
         user: { id: profile.id, email: profile.email },
-        profile,
+        profile: sanitizeProfile(profile),
         session: { access_token: userId, user: { id: profile.id, email: profile.email } }
       });
     } catch (error) {
@@ -175,10 +188,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Filter profiles by department
         const allProfiles = await storage.getAllProfiles();
         const filteredProfiles = allProfiles.filter(profile => profile.department_id === department_id);
-        res.json(filteredProfiles);
+        res.json(filteredProfiles.map(sanitizeProfile));
       } else {
         const profiles = await storage.getAllProfiles();
-        res.json(profiles);
+        res.json(profiles.map(sanitizeProfile));
       }
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch profiles' });
@@ -191,7 +204,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!profile) {
         return res.status(404).json({ error: 'Profile not found' });
       }
-      res.json(profile);
+      res.json(sanitizeProfile(profile));
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch profile' });
     }
@@ -203,7 +216,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!profile) {
         return res.status(404).json({ error: 'Profile not found' });
       }
-      res.json(profile);
+      res.json(sanitizeProfile(profile));
     } catch (error) {
       res.status(500).json({ error: 'Failed to update profile' });
     }
@@ -213,9 +226,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertProfileSchema.parse(req.body);
       const profile = await storage.createProfile(validatedData);
-      res.status(201).json(profile);
+      res.status(201).json(sanitizeProfile(profile));
     } catch (error) {
       res.status(400).json({ error: 'Invalid profile data' });
+    }
+  });
+
+  // Admin endpoint to reset user password
+  app.post('/api/admin/reset-password', requireAuth, async (req: any, res) => {
+    try {
+      // Check if user is admin
+      if (req.userProfile.role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+
+      const { user_id, new_password } = req.body;
+      
+      if (!user_id || !new_password) {
+        return res.status(400).json({ error: 'User ID and new password are required' });
+      }
+
+      if (new_password.length < 6) {
+        return res.status(400).json({ error: 'Password must be at least 6 characters' });
+      }
+
+      // Hash the new password
+      const password_hash = await bcrypt.hash(new_password, 10);
+
+      // Update the user's password
+      const updatedProfile = await storage.updateProfile(user_id, { password_hash });
+      
+      if (!updatedProfile) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      res.json({ 
+        message: 'Password reset successfully',
+        user: { id: updatedProfile.id, email: updatedProfile.email },
+        profile: sanitizeProfile(updatedProfile)
+      });
+    } catch (error) {
+      console.error('Password reset failed:', error);
+      res.status(500).json({ error: 'Password reset failed' });
     }
   });
 
@@ -225,7 +277,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!profile) {
         return res.status(404).json({ error: 'Profile not found' });
       }
-      res.json(profile);
+      res.json(sanitizeProfile(profile));
     } catch (error) {
       res.status(500).json({ error: 'Failed to update profile' });
     }

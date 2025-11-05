@@ -38,7 +38,7 @@ export const departments = pgTable("departments", {
 export const profiles = pgTable("profiles", {
   id: uuid("id").primaryKey(),
   email: text("email").notNull(),
-  password_hash: text("password_hash").notNull(),
+  password_hash: text("password_hash"),
   full_name: text("full_name"),
   role: userRoleEnum("role").notNull().default("data_entry_user"),
   department_id: uuid("department_id").references(() => departments.id),

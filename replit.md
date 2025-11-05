@@ -4,16 +4,12 @@
 This is a full-stack data collection management system with a public-first approach, designed to enable organizations to create structured forms, manage data collection, and publish transparent reports for public access. It features interactive charts and visualizations for published reports and secure admin access for data management. The system supports role-based access control with department-based data isolation. The project aims to provide a comprehensive SDG Dashboard system, integrating authentic Balochistan data and supporting all phases of SDG implementation, from data entry to progress tracking and visualization.
 
 ## Recent Changes (November 2025)
+- **Session Configuration Simplified (Latest)**: Streamlined session/cookie configuration by removing complex environment-based conditionals. Trust proxy now enabled by default, session cookies use simple secure defaults (sameSite: 'lax', 24hr expiry, httpOnly). Removed aggressive security settings that caused login failures in production deployments behind reverse proxies (Apache/Nginx).
+- **Comprehensive Deployment Documentation**: Created detailed Ubuntu + Apache2 + PM2 deployment guide (`DEPLOYMENT_GUIDE_PM2_APACHE2.md`) specifically for multi-app server environments with port conflict management, Let's Encrypt SSL setup, and complete step-by-step instructions. Added quick reference card (`DEPLOYMENT_QUICK_REFERENCE.md`) for daily operations.
+- **Temporary Admin Signup Page**: Created `/temp-signup` route for bootstrapping first admin user without authentication (must be removed after creating admin account for security).
 - **Critical Security Fix - Password Authentication**: Implemented proper password authentication using bcrypt (salt rounds: 10) with password hashing on user creation and password verification on login. Added password_hash field to profiles schema (nullable for legacy users). All API responses now sanitized to prevent password hash exposure. Added admin password reset endpoint for legacy user migration. Minimum password length: 6 characters enforced across all endpoints.
 - **Production Static File Serving Fix**: Corrected production build path from `dist/` to `dist/public/` to resolve blank screen deployment issue with MIME type errors
-- **Production Deployment Hardening**: Complete refactoring of configuration management to support deployment on any server environment (Digital Ocean, AWS, Azure, bare metal)
-- **Configuration Externalization**: Removed all hardcoded values (PORT, HOST, timeouts) and replaced with environment variables with sensible defaults
-- **Enhanced Database Configuration**: Smart SSL defaults (enabled for remote databases, disabled for localhost), support for custom CA certificates, connection pooling configuration, multiple PostgreSQL providers (Aiven, AWS RDS, Azure, self-hosted)
-- **Session Management Improvements**: Trust proxy support for reverse proxies (nginx/Apache), configurable session TTL, cookie domain, and security settings
-- **Health Monitoring Endpoints**: Added `/health` and `/ready` endpoints for production monitoring, load balancers, and Kubernetes deployments
-- **Deployment Scripts**: Added PM2 integration scripts, database migration commands, and deployment setup automation
-- **Comprehensive Documentation**: Created detailed deployment checklist (DEPLOYMENT_CHECKLIST.md), comprehensive .env.example with all configuration options documented
-- **Secure Defaults**: SSL enabled by default for remote databases, localhost auto-detection, proper security headers and cookie configuration
+- **Production Deployment Hardening**: Complete refactoring of configuration management to support deployment on any server environment (Digital Ocean, AWS, Azure, bare metal, Replit deployments)
 
 ## Previous Changes (August-September 2025)
 - **Complete SDG Framework Implementation**: Successfully populated database with 81 authentic UN SDG indicators from Goals 1-5

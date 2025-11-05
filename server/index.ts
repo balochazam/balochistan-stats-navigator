@@ -14,18 +14,28 @@ app.use(express.urlencoded({ extended: false }));
 // Configure PostgreSQL session store
 const PostgreSqlStore = ConnectPgSimple(session);
 
+// Configure trust proxy if behind reverse proxy (nginx, Apache, etc.)
+if (process.env.TRUST_PROXY === 'true') {
+  app.set('trust proxy', 1);
+}
+
 app.use(session({
   store: new PostgreSqlStore({
     pool: pool,
     createTableIfMissing: true,
+    tableName: process.env.SESSION_TABLE_NAME || 'session',
+    ttl: parseInt(process.env.SESSION_TTL || '86400', 10), // 24 hours default
   }),
   secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
   resave: false,
   saveUninitialized: false,
+  name: process.env.SESSION_COOKIE_NAME || 'connect.sid',
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000
+    maxAge: parseInt(process.env.SESSION_TTL || '86400', 10) * 1000,
+    domain: process.env.SESSION_COOKIE_DOMAIN || undefined,
+    sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
   }
 }));
 
@@ -90,17 +100,23 @@ app.use((req, res, next) => {
     }
 
     // Prevent hanging connections
-    server.setTimeout(60000); // 60s
+    const timeout = parseInt(process.env.SERVER_TIMEOUT || '60000', 10);
+    server.setTimeout(timeout);
 
-    const port = 5000;
+    // Use environment variables for port and host with sensible defaults
+    const port = parseInt(process.env.PORT || '5000', 10);
+    const host = process.env.HOST || '0.0.0.0';
+    
     server.listen({
       port,
-      host: "0.0.0.0",
+      host,
       reusePort: true,
     }, () => {
-      log(`✓ Server successfully started on port ${port}`);
+      log(`✓ Server successfully started`);
+      log(`✓ Listening on: ${host}:${port}`);
       log(`✓ Environment: ${app.get("env")}`);
-      log(`✓ Database connected: ${process.env.REMOTE_DATABASE_URL ? 'Remote PostgreSQL (Aiven)' : 'Local PostgreSQL'}`);
+      log(`✓ Database: ${process.env.REMOTE_DATABASE_URL ? 'Remote PostgreSQL' : 'Local PostgreSQL'}`);
+      log(`✓ Trust Proxy: ${process.env.TRUST_PROXY === 'true' ? 'enabled' : 'disabled'}`);
     });
   } catch (error) {
     console.error("Fatal error during server initialization:");

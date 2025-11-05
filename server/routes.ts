@@ -1330,6 +1330,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Health check endpoint for monitoring and load balancers
+  app.get('/health', async (_req, res) => {
+    try {
+      // Check database connectivity
+      await storage.getDepartments();
+      
+      res.status(200).json({
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV || 'development',
+        database: 'connected',
+        uptime: process.uptime(),
+      });
+    } catch (error) {
+      res.status(503).json({
+        status: 'unhealthy',
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV || 'development',
+        database: 'disconnected',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  });
+
+  // Readiness check endpoint (for Kubernetes, Docker, etc.)
+  app.get('/ready', async (_req, res) => {
+    try {
+      // Verify critical dependencies
+      await storage.getDepartments();
+      res.status(200).json({ ready: true });
+    } catch (error) {
+      res.status(503).json({ ready: false });
+    }
+  });
+
   const server = createServer(app);
   return server;
 }

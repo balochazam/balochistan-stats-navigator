@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage.js";
 import { insertProfileSchema, insertDepartmentSchema, insertDataBankSchema, insertDataBankEntrySchema, insertFormSchema, insertFormFieldSchema, insertFieldGroupSchema, insertScheduleSchema, insertScheduleFormSchema, insertFormSubmissionSchema, insertScheduleFormCompletionSchema, insertSdgGoalSchema, insertSdgTargetSchema, insertSdgIndicatorSchema, insertSdgDataSourceSchema, insertSdgIndicatorValueSchema, insertSdgProgressCalculationSchema } from "@shared/schema";
+import bcrypt from "bcryptjs";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Simple authentication routes for demo purposes
@@ -9,11 +10,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { email, password, full_name } = req.body;
       
+      if (!password || password.length < 6) {
+        return res.status(400).json({ error: 'Password must be at least 6 characters' });
+      }
+      
       // Check if user already exists
       const existingProfile = await storage.getProfileByEmail(email);
       if (existingProfile) {
         return res.status(400).json({ error: 'User already exists' });
       }
+
+      // Hash the password
+      const password_hash = await bcrypt.hash(password, 10);
 
       // Create a simple user ID (in production, use proper auth service)
       const userId = crypto.randomUUID();
@@ -21,6 +29,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const profile = await storage.createProfile({
         id: userId,
         email,
+        password_hash,
         full_name: full_name || '',
         role: 'data_entry_user'
       });
@@ -42,11 +51,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { email, password, full_name, role, department_id } = req.body;
       
+      if (!password || password.length < 6) {
+        return res.status(400).json({ error: 'Password must be at least 6 characters' });
+      }
+      
       // Check if user already exists
       const existingProfile = await storage.getProfileByEmail(email);
       if (existingProfile) {
         return res.status(400).json({ error: 'User already exists with this email' });
       }
+
+      // Hash the password
+      const password_hash = await bcrypt.hash(password, 10);
 
       // Create user ID
       const userId = crypto.randomUUID();
@@ -54,6 +70,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const profile = await storage.createProfile({
         id: userId,
         email,
+        password_hash,
         full_name: full_name || '',
         role: role || 'data_entry_user',
         department_id: department_id || null
@@ -73,8 +90,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { email, password } = req.body;
       
+      if (!email || !password) {
+        return res.status(400).json({ error: 'Email and password are required' });
+      }
+      
       const profile = await storage.getProfileByEmail(email);
       if (!profile) {
+        return res.status(401).json({ error: 'Invalid credentials' });
+      }
+
+      // Verify password
+      const isValidPassword = await bcrypt.compare(password, profile.password_hash);
+      if (!isValidPassword) {
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 

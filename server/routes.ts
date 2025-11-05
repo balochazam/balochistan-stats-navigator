@@ -11,6 +11,46 @@ function sanitizeProfile(profile: any) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // TEMPORARY: Public signup endpoint for creating first admin user
+  // TODO: Remove this endpoint after creating your admin account
+  app.post('/api/auth/temp-signup', async (req, res) => {
+    try {
+      const { email, password, full_name } = req.body;
+      
+      if (!password || password.length < 6) {
+        return res.status(400).json({ error: 'Password must be at least 6 characters' });
+      }
+      
+      // Check if user already exists
+      const existingProfile = await storage.getProfileByEmail(email);
+      if (existingProfile) {
+        return res.status(400).json({ error: 'User already exists' });
+      }
+
+      // Hash the password
+      const password_hash = await bcrypt.hash(password, 10);
+
+      // Create admin user
+      const userId = crypto.randomUUID();
+      
+      const profile = await storage.createProfile({
+        id: userId,
+        email,
+        password_hash,
+        full_name: full_name || '',
+        role: 'admin' // Always create as admin
+      });
+
+      res.status(201).json({ 
+        message: 'Admin account created successfully',
+        user: { id: profile.id, email: profile.email }
+      });
+    } catch (error) {
+      console.error('Temp signup failed:', error);
+      res.status(500).json({ error: 'Failed to create admin account' });
+    }
+  });
+
   // Simple authentication routes for demo purposes
   app.post('/api/auth/register', async (req, res) => {
     try {

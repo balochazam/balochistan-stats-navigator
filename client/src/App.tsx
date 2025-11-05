@@ -24,6 +24,7 @@ import { IndicatorDashboardWrapper } from "./pages/IndicatorDashboardWrapper";
 import GoalDetailPage from "./pages/GoalDetailPage";
 import { IndicatorDetailsPage } from "./pages/IndicatorDetailsPage";
 import { Toaster as HotToaster } from 'react-hot-toast';
+import TempSignup from "./pages/TempSignup";
 
 
 const queryClient = new QueryClient({
@@ -85,6 +86,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<PublicLanding />} />
             <Route path="/public/reports/:scheduleId" element={<PublicReportView />} />
+            <Route path="/temp-signup" element={<TempSignup />} />
             <Route path="/auth" element={<AdminLoginPage />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/profile" element={<Profile />} />

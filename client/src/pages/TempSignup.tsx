@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
 
 const signupSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -34,10 +33,22 @@ export default function TempSignup() {
   async function onSubmit(data: SignupFormData) {
     setIsSubmitting(true);
     try {
-      await apiRequest("/api/auth/temp-signup", "POST", {
-        ...data,
-        role: "admin",
+      const response = await fetch("/api/auth/temp-signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          ...data,
+          role: "admin",
+        }),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to create account");
+      }
 
       setSuccess(true);
       toast({

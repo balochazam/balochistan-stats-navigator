@@ -35,7 +35,7 @@ app.use(session({
     httpOnly: true,
     maxAge: parseInt(process.env.SESSION_TTL || '86400', 10) * 1000,
     domain: process.env.SESSION_COOKIE_DOMAIN || undefined,
-    sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+    sameSite: 'lax',
   }
 }));
 

@@ -25,6 +25,7 @@ import {
   Target
 } from 'lucide-react';
 import logoPath from "@assets/6f64eb753133d8c8693ef11f8af6f2e5_1750318410601.png";
+import { AnalyticsChatDrawer } from '@/components/analytics/AnalyticsChatDrawer';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -271,6 +272,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           </div>
         </main>
       </div>
+      <AnalyticsChatDrawer ownerId={profile?.id} />
     </div>
   );
 };

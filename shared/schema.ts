@@ -1,4 +1,4 @@
-import { pgTable, text, uuid, timestamp, boolean, integer, date, jsonb, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, uuid, timestamp, boolean, integer, date, jsonb, pgEnum, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -28,11 +28,14 @@ export const improvementDirectionEnum = pgEnum("improvement_direction", ["increa
 // Departments table
 export const departments = pgTable("departments", {
   id: uuid("id").primaryKey().defaultRandom(),
-  name: text("name").notNull().unique(),
+  tenant_id: uuid("tenant_id").notNull(),
+  name: text("name").notNull(),
   description: text("description"),
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow(),
-});
+}, (table) => ({
+  tenantNameUnique: uniqueIndex("departments_tenant_name_unique").on(table.tenant_id, table.name),
+}));
 
 // Profiles table (users)
 export const profiles = pgTable("profiles", {
@@ -41,6 +44,8 @@ export const profiles = pgTable("profiles", {
   password_hash: text("password_hash"),
   full_name: text("full_name"),
   role: userRoleEnum("role").notNull().default("data_entry_user"),
+  // Root admins use their own id as tenant_id; users created by them inherit it.
+  tenant_id: uuid("tenant_id").notNull(),
   department_id: uuid("department_id").references(() => departments.id),
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow(),
@@ -49,6 +54,7 @@ export const profiles = pgTable("profiles", {
 // Data banks table
 export const data_banks = pgTable("data_banks", {
   id: uuid("id").primaryKey().defaultRandom(),
+  tenant_id: uuid("tenant_id").notNull(),
   name: text("name").notNull(),
   description: text("description"),
   department_id: uuid("department_id").references(() => departments.id),
@@ -74,6 +80,7 @@ export const data_bank_entries = pgTable("data_bank_entries", {
 // Forms table
 export const forms = pgTable("forms", {
   id: uuid("id").primaryKey().defaultRandom(),
+  tenant_id: uuid("tenant_id").notNull(),
   name: text("name").notNull(),
   description: text("description"),
   category: formCategoryEnum("category").notNull().default("bbos"), // distinguish between BBOS and SDG forms
@@ -122,7 +129,8 @@ export const form_fields = pgTable("form_fields", {
 // Schedules table
 export const schedules = pgTable("schedules", {
   id: uuid("id").primaryKey().defaultRandom(),
-  name: text("name").notNull().unique(),
+  tenant_id: uuid("tenant_id").notNull(),
+  name: text("name").notNull(),
   description: text("description"),
   start_date: date("start_date").notNull(),
   end_date: date("end_date").notNull(),
@@ -130,7 +138,9 @@ export const schedules = pgTable("schedules", {
   created_by: uuid("created_by").notNull(),
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-});
+}, (table) => ({
+  tenantNameUnique: uniqueIndex("schedules_tenant_name_unique").on(table.tenant_id, table.name),
+}));
 
 // Schedule forms junction table
 export const schedule_forms = pgTable("schedule_forms", {

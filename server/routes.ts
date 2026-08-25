@@ -38,7 +38,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email,
         password_hash,
         full_name: full_name || '',
-        role: 'admin' // Always create as admin
+        role: 'admin', // Every self-registered admin starts a new empty tenant.
+        tenant_id: userId,
       });
 
       res.status(201).json({ 
@@ -77,7 +78,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email,
         password_hash,
         full_name: full_name || '',
-        role: 'data_entry_user'
+        role: 'data_entry_user',
+        // Public registration is an isolated workspace until an admin creates users.
+        tenant_id: userId,
       });
 
       // Store user ID in session
@@ -93,8 +96,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/auth/create-user', async (req, res) => {
+  app.post('/api/auth/create-user', requireAuth, async (req: any, res) => {
     try {
+      if (req.userProfile.role !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
       const { email, password, full_name, role, department_id } = req.body;
       
       if (!password || password.length < 6) {
@@ -119,7 +125,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         password_hash,
         full_name: full_name || '',
         role: role || 'data_entry_user',
-        department_id: department_id || null
+        department_id: department_id || null,
+        tenant_id: req.userProfile.tenant_id,
       });
 
       res.status(201).json({ 
@@ -200,7 +207,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Authentication middleware
-  const requireAuth = async (req: any, res: any, next: any) => {
+  async function requireAuth(req: any, res: any, next: any) {
     const userId = (req as any).session?.userId;
     if (!userId) {
       return res.status(401).json({ error: 'Authentication required' });
@@ -217,20 +224,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       return res.status(401).json({ error: 'Authentication failed' });
     }
+  }
+
+  const belongsToTenant = (record: { tenant_id: string } | undefined, req: any) =>
+    !!record && record.tenant_id === req.userProfile.tenant_id;
+  const notFound = (res: any, resource: string) => res.status(404).json({ error: `${resource} not found` });
+  const getTenantForm = async (id: string, req: any) => {
+    const form = await storage.getForm(id);
+    return belongsToTenant(form, req) ? form : undefined;
+  };
+  const getTenantSchedule = async (id: string, req: any) => {
+    const schedule = await storage.getSchedule(id);
+    return belongsToTenant(schedule, req) ? schedule : undefined;
+  };
+  const getTenantDataBank = async (id: string, req: any) => {
+    const dataBank = await storage.getDataBank(id);
+    return belongsToTenant(dataBank, req) ? dataBank : undefined;
   };
 
   // Profile routes
-  app.get('/api/profiles', requireAuth, async (req, res) => {
+  app.get('/api/profiles', requireAuth, async (req: any, res) => {
     try {
       const { department_id } = req.query;
       
       if (department_id) {
         // Filter profiles by department
-        const allProfiles = await storage.getAllProfiles();
+        const allProfiles = (await storage.getAllProfiles()).filter(profile => profile.tenant_id === req.userProfile.tenant_id);
         const filteredProfiles = allProfiles.filter(profile => profile.department_id === department_id);
         res.json(filteredProfiles.map(sanitizeProfile));
       } else {
-        const profiles = await storage.getAllProfiles();
+        const profiles = (await storage.getAllProfiles()).filter(profile => profile.tenant_id === req.userProfile.tenant_id);
         res.json(profiles.map(sanitizeProfile));
       }
     } catch (error) {
@@ -238,10 +261,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/profiles/:id', requireAuth, async (req, res) => {
+  app.get('/api/profiles/:id', requireAuth, async (req: any, res) => {
     try {
       const profile = await storage.getProfile(req.params.id);
-      if (!profile) {
+      if (!belongsToTenant(profile, req)) {
         return res.status(404).json({ error: 'Profile not found' });
       }
       res.json(sanitizeProfile(profile));
@@ -250,9 +273,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/profiles/:id', requireAuth, async (req, res) => {
+  app.patch('/api/profiles/:id', requireAuth, async (req: any, res) => {
     try {
-      const profile = await storage.updateProfile(req.params.id, req.body);
+      const existing = await storage.getProfile(req.params.id);
+      if (!belongsToTenant(existing, req)) return notFound(res, 'Profile');
+      const { tenant_id, ...updates } = req.body;
+      const profile = await storage.updateProfile(req.params.id, updates);
       if (!profile) {
         return res.status(404).json({ error: 'Profile not found' });
       }
@@ -264,7 +290,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/profiles', requireAuth, async (req: any, res) => {
     try {
-      const validatedData = insertProfileSchema.parse(req.body);
+      const validatedData = insertProfileSchema.parse({ ...req.body, tenant_id: req.userProfile.tenant_id });
       const profile = await storage.createProfile(validatedData);
       res.status(201).json(sanitizeProfile(profile));
     } catch (error) {
@@ -294,6 +320,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const password_hash = await bcrypt.hash(new_password, 10);
 
       // Update the user's password
+      const targetProfile = await storage.getProfile(user_id);
+      if (!belongsToTenant(targetProfile, req)) return notFound(res, 'User');
       const updatedProfile = await storage.updateProfile(user_id, { password_hash });
       
       if (!updatedProfile) {
@@ -324,18 +352,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Department routes
-  app.get('/api/departments', requireAuth, async (req, res) => {
+  app.get('/api/departments', requireAuth, async (req: any, res) => {
     try {
-      const departments = await storage.getDepartments();
+      const departments = (await storage.getDepartments()).filter(d => d.tenant_id === req.userProfile.tenant_id);
       res.json(departments);
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch departments' });
     }
   });
 
-  app.post('/api/departments', requireAuth, async (req, res) => {
+  app.post('/api/departments', requireAuth, async (req: any, res) => {
     try {
-      const validatedData = insertDepartmentSchema.parse(req.body);
+      const validatedData = insertDepartmentSchema.parse({ ...req.body, tenant_id: req.userProfile.tenant_id });
       const department = await storage.createDepartment(validatedData);
       res.status(201).json(department);
     } catch (error) {
@@ -343,8 +371,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/departments/:id', requireAuth, async (req, res) => {
+  app.patch('/api/departments/:id', requireAuth, async (req: any, res) => {
     try {
+      const existing = (await storage.getDepartments()).find(d => d.id === req.params.id && d.tenant_id === req.userProfile.tenant_id);
+      if (!existing) return notFound(res, 'Department');
       const department = await storage.updateDepartment(req.params.id, req.body);
       if (!department) {
         return res.status(404).json({ error: 'Department not found' });
@@ -355,8 +385,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/departments/:id', requireAuth, async (req, res) => {
+  app.delete('/api/departments/:id', requireAuth, async (req: any, res) => {
     try {
+      const existing = (await storage.getDepartments()).find(d => d.id === req.params.id && d.tenant_id === req.userProfile.tenant_id);
+      if (!existing) return notFound(res, 'Department');
       const success = await storage.deleteDepartment(req.params.id);
       if (!success) {
         return res.status(404).json({ error: 'Department not found' });
@@ -368,19 +400,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Data Bank routes
-  app.get('/api/data-banks', requireAuth, async (req, res) => {
+  app.get('/api/data-banks', requireAuth, async (req: any, res) => {
     try {
-      const dataBanks = await storage.getDataBanks();
+      const dataBanks = (await storage.getDataBanks()).filter(db => db.tenant_id === req.userProfile.tenant_id);
       res.json(dataBanks);
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch data banks' });
     }
   });
 
-  app.get('/api/data-banks/:id', requireAuth, async (req, res) => {
+  app.get('/api/data-banks/:id', requireAuth, async (req: any, res) => {
     try {
       const dataBank = await storage.getDataBank(req.params.id);
-      if (!dataBank) {
+      if (!belongsToTenant(dataBank, req)) {
         return res.status(404).json({ error: 'Data bank not found' });
       }
       res.json(dataBank);
@@ -393,7 +425,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertDataBankSchema.parse({
         ...req.body,
-        created_by: req.userId
+        created_by: req.userId,
+        tenant_id: req.userProfile.tenant_id,
       });
       const dataBank = await storage.createDataBank(validatedData);
       res.status(201).json(dataBank);
@@ -402,8 +435,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/data-banks/:id', requireAuth, async (req, res) => {
+  app.patch('/api/data-banks/:id', requireAuth, async (req: any, res) => {
     try {
+      if (!await getTenantDataBank(req.params.id, req)) return notFound(res, 'Data bank');
       const dataBank = await storage.updateDataBank(req.params.id, req.body);
       if (!dataBank) {
         return res.status(404).json({ error: 'Data bank not found' });
@@ -414,8 +448,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/data-banks/:id', requireAuth, async (req, res) => {
+  app.delete('/api/data-banks/:id', requireAuth, async (req: any, res) => {
     try {
+      if (!await getTenantDataBank(req.params.id, req)) return notFound(res, 'Data bank');
       const success = await storage.deleteDataBank(req.params.id);
       if (!success) {
         return res.status(404).json({ error: 'Data bank not found' });
@@ -427,7 +462,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Data Bank Entry routes
-  app.get('/api/data-banks/:dataBankId/entries', requireAuth, async (req, res) => {
+  app.get('/api/data-banks/:dataBankId/entries', requireAuth, async (req: any, res) => {
     try {
       const { dataBankId } = req.params;
       
@@ -436,7 +471,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // If it doesn't look like a UUID, treat it as a name and resolve to ID
       if (!dataBankId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i)) {
-        const dataBanks = await storage.getDataBanks();
+        const dataBanks = (await storage.getDataBanks()).filter(db => db.tenant_id === req.userProfile.tenant_id);
         const dataBank = dataBanks.find(db => db.name === dataBankId);
         if (!dataBank) {
           return res.status(404).json({ error: `Data bank '${dataBankId}' not found` });
@@ -444,6 +479,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         actualDataBankId = dataBank.id;
       }
       
+      if (!await getTenantDataBank(actualDataBankId, req)) return notFound(res, 'Data bank');
       const entries = await storage.getDataBankEntries(actualDataBankId);
       res.json(entries);
     } catch (error) {
@@ -454,6 +490,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/data-banks/:dataBankId/entries', requireAuth, async (req: any, res) => {
     try {
+      if (!await getTenantDataBank(req.params.dataBankId, req)) return notFound(res, 'Data bank');
       const validatedData = insertDataBankEntrySchema.parse({
         ...req.body,
         data_bank_id: req.params.dataBankId,
@@ -466,8 +503,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/data-banks/:dataBankId/entries/:entryId', requireAuth, async (req, res) => {
+  app.put('/api/data-banks/:dataBankId/entries/:entryId', requireAuth, async (req: any, res) => {
     try {
+      if (!await getTenantDataBank(req.params.dataBankId, req)) return notFound(res, 'Data bank');
       console.log('Updating entry:', req.params.entryId, 'with data:', req.body);
       const entry = await storage.updateDataBankEntry(req.params.entryId, req.body);
       if (!entry) {
@@ -480,8 +518,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/data-banks/:dataBankId/entries/:entryId', requireAuth, async (req, res) => {
+  app.delete('/api/data-banks/:dataBankId/entries/:entryId', requireAuth, async (req: any, res) => {
     try {
+      if (!await getTenantDataBank(req.params.dataBankId, req)) return notFound(res, 'Data bank');
       console.log('Deleting entry:', req.params.entryId);
       const success = await storage.deleteDataBankEntry(req.params.entryId);
       console.log('Delete success:', success);
@@ -522,7 +561,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Form routes
   app.get('/api/forms', requireAuth, async (req: any, res) => {
     try {
-      const forms = await storage.getForms();
+      const forms = (await storage.getForms()).filter(form => form.tenant_id === req.userProfile.tenant_id);
       
       // Filter forms based on user department (non-admin users only see their department's forms)
       if (req.userProfile.role !== 'admin') {
@@ -538,10 +577,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/forms/:id', requireAuth, async (req, res) => {
+  app.get('/api/forms/:id', requireAuth, async (req: any, res) => {
     try {
       const form = await storage.getForm(req.params.id);
-      if (!form) {
+      if (!belongsToTenant(form, req)) {
         return res.status(404).json({ error: 'Form not found' });
       }
       res.json(form);
@@ -554,7 +593,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertFormSchema.parse({
         ...req.body,
-        created_by: req.userId
+        created_by: req.userId,
+        tenant_id: req.userProfile.tenant_id,
       });
       const form = await storage.createForm(validatedData);
       res.status(201).json(form);
@@ -563,8 +603,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/forms/:id', requireAuth, async (req, res) => {
+  app.patch('/api/forms/:id', requireAuth, async (req: any, res) => {
     try {
+      if (!await getTenantForm(req.params.id, req)) return notFound(res, 'Form');
       const form = await storage.updateForm(req.params.id, req.body);
       if (!form) {
         return res.status(404).json({ error: 'Form not found' });
@@ -576,8 +617,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/forms/:id', requireAuth, async (req, res) => {
+  app.put('/api/forms/:id', requireAuth, async (req: any, res) => {
     try {
+      if (!await getTenantForm(req.params.id, req)) return notFound(res, 'Form');
       const form = await storage.updateForm(req.params.id, req.body);
       if (!form) {
         return res.status(404).json({ error: 'Form not found' });
@@ -589,8 +631,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/forms/:id', requireAuth, async (req, res) => {
+  app.delete('/api/forms/:id', requireAuth, async (req: any, res) => {
     try {
+      if (!await getTenantForm(req.params.id, req)) return notFound(res, 'Form');
       console.log('Attempting to delete form:', req.params.id);
       const success = await storage.deleteForm(req.params.id);
       console.log('Delete form result:', success);
@@ -605,8 +648,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Field Group routes
-  app.get('/api/forms/:formId/groups', requireAuth, async (req, res) => {
+  app.get('/api/forms/:formId/groups', requireAuth, async (req: any, res) => {
     try {
+      if (!await getTenantForm(req.params.formId, req)) return notFound(res, 'Form');
       const groups = await storage.getFieldGroups(req.params.formId);
       res.json(groups);
     } catch (error) {
@@ -616,6 +660,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/field-groups', requireAuth, async (req, res) => {
     try {
+      const requestedGroups = Array.isArray(req.body) ? req.body : [req.body];
+      for (const groupData of requestedGroups) {
+        if (!await getTenantForm(groupData.form_id, req)) return notFound(res, 'Form');
+      }
       if (Array.isArray(req.body)) {
         const createdGroups = [];
         for (const groupData of req.body) {
@@ -660,8 +708,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Form Field routes
-  app.get('/api/forms/:formId/fields', requireAuth, async (req, res) => {
+  app.get('/api/forms/:formId/fields', requireAuth, async (req: any, res) => {
     try {
+      if (!await getTenantForm(req.params.formId, req)) return notFound(res, 'Form');
       const fields = await storage.getFormFields(req.params.formId);
       res.json(fields);
     } catch (error) {
@@ -670,8 +719,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Alternative route for form fields (used by client)
-  app.get('/api/form-fields/:formId', requireAuth, async (req, res) => {
+  app.get('/api/form-fields/:formId', requireAuth, async (req: any, res) => {
     try {
+      if (!await getTenantForm(req.params.formId, req)) return notFound(res, 'Form');
       const fields = await storage.getFormFields(req.params.formId);
       res.json(fields);
     } catch (error) {
@@ -679,8 +729,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/forms/:formId/fields', requireAuth, async (req, res) => {
+  app.post('/api/forms/:formId/fields', requireAuth, async (req: any, res) => {
     try {
+      if (!await getTenantForm(req.params.formId, req)) return notFound(res, 'Form');
       const validatedData = insertFormFieldSchema.parse({
         ...req.body,
         form_id: req.params.formId
@@ -697,6 +748,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       if (!Array.isArray(req.body)) {
         return res.status(400).json({ error: 'Request body must be an array of form fields' });
+      }
+
+      for (const fieldData of req.body) {
+        if (!await getTenantForm(fieldData.form_id, req)) return notFound(res, 'Form');
       }
 
       console.log('Creating form fields, received data:', JSON.stringify(req.body, null, 2));
@@ -752,6 +807,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/forms/:formId/fields', requireAuth, async (req, res) => {
     try {
       const formId = req.params.formId;
+      if (!await getTenantForm(formId, req)) return notFound(res, 'Form');
       const existingFields = await storage.getFormFields(formId);
       
       // Delete all existing fields for this form
@@ -797,7 +853,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Schedule routes
   app.get('/api/schedules', requireAuth, async (req: any, res) => {
     try {
-      const schedules = await storage.getSchedules();
+      const schedules = (await storage.getSchedules()).filter(schedule => schedule.tenant_id === req.userProfile.tenant_id);
       
       // Filter schedules based on user department (non-admin users only see schedules with their department's forms)
       if (req.userProfile.role !== 'admin') {
@@ -808,7 +864,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Get all forms for user's department
-        const allForms = await storage.getForms();
+        const allForms = (await storage.getForms()).filter(form => form.tenant_id === req.userProfile.tenant_id);
         const departmentForms = allForms.filter(form => form.department_id === userDepartmentId);
         const departmentFormIds = departmentForms.map(form => form.id);
         
@@ -833,10 +889,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/schedules/:id', requireAuth, async (req, res) => {
+  app.get('/api/schedules/:id', requireAuth, async (req: any, res) => {
     try {
       const schedule = await storage.getSchedule(req.params.id);
-      if (!schedule) {
+      if (!belongsToTenant(schedule, req)) {
         return res.status(404).json({ error: 'Schedule not found' });
       }
       res.json(schedule);
@@ -849,7 +905,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertScheduleSchema.parse({
         ...req.body,
-        created_by: req.userId
+        created_by: req.userId,
+        tenant_id: req.userProfile.tenant_id,
       });
       const schedule = await storage.createSchedule(validatedData);
       res.status(201).json(schedule);
@@ -858,8 +915,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/schedules/:id', requireAuth, async (req, res) => {
+  app.patch('/api/schedules/:id', requireAuth, async (req: any, res) => {
     try {
+      if (!await getTenantSchedule(req.params.id, req)) return notFound(res, 'Schedule');
       const schedule = await storage.updateSchedule(req.params.id, req.body);
       if (!schedule) {
         return res.status(404).json({ error: 'Schedule not found' });
@@ -870,8 +928,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/schedules/:id', requireAuth, async (req, res) => {
+  app.put('/api/schedules/:id', requireAuth, async (req: any, res) => {
     try {
+      if (!await getTenantSchedule(req.params.id, req)) return notFound(res, 'Schedule');
       // Remove updated_at from request body as it should be handled by the database
       const { updated_at, ...updateData } = req.body;
       const schedule = await storage.updateSchedule(req.params.id, {
@@ -888,8 +947,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/schedules/:id', requireAuth, async (req, res) => {
+  app.delete('/api/schedules/:id', requireAuth, async (req: any, res) => {
     try {
+      if (!await getTenantSchedule(req.params.id, req)) return notFound(res, 'Schedule');
       const success = await storage.deleteSchedule(req.params.id);
       if (!success) {
         return res.status(404).json({ error: 'Schedule not found' });
@@ -901,9 +961,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Check if schedule can be published (all forms completed)
-  app.get('/api/schedules/:id/completion-status', requireAuth, async (req, res) => {
+  app.get('/api/schedules/:id/completion-status', requireAuth, async (req: any, res) => {
     try {
       const scheduleId = req.params.id;
+      if (!await getTenantSchedule(scheduleId, req)) return notFound(res, 'Schedule');
       const scheduleForms = await storage.getScheduleForms(scheduleId);
       
       if (scheduleForms.length === 0) {
@@ -953,7 +1014,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/schedule-forms', requireAuth, async (req: any, res) => {
     try {
       // Get all schedule forms with form details for department filtering
-      const allSchedules = await storage.getSchedules();
+      const allSchedules = (await storage.getSchedules()).filter(schedule => schedule.tenant_id === req.userProfile.tenant_id);
       let allScheduleForms = [];
       
       for (const schedule of allSchedules) {
@@ -964,7 +1025,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Filter by department for non-admin users
       if (req.userProfile?.role !== 'admin' && req.userProfile?.department_id) {
         const userDepartmentId = req.userProfile.department_id;
-        const allForms = await storage.getForms();
+        const allForms = (await storage.getForms()).filter(form => form.tenant_id === req.userProfile.tenant_id);
         const departmentFormIds = allForms
           .filter(form => form.department_id === userDepartmentId)
           .map(form => form.id);
@@ -980,8 +1041,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/schedules/:scheduleId/forms', requireAuth, async (req, res) => {
+  app.get('/api/schedules/:scheduleId/forms', requireAuth, async (req: any, res) => {
     try {
+      if (!await getTenantSchedule(req.params.scheduleId, req)) return notFound(res, 'Schedule');
       const scheduleForms = await storage.getScheduleForms(req.params.scheduleId);
       res.json(scheduleForms);
     } catch (error) {
@@ -989,8 +1051,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/schedules/:scheduleId/forms', requireAuth, async (req, res) => {
+  app.post('/api/schedules/:scheduleId/forms', requireAuth, async (req: any, res) => {
     try {
+      if (!await getTenantSchedule(req.params.scheduleId, req)) return notFound(res, 'Schedule');
+      if (!await getTenantForm(req.body.form_id, req)) return notFound(res, 'Form');
       const validatedData = insertScheduleFormSchema.parse({
         ...req.body,
         schedule_id: req.params.scheduleId
@@ -1002,8 +1066,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/schedule-forms', requireAuth, async (req, res) => {
+  app.post('/api/schedule-forms', requireAuth, async (req: any, res) => {
     try {
+      if (!await getTenantSchedule(req.body.schedule_id, req)) return notFound(res, 'Schedule');
+      if (!await getTenantForm(req.body.form_id, req)) return notFound(res, 'Form');
       const validatedData = insertScheduleFormSchema.parse(req.body);
       const scheduleForm = await storage.createScheduleForm(validatedData);
       res.status(201).json(scheduleForm);
@@ -1044,6 +1110,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         formId as string,
         scheduleId as string
       );
+      const tenantFormIds = new Set(
+        (await storage.getForms())
+          .filter(form => form.tenant_id === req.userProfile.tenant_id)
+          .map(form => form.id)
+      );
+      const tenantSubmissions = submissions.filter(submission => tenantFormIds.has(submission.form_id));
       
       // Filter submissions based on user department (non-admin users only see their department's data)
       if (req.userProfile.role !== 'admin') {
@@ -1053,17 +1125,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Get all forms for user's department
-        const allForms = await storage.getForms();
+        const allForms = (await storage.getForms()).filter(form => form.tenant_id === req.userProfile.tenant_id);
         const departmentForms = allForms.filter(form => form.department_id === userDepartmentId);
         const departmentFormIds = departmentForms.map(form => form.id);
         
         // Filter submissions that belong to user's department forms
-        const filteredSubmissions = submissions.filter(submission => 
+        const filteredSubmissions = tenantSubmissions.filter(submission => 
           departmentFormIds.includes(submission.form_id)
         );
         res.json(filteredSubmissions);
       } else {
-        res.json(submissions);
+        res.json(tenantSubmissions);
       }
     } catch (error) {
       res.status(500).json({ error: 'Failed to fetch form submissions' });
@@ -1072,6 +1144,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/form-submissions', requireAuth, async (req: any, res) => {
     try {
+      if (!await getTenantForm(req.body.form_id, req)) return notFound(res, 'Form');
+      if (req.body.schedule_id && !await getTenantSchedule(req.body.schedule_id, req)) return notFound(res, 'Schedule');
       const validatedData = insertFormSubmissionSchema.parse({
         ...req.body,
         submitted_by: req.userId
@@ -1145,16 +1219,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get yearly data for cross-tabulation reports
-  app.get('/api/forms/:formId/yearly-data', requireAuth, async (req, res) => {
+  app.get('/api/forms/:formId/yearly-data', requireAuth, async (req: any, res) => {
     try {
       const formId = req.params.formId;
+      if (!await getTenantForm(formId, req)) return notFound(res, 'Form');
       
       // Get all submissions for this form across all schedules
       const submissions = await storage.getFormSubmissions();
       const formSubmissions = submissions.filter(sub => sub.form_id === formId);
       
       // Get all schedules to extract years
-      const schedules = await storage.getSchedules();
+      const schedules = (await storage.getSchedules()).filter(schedule => schedule.tenant_id === req.userProfile.tenant_id);
       const scheduleMap = Object.fromEntries(schedules.map(s => [s.id, s]));
       
       // Group submissions by year
@@ -1183,14 +1258,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Generate cross-tabulation report
-  app.post('/api/forms/:formId/cross-tabulation', requireAuth, async (req, res) => {
+  app.post('/api/forms/:formId/cross-tabulation', requireAuth, async (req: any, res) => {
     try {
       const formId = req.params.formId;
       const { selectedYears } = req.body;
       
       // Get form and its fields
       const form = await storage.getForm(formId);
-      if (!form) {
+      if (!belongsToTenant(form, req)) {
         return res.status(404).json({ error: 'Form not found' });
       }
       
@@ -1200,7 +1275,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const submissions = await storage.getFormSubmissions();
       const formSubmissions = submissions.filter(sub => sub.form_id === formId);
       
-      const schedules = await storage.getSchedules();
+      const schedules = (await storage.getSchedules()).filter(schedule => schedule.tenant_id === req.userProfile.tenant_id);
       const scheduleMap = Object.fromEntries(schedules.map(s => [s.id, s]));
       
       // Group submissions by year
@@ -1487,4 +1562,3 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const server = createServer(app);
   return server;
 }
-

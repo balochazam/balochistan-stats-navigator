@@ -33,6 +33,7 @@ export async function createSDGForm(
   try {
     // Create the form
     const [form] = await db.insert(forms).values({
+      tenant_id: createdBy,
       name: `${indicatorCode} Data Collection Form`,
       description: `Data collection form for ${title}`,
       category: 'sdg',

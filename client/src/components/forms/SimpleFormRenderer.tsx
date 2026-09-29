@@ -12,6 +12,7 @@ import { simpleApiClient } from '@/lib/simpleApi';
 import { ReferenceDataSelect } from '@/components/reference-data/ReferenceDataSelect';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { Save, Loader2, Upload, Download, FileSpreadsheet, CheckCircle, Plus } from 'lucide-react';
+import { autoCalculateAllAggregates } from '@/components/data-collection/DataEntryForm';
 
 interface SubHeaderField {
   id?: string;
@@ -246,6 +247,7 @@ export const SimpleFormRenderer: React.FC<SimpleFormRendererProps> = ({
   const generateCSVTemplate = () => {
     const headers = formFields
       .sort((a, b) => a.field_order - b.field_order)
+      .filter(field => field.field_type !== 'aggregate')
       .map(field => field.field_label);
     
     const csvContent = headers.join(',') + '\n';
@@ -261,7 +263,7 @@ export const SimpleFormRenderer: React.FC<SimpleFormRendererProps> = ({
     
     toast({
       title: "Template Downloaded!",
-      description: "CSV template has been downloaded. Fill it out and upload using the CSV tab.",
+      description: "CSV template downloaded. Compute/sum fields are omitted and will be calculated automatically upon upload.",
     });
   };
 
@@ -278,9 +280,16 @@ export const SimpleFormRenderer: React.FC<SimpleFormRendererProps> = ({
 
     const headers = lines[0].split(',').map(h => h.trim());
     const fieldMap: Record<string, string> = {};
+    const computeFieldNames = new Set<string>();
+    const computeFieldLabels = new Set<string>();
     
-    // Map CSV headers to field names
+    // Map CSV headers to field names and identify compute fields
     formFields.forEach(field => {
+      if (field.field_type === 'aggregate') {
+        computeFieldNames.add(field.field_name);
+        computeFieldLabels.add(field.field_label.toLowerCase().trim());
+        computeFieldLabels.add(field.field_name.toLowerCase().trim());
+      }
       const matchingHeader = headers.find(h => 
         h.toLowerCase() === field.field_label.toLowerCase() ||
         h.toLowerCase() === field.field_name.toLowerCase()
@@ -292,7 +301,8 @@ export const SimpleFormRenderer: React.FC<SimpleFormRendererProps> = ({
 
     // Identify primary columns for duplicate detection
     const primaryColumns = formFields.filter(field => field.is_primary_column);
-    const requiredFields = formFields.filter(field => field.is_required);
+    const requiredFields = formFields.filter(field => field.is_required && field.field_type !== 'aggregate');
+    const sortedFields = [...formFields].sort((a, b) => a.field_order - b.field_order);
     
     const entries: Record<string, any>[] = [];
     const validationErrors: string[] = [];
@@ -302,20 +312,20 @@ export const SimpleFormRenderer: React.FC<SimpleFormRendererProps> = ({
     for (let i = 1; i < lines.length; i++) {
       const lineNumber = i + 1;
       const values = lines[i].split(',').map(v => v.trim());
-      const entry: Record<string, any> = {};
+      const rawEntry: Record<string, any> = {};
       
       // Parse row data
       headers.forEach((header, index) => {
         if (fieldMap[header]) {
-          entry[fieldMap[header]] = values[index] || '';
+          rawEntry[fieldMap[header]] = values[index] || '';
         }
       });
       
-      if (Object.keys(entry).length === 0) continue;
+      if (Object.keys(rawEntry).length === 0) continue;
 
-      // Validate required fields
+      // Validate required non-compute fields
       const missingRequired = requiredFields.filter(field => 
-        !entry[field.field_name] || entry[field.field_name] === ''
+        !rawEntry[field.field_name] || rawEntry[field.field_name] === ''
       );
       
       if (missingRequired.length > 0) {
@@ -325,12 +335,31 @@ export const SimpleFormRenderer: React.FC<SimpleFormRendererProps> = ({
         continue;
       }
 
+      // Discard whatever value was in the CSV for compute/aggregate fields
+      computeFieldNames.forEach(compName => {
+        delete rawEntry[compName];
+      });
+
+      // Automatically calculate compute fields from form fields configuration
+      const computedEntry = autoCalculateAllAggregates(rawEntry, formFields);
+
+      // Re-order according to form field schema placement
+      const finalEntry: Record<string, any> = {};
+      sortedFields.forEach(f => {
+        finalEntry[f.field_name] = computedEntry[f.field_name] ?? '';
+      });
+      Object.keys(computedEntry).forEach(k => {
+        if (!(k in finalEntry)) {
+          finalEntry[k] = computedEntry[k];
+        }
+      });
+
       // Check for duplicates based on primary columns
       if (primaryColumns.length > 0) {
-        const primaryKeyValues = primaryColumns.map(col => entry[col.field_name] || '').join('|');
+        const primaryKeyValues = primaryColumns.map(col => finalEntry[col.field_name] || '').join('|');
         
         if (primaryKeyTracker.has(primaryKeyValues)) {
-          const primaryLabels = primaryColumns.map(col => `${col.field_label}: ${entry[col.field_name]}`).join(', ');
+          const primaryLabels = primaryColumns.map(col => `${col.field_label}: ${finalEntry[col.field_name]}`).join(', ');
           duplicateErrors.push(`Row ${lineNumber}: Duplicate entry detected (${primaryLabels})`);
           continue;
         }
@@ -338,7 +367,7 @@ export const SimpleFormRenderer: React.FC<SimpleFormRendererProps> = ({
         primaryKeyTracker.add(primaryKeyValues);
       }
       
-      entries.push(entry);
+      entries.push(finalEntry);
     }
     
     return { entries, validationErrors, duplicateErrors };

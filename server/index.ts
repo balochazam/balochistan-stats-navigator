@@ -1,35 +1,50 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
+dotenv.config({ override: true });
+
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
+import MemoryStoreFactory from "memorystore";
+import ConnectPgSimple from "connect-pg-simple";
 import { registerRoutes } from "./routes.js";
 import { setupVite, serveStatic, log } from "./vite.js";
-import ConnectPgSimple from "connect-pg-simple";
-import { pool } from "./db.js";
-import path from "path";
+import { pool, isDbConfigured } from "./db.js";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Simple session configuration
-const PostgreSqlStore = ConnectPgSimple(session);
-
-// Trust proxy for Replit deployment
+// Trust proxy for reverse proxy environment
 app.set('trust proxy', 1);
 
+// Configure session store
+const MemoryStore = MemoryStoreFactory(session);
+let sessionStore: any;
+
+if (isDbConfigured) {
+  try {
+    const PostgreSqlStore = ConnectPgSimple(session);
+    sessionStore = new PostgreSqlStore({
+      pool: pool,
+      createTableIfMissing: true,
+    });
+  } catch (err) {
+    console.warn('[Session] PostgreSqlStore init failed, using MemoryStore:', err);
+    sessionStore = new MemoryStore({ checkPeriod: 86400000 });
+  }
+} else {
+  sessionStore = new MemoryStore({ checkPeriod: 86400000 });
+}
+
 app.use(session({
-  store: new PostgreSqlStore({
-    pool: pool,
-    createTableIfMissing: true,
-  }),
+  store: sessionStore,
   secret: process.env.SESSION_SECRET || 'bbos-secret-key-2025',
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: false, // Keep simple - Replit handles SSL
+    secure: true,
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    sameSite: 'lax', // Allow cookies during redirects
+    sameSite: 'none',
   }
 }));
 
@@ -71,7 +86,6 @@ app.use((req, res, next) => {
 
       log(`Error: ${status} - ${message}`);
       res.status(status).json({ message });
-      // removed throw err to prevent crashing
     });
 
     // Development / Vite
@@ -83,10 +97,10 @@ app.use((req, res, next) => {
       serveStatic(app);
     }
 
-    const port = parseInt(process.env.PORT || '5000', 10);
+    const port = 3000;
     const host = '0.0.0.0';
     
-    server.listen({ port, host, reusePort: true }, () => {
+    server.listen(port, host, () => {
       log(`✓ Server started on ${host}:${port}`);
     });
   } catch (error) {

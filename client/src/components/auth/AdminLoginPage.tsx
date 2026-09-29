@@ -1,34 +1,44 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useSimpleAuth';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, ArrowLeft, Shield, Database } from 'lucide-react';
+import { Loader2, ArrowLeft, Shield, Database, Eye, EyeOff, UserCheck, KeyRound } from 'lucide-react';
 import logoPath from "@assets/6f64eb753133d8c8693ef11f8af6f2e5_1750318410601.png";
 
 export const AdminLoginPage = () => {
   usePageTitle('Administrator Login');
+  const navigate = useNavigate();
   
   const { signIn, user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const [signInData, setSignInData] = useState({
     email: '',
     password: ''
   });
 
+  const handleQuickFill = (email: string) => {
+    setSignInData({
+      email,
+      password: 'admin123'
+    });
+    setError(null);
+  };
+
   // Redirect authenticated users to dashboard
   useEffect(() => {
     if (!authLoading && user) {
       console.log('User authenticated on auth page, redirecting to dashboard');
-      window.location.href = '/dashboard';
+      navigate('/dashboard', { replace: true });
     }
-  }, [user, authLoading]);
+  }, [user, authLoading, navigate]);
 
   // Show loading while checking auth state
   if (authLoading) {
@@ -57,8 +67,9 @@ export const AdminLoginPage = () => {
     if (error) {
       setError(error.message);
       setLoading(false);
+    } else {
+      navigate('/dashboard', { replace: true });
     }
-    // Don't set loading to false on success - let the auth state change handle redirect
   };
 
   return (
@@ -128,30 +139,49 @@ export const AdminLoginPage = () => {
                     required
                     value={signInData.email}
                     onChange={(e) => setSignInData({ ...signInData, email: e.target.value })}
-                    placeholder="admin@bbs.gov.pk"
+                    placeholder="syedazambaloch@gmail.com or admin@bbos.gob.pk"
                     disabled={loading}
                     className="relative block w-full"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    autoComplete="current-password"
-                    required
-                    value={signInData.password}
-                    onChange={(e) => setSignInData({ ...signInData, password: e.target.value })}
-                    placeholder="Enter your password"
-                    disabled={loading}
-                    className="relative block w-full"
-                  />
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="password">Password</Label>
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                    >
+                      {showPassword ? (
+                        <>
+                          <EyeOff className="h-3.5 w-3.5" /> Hide
+                        </>
+                      ) : (
+                        <>
+                          <Eye className="h-3.5 w-3.5" /> Show
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      autoComplete="current-password"
+                      required
+                      value={signInData.password}
+                      onChange={(e) => setSignInData({ ...signInData, password: e.target.value })}
+                      placeholder="Enter your password (default: admin123)"
+                      disabled={loading}
+                      className="relative block w-full pr-10"
+                    />
+                  </div>
                 </div>
 
                 <Button 
                   type="submit" 
-                  className="w-full" 
+                  className="w-full bg-blue-600 hover:bg-blue-700 font-semibold" 
                   disabled={loading}
                 >
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -159,11 +189,50 @@ export const AdminLoginPage = () => {
                 </Button>
               </form>
 
-              <div className="mt-6 text-center">
+              {/* Quick Fill / Demo Accounts */}
+              <div className="mt-5 pt-4 border-t border-gray-100">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1">
+                    <KeyRound className="h-3.5 w-3.5 text-blue-500" />
+                    Quick Fill Credentials:
+                  </span>
+                  <span className="text-[11px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded font-mono">
+                    pass: admin123
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="text-xs justify-start border-blue-200 hover:bg-blue-50 text-blue-800 h-auto py-2 px-2.5"
+                    onClick={() => handleQuickFill('syedazambaloch@gmail.com')}
+                  >
+                    <UserCheck className="h-3.5 w-3.5 mr-1.5 text-blue-600 shrink-0" />
+                    <div className="text-left truncate">
+                      <div className="font-semibold text-[11px] truncate">Syed Azam Baloch</div>
+                      <div className="text-[10px] text-gray-500 truncate">syedazambaloch@gmail.com</div>
+                    </div>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="text-xs justify-start border-slate-200 hover:bg-slate-50 text-slate-800 h-auto py-2 px-2.5"
+                    onClick={() => handleQuickFill('admin@bbos.gob.pk')}
+                  >
+                    <Shield className="h-3.5 w-3.5 mr-1.5 text-slate-600 shrink-0" />
+                    <div className="text-left truncate">
+                      <div className="font-semibold text-[11px] truncate">BBoS Administrator</div>
+                      <div className="text-[10px] text-gray-500 truncate">admin@bbos.gob.pk</div>
+                    </div>
+                  </Button>
+                </div>
+              </div>
+
+              <div className="mt-4 text-center">
                 <p className="text-xs text-gray-500">
                   Only authorized administrators can access this system.
-                  <br />
-                  Contact your system administrator for account access.
                 </p>
               </div>
             </CardContent>

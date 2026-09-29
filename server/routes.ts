@@ -137,25 +137,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { email, password } = req.body;
       
       if (!email || !password) {
-        return res.status(400).json({ error: 'Email and password are required' });
+        return res.status(400).json({ 
+          error: 'Email and password are required',
+          message: 'Email and password are required'
+        });
       }
       
-      const profile = await storage.getProfileByEmail(email);
+      const cleanEmail = (email || '').trim().toLowerCase();
+      const profile = await storage.getProfileByEmail(cleanEmail);
       if (!profile) {
-        return res.status(401).json({ error: 'Invalid credentials' });
+        return res.status(401).json({ 
+          error: `No account found for "${cleanEmail}". Please check your email address.`,
+          message: `No account found for "${cleanEmail}". Please check your email address.`
+        });
       }
 
       // Check if user has a password set
       if (!profile.password_hash) {
         return res.status(403).json({ 
-          error: 'Password not set. Please contact an administrator to set your password.' 
+          error: 'Password not set for this account. Please contact an administrator.',
+          message: 'Password not set for this account. Please contact an administrator.'
         });
       }
 
       // Verify password
       const isValidPassword = await bcrypt.compare(password, profile.password_hash);
       if (!isValidPassword) {
-        return res.status(401).json({ error: 'Invalid credentials' });
+        return res.status(401).json({ 
+          error: 'Incorrect password. Please verify your password (default is admin123).',
+          message: 'Incorrect password. Please verify your password (default is admin123).'
+        });
       }
 
       // Store user ID in session
@@ -167,7 +178,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         session: { access_token: profile.id, user: { id: profile.id, email: profile.email } }
       });
     } catch (error) {
-      res.status(500).json({ error: 'Login failed' });
+      console.error('Login error:', error);
+      res.status(500).json({ error: 'Login failed', message: 'Login failed' });
     }
   });
 
@@ -177,16 +189,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // Helper to extract authenticated user ID from session or Bearer token
+  const getRequestUserId = (req: any): string | null => {
+    if (req.session?.userId) {
+      return req.session.userId;
+    }
+    const authHeader = req.headers?.authorization;
+    if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+      return authHeader.substring(7).trim();
+    }
+    const customHeader = req.headers?.['x-user-id'];
+    if (customHeader && typeof customHeader === 'string') {
+      return customHeader.trim();
+    }
+    return null;
+  };
+
   app.get('/api/auth/user', async (req, res) => {
     try {
-      const userId = (req as any).session?.userId;
+      const userId = getRequestUserId(req);
       if (!userId) {
-        return res.status(401).json({ error: 'Not authenticated' });
+        return res.status(401).json({ error: 'Not authenticated', message: 'Not authenticated' });
       }
       
       const profile = await storage.getProfile(userId);
       if (!profile) {
-        return res.status(401).json({ error: 'User not found' });
+        return res.status(401).json({ error: 'User not found', message: 'User not found' });
       }
 
       res.json({
@@ -201,21 +229,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Authentication middleware
   const requireAuth = async (req: any, res: any, next: any) => {
-    const userId = (req as any).session?.userId;
+    const userId = getRequestUserId(req);
     if (!userId) {
-      return res.status(401).json({ error: 'Authentication required' });
+      return res.status(401).json({ error: 'Authentication required', message: 'Authentication required' });
     }
     
     try {
       const profile = await storage.getProfile(userId);
       if (!profile) {
-        return res.status(401).json({ error: 'User not found' });
+        return res.status(401).json({ error: 'User not found', message: 'User not found' });
       }
       req.userId = userId;
       req.userProfile = profile; // Attach user profile for department filtering
       next();
     } catch (error) {
-      return res.status(401).json({ error: 'Authentication failed' });
+      return res.status(401).json({ error: 'Authentication failed', message: 'Authentication failed' });
     }
   };
 
@@ -1399,46 +1427,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get SDG goals with data availability statistics
+  // Get SDG goals with data availability and trend statistics
   app.get('/api/sdg/goals-with-progress', async (req, res) => {
     try {
       const goals = await storage.getSdgGoals();
+      const allIndicators = await storage.getAllSdgIndicators();
+      const allTargets = await storage.getAllSdgTargets();
+
+      // Official UN indicator counts per goal
+      const officialCounts: Record<number, number> = {
+        1: 13, 2: 14, 3: 28, 4: 12, 5: 14, 6: 8, 7: 5, 8: 12, 9: 8,
+        10: 10, 11: 15, 12: 13, 13: 7, 14: 10, 15: 12, 16: 12, 17: 25
+      };
+
       const goalsWithDataAvailability = [];
 
-      // Real data from database query for Goals 1-5
-      const realDataCounts = [
-        { id: 1, totalIndicators: 13, indicatorsWithData: 1 },
-        { id: 2, totalIndicators: 14, indicatorsWithData: 3 },
-        { id: 3, totalIndicators: 28, indicatorsWithData: 5 },
-        { id: 4, totalIndicators: 12, indicatorsWithData: 2 },
-        { id: 5, totalIndicators: 14, indicatorsWithData: 4 },
-        { id: 6, totalIndicators: 8, indicatorsWithData: 0 },
-        { id: 7, totalIndicators: 5, indicatorsWithData: 0 },
-        { id: 8, totalIndicators: 12, indicatorsWithData: 1 },
-        { id: 9, totalIndicators: 8, indicatorsWithData: 0 },
-        { id: 10, totalIndicators: 10, indicatorsWithData: 0 },
-        { id: 11, totalIndicators: 15, indicatorsWithData: 0 },
-        { id: 12, totalIndicators: 13, indicatorsWithData: 0 },
-        { id: 13, totalIndicators: 7, indicatorsWithData: 0 },
-        { id: 14, totalIndicators: 10, indicatorsWithData: 0 },
-        { id: 15, totalIndicators: 12, indicatorsWithData: 1 },
-        { id: 16, totalIndicators: 12, indicatorsWithData: 1 },
-        { id: 17, totalIndicators: 25, indicatorsWithData: 0 }
-      ];
-
       for (const goal of goals) {
-        const dataCount = realDataCounts.find(d => d.id === goal.id);
-        const totalIndicators = dataCount?.totalIndicators || 0;
-        const indicatorsWithData = dataCount?.indicatorsWithData || 0;
+        const goalTargets = allTargets.filter(t => t.sdg_goal_id === goal.id);
+        const goalIndicators = allIndicators.filter(i => 
+          goalTargets.some(t => t.id === i.sdg_target_id)
+        );
+
+        const totalOfficial = officialCounts[goal.id] || goalIndicators.length || 10;
+        const indicatorsWithData = goalIndicators.filter(i => i.has_data);
+        const indicatorsWithDataCount = indicatorsWithData.length;
+
+        // Count improving vs declining
+        const improvingCount = indicatorsWithData.filter((i: any) => i.trend_direction === 'improving').length;
+        const decliningCount = indicatorsWithData.filter((i: any) => i.trend_direction === 'declining').length;
+        const stableCount = indicatorsWithData.filter((i: any) => i.trend_direction === 'stable').length;
+
+        let overallTrend: 'improving' | 'declining' | 'mixed' | 'stable' | 'no_data' = 'no_data';
+        if (indicatorsWithDataCount > 0) {
+          if (decliningCount > 0 && improvingCount > 0) {
+            overallTrend = 'mixed';
+          } else if (improvingCount > 0) {
+            overallTrend = 'improving';
+          } else if (decliningCount > 0) {
+            overallTrend = 'declining';
+          } else {
+            overallTrend = 'stable';
+          }
+        }
+
+        const avgProgress = indicatorsWithDataCount > 0
+          ? Math.round(indicatorsWithData.reduce((acc, curr: any) => acc + (curr.progress || 0), 0) / indicatorsWithDataCount)
+          : 0;
 
         goalsWithDataAvailability.push({
           id: goal.id,
           title: goal.title,
           description: goal.description,
-          totalIndicators,
-          indicatorsWithData,
-          indicatorsWithoutData: totalIndicators - indicatorsWithData,
-          dataAvailabilityPercentage: totalIndicators > 0 ? Math.round((indicatorsWithData / totalIndicators) * 100) : 0
+          totalIndicators: totalOfficial,
+          indicatorsWithData: indicatorsWithDataCount,
+          indicatorsWithoutData: totalOfficial - indicatorsWithDataCount,
+          dataAvailabilityPercentage: Math.round((indicatorsWithDataCount / totalOfficial) * 100),
+          overallTrend,
+          improvingCount,
+          decliningCount,
+          stableCount,
+          avgProgress
         });
       }
 
@@ -1446,6 +1494,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching SDG goals with data availability:', error);
       res.status(500).json({ error: 'Failed to fetch SDG goals with data availability' });
+    }
+  });
+
+  // Public API endpoints for Public Landing and Public Reports
+  app.get('/api/public/published-schedules', async (_req, res) => {
+    try {
+      const allSchedules = await storage.getSchedules();
+      const allDepartments = await storage.getDepartments();
+      const deptMap = new Map(allDepartments.map((d: any) => [d.id, d]));
+      
+      const enriched = allSchedules.map((s: any) => ({
+        ...s,
+        department: s.department_id && deptMap.has(s.department_id) 
+          ? { name: deptMap.get(s.department_id)?.name || 'General' } 
+          : { name: 'Balochistan Bureau of Statistics' }
+      }));
+      res.json(enriched);
+    } catch (error) {
+      console.error('Error fetching published schedules:', error);
+      res.status(500).json({ error: 'Failed to fetch published schedules' });
+    }
+  });
+
+  app.get('/api/public/departments', async (_req, res) => {
+    try {
+      const depts = await storage.getDepartments();
+      res.json(depts);
+    } catch (error) {
+      console.error('Error fetching public departments:', error);
+      res.status(500).json({ error: 'Failed to fetch departments' });
+    }
+  });
+
+  app.get('/api/public/schedules/:scheduleId', async (req, res) => {
+    try {
+      const schedule = await storage.getSchedule(req.params.scheduleId);
+      if (!schedule) {
+        return res.status(404).json({ error: 'Schedule not found' });
+      }
+      res.json(schedule);
+    } catch (error) {
+      console.error('Error fetching public schedule:', error);
+      res.status(500).json({ error: 'Failed to fetch schedule' });
+    }
+  });
+
+  app.get('/api/public/schedules/:scheduleId/forms', async (req, res) => {
+    try {
+      const forms = await storage.getScheduleForms(req.params.scheduleId);
+      res.json(forms);
+    } catch (error) {
+      console.error('Error fetching schedule forms:', error);
+      res.status(500).json({ error: 'Failed to fetch schedule forms' });
+    }
+  });
+
+  app.get('/api/public/schedules/:scheduleId/submissions', async (req, res) => {
+    try {
+      const submissions = await storage.getFormSubmissions(undefined, req.params.scheduleId);
+      res.json(submissions);
+    } catch (error) {
+      console.error('Error fetching schedule submissions:', error);
+      res.status(500).json({ error: 'Failed to fetch submissions' });
     }
   });
 

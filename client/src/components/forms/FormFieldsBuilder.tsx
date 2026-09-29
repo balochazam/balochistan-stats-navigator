@@ -21,6 +21,8 @@ interface FormField {
   reference_data_name?: string;
   placeholder_text?: string;
   aggregate_fields?: string[];
+  validation_min?: number | null;
+  validation_max?: number | null;
   field_order: number;
   has_sub_headers?: boolean;
   sub_headers?: SubHeader[];
@@ -43,6 +45,8 @@ interface SubHeaderField {
   reference_data_name?: string;
   placeholder_text?: string;
   aggregate_fields?: string[];
+  validation_min?: number | null;
+  validation_max?: number | null;
   is_secondary_column?: boolean;
   has_sub_headers?: boolean;
   sub_headers?: SubHeader[];
@@ -470,6 +474,36 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
                   </p>
                 </div>
               )}
+
+              {(field.field_type === 'number' || field.field_type === 'aggregate') && (
+                <div className="bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-800/40 rounded-lg p-3 space-y-3">
+                  <Label className="text-xs font-semibold text-amber-900 dark:text-amber-300 uppercase tracking-wide">
+                    Value Validation (Min &amp; Max Limits)
+                  </Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-gray-700 dark:text-gray-300 font-medium">Min Value (Can't be lower than)</Label>
+                      <Input
+                        type="number"
+                        value={field.validation_min !== undefined && field.validation_min !== null ? field.validation_min : ''}
+                        onChange={(e) => updateField(index, { validation_min: e.target.value === '' ? null : Number(e.target.value) })}
+                        placeholder="e.g. 0"
+                        className="bg-white dark:bg-gray-900"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-gray-700 dark:text-gray-300 font-medium">Max Value (Can't exceed)</Label>
+                      <Input
+                        type="number"
+                        value={field.validation_max !== undefined && field.validation_max !== null ? field.validation_max : ''}
+                        onChange={(e) => updateField(index, { validation_max: e.target.value === '' ? null : Number(e.target.value) })}
+                        placeholder="e.g. 1000"
+                        className="bg-white dark:bg-gray-900"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {field.field_type === 'aggregate' && (
@@ -811,6 +845,36 @@ export const FormFieldsBuilder = ({ fields, onChange }: FormFieldsBuilderProps) 
                                   className="text-sm"
                                 />
                               </div>
+
+                              {(subField.field_type === 'number' || subField.field_type === 'aggregate') && (
+                                <div className="mb-3 bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-800/40 rounded-lg p-2.5 space-y-2">
+                                  <Label className="text-[11px] font-semibold text-amber-900 dark:text-amber-300 uppercase tracking-wide">
+                                    Value Validation (Min &amp; Max Limits)
+                                  </Label>
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div className="space-y-1">
+                                      <Label className="text-[11px] text-gray-700 dark:text-gray-300 font-medium">Min Value (Can't be lower than)</Label>
+                                      <Input
+                                        type="number"
+                                        value={subField.validation_min !== undefined && subField.validation_min !== null ? subField.validation_min : ''}
+                                        onChange={(e) => updateSubHeaderField(index, subIndex, fieldIndex, { validation_min: e.target.value === '' ? null : Number(e.target.value) })}
+                                        placeholder="e.g. 0"
+                                        className="h-8 text-xs bg-white dark:bg-gray-900"
+                                      />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <Label className="text-[11px] text-gray-700 dark:text-gray-300 font-medium">Max Value (Can't exceed)</Label>
+                                      <Input
+                                        type="number"
+                                        value={subField.validation_max !== undefined && subField.validation_max !== null ? subField.validation_max : ''}
+                                        onChange={(e) => updateSubHeaderField(index, subIndex, fieldIndex, { validation_max: e.target.value === '' ? null : Number(e.target.value) })}
+                                        placeholder="e.g. 1000"
+                                        className="h-8 text-xs bg-white dark:bg-gray-900"
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
 
                               <div className="flex flex-wrap gap-4">
                                 <div className="flex items-center space-x-2">

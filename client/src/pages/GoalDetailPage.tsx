@@ -38,6 +38,14 @@ interface Indicator {
   data_sources?: string[];
   progress?: number;
   has_data: boolean;
+  improvement_direction?: 'increase' | 'decrease';
+  trend_direction?: 'improving' | 'declining' | 'stable';
+  status_label?: string;
+  percent_change?: number;
+  baseline_value?: string;
+  baseline_year?: string;
+  latest_value?: string;
+  latest_year?: string;
 }
 
 interface IndicatorWithTarget extends Indicator {
@@ -189,43 +197,95 @@ export default function GoalDetailPage() {
           )}
           
           {goalIndicators.map((indicator) => {
+            const isDeclining = indicator.trend_direction === 'declining';
+            const isImproving = indicator.trend_direction === 'improving';
+            const lowerIsBetter = indicator.improvement_direction === 'decrease';
+
             return (
               <div key={indicator.id} className="relative">
-                <div className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors">
+                <div className={`p-4 border rounded-lg transition-colors ${isDeclining ? 'border-rose-200 bg-rose-50/30' : isImproving ? 'border-emerald-200 bg-emerald-50/20' : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'}`}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="secondary" className="text-xs">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <Badge variant="secondary" className="text-xs font-mono font-bold">
                           {indicator.indicator_code}
                         </Badge>
                         <Badge variant="outline" className="text-xs">
                           Tier {indicator.tier}
                         </Badge>
+                        
+                        <Badge variant="outline" className="text-xs bg-slate-100 text-slate-700 border-slate-300">
+                          {lowerIsBetter ? 'Target: Lower is Better (Reduction)' : 'Target: Higher is Better (Expansion)'}
+                        </Badge>
+
                         {indicator.has_data ? (
-                          <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
-                            ✓ Data Available
-                          </Badge>
+                          isDeclining ? (
+                            <Badge className="bg-rose-100 text-rose-800 border border-rose-300 text-xs font-bold">
+                              ▼ Declining / Deteriorating ({indicator.percent_change && indicator.percent_change > 0 ? `+${indicator.percent_change}%` : `${indicator.percent_change}%`})
+                            </Badge>
+                          ) : isImproving ? (
+                            <Badge className="bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-bold">
+                              ▲ Improving ({indicator.percent_change && indicator.percent_change > 0 ? `+${indicator.percent_change}%` : `${indicator.percent_change}%`})
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                              ✓ Baseline Available
+                            </Badge>
+                          )
                         ) : (
                           <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700 border-orange-200">
                             ⚠ No Data
                           </Badge>
                         )}
                       </div>
-                      <h4 className="font-medium text-gray-900 mb-2 leading-tight">
+
+                      <h4 className="font-semibold text-gray-900 mb-2 leading-tight">
                         {indicator.title}
                       </h4>
                       <p className="text-sm text-gray-600 mb-3 line-clamp-2">
                         {indicator.description}
                       </p>
-                      {indicator.has_data && (
+
+                      {indicator.has_data && indicator.baseline_value && (
+                        <div className="mb-3 p-3 bg-white rounded-md border text-xs grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          <div>
+                            <span className="text-gray-500 block">Baseline ({indicator.baseline_year || 'Initial'}):</span>
+                            <span className="font-bold text-gray-800 text-sm">{indicator.baseline_value}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-500 block">Latest Status ({indicator.latest_year || 'Latest'}):</span>
+                            <span className={`font-bold text-sm ${isDeclining ? 'text-rose-600' : 'text-emerald-600'}`}>
+                              {indicator.latest_value}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-gray-500 block">Net Trajectory:</span>
+                            <span className={`font-semibold ${isDeclining ? 'text-rose-700' : isImproving ? 'text-emerald-700' : 'text-gray-600'}`}>
+                              {isDeclining ? 'Regressed / Worsened' : isImproving ? 'Progressing Towards SDG Target' : 'Stable'}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {indicator.has_data && isImproving && (
                         <div className="mb-2">
                           <div className="flex items-center justify-between text-sm mb-1">
-                            <span className="text-gray-600">Balochistan Progress</span>
-                            <span className="font-medium text-blue-600">{Math.round(indicator.progress || 0)}%</span>
+                            <span className="text-gray-600 font-medium">Progress Score</span>
+                            <span className="font-bold text-emerald-600">{Math.round(indicator.progress || 0)}%</span>
                           </div>
                           <Progress value={indicator.progress || 0} className="h-2" />
                         </div>
                       )}
+
+                      {indicator.has_data && isDeclining && (
+                        <div className="mb-2 p-2.5 bg-rose-50 border border-rose-200 rounded text-xs text-rose-800 flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                          <span>
+                            <strong>Critical Alert:</strong> Indicator has regressed away from the 2030 target direction. Policy intervention needed.
+                          </span>
+                        </div>
+                      )}
+
                       {indicator.custodian_agencies && indicator.custodian_agencies.length > 0 && (
                         <p className="text-xs text-gray-500">
                           Custodian: {indicator.custodian_agencies.join(', ')}
@@ -235,7 +295,7 @@ export default function GoalDetailPage() {
                     <div className="flex flex-col gap-2">
                       {indicator.has_data ? (
                         <Link to={`/indicator/${indicator.indicator_code}`}>
-                          <Button size="sm" variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50">
+                          <Button size="sm" variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50 font-medium">
                             View Details
                           </Button>
                         </Link>

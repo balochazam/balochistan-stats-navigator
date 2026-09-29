@@ -32,11 +32,14 @@ const queryClient = new QueryClient({
     queries: {
       queryFn: async ({ queryKey }) => {
         const [url] = queryKey as [string];
+        const token = typeof window !== 'undefined' ? localStorage.getItem('bbos_auth_token') : null;
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        };
         const response = await fetch(url, {
           credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers,
         });
         
         if (!response.ok) {

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useSimpleAuth';
 import { simpleApiClient } from '@/lib/simpleApi';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText, Download, Eye, Calendar, FileX, Search, Filter } from 'lucide-react';
+import { FileText, Download, Eye, Calendar, FileX, Search, Filter, BarChart3, Table as TableIcon } from 'lucide-react';
+import { FormVisualDashboard } from '@/components/reports/FormVisualDashboard';
 
 interface Schedule {
   id: string;
@@ -83,6 +84,7 @@ interface FormSubmission {
 export const Reports = () => {
   const { profile } = useAuth();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [publishedSchedules, setPublishedSchedules] = useState<Schedule[]>([]);
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
   const [scheduleForms, setScheduleForms] = useState<ScheduleForm[]>([]);
@@ -91,6 +93,7 @@ export const Reports = () => {
   const [formSubmissions, setFormSubmissions] = useState<FormSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingData, setLoadingData] = useState(false);
+  const [viewMode, setViewMode] = useState<'dashboard' | 'table'>('dashboard');
   
   // Filter states
   const [scheduleFilter, setScheduleFilter] = useState('');
@@ -924,10 +927,28 @@ export const Reports = () => {
                             <p className="text-gray-600 mb-2 ml-8">{scheduleForm.form.description}</p>
                           )}
                         </div>
-                        <Button onClick={() => handleViewFormData(scheduleForm)}>
-                          <Eye className="h-4 w-4 mr-2" />
-                          View Data
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+                            onClick={() => {
+                              setViewMode('dashboard');
+                              handleViewFormData(scheduleForm);
+                            }}
+                          >
+                            <BarChart3 className="h-4 w-4 mr-1.5" />
+                            Visual Dashboard
+                          </Button>
+                          <Button 
+                            variant="outline"
+                            onClick={() => {
+                              setViewMode('table');
+                              handleViewFormData(scheduleForm);
+                            }}
+                          >
+                            <TableIcon className="h-4 w-4 mr-1.5" />
+                            View Table
+                          </Button>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -937,7 +958,7 @@ export const Reports = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
               <div>
                 <h3 className="text-lg font-semibold">{selectedForm.form.name} - Data Report</h3>
                 <p className="text-gray-600">
@@ -948,82 +969,55 @@ export const Reports = () => {
                   </Badge>
                 </p>
               </div>
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary">
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* View Mode Toggle */}
+                <div className="flex bg-gray-100 p-1 rounded-lg border mr-1">
+                  <button
+                    onClick={() => setViewMode('dashboard')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                      viewMode === 'dashboard'
+                        ? 'bg-white text-blue-700 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    <BarChart3 className="h-3.5 w-3.5" />
+                    Visual Dashboard
+                  </button>
+                  <button
+                    onClick={() => setViewMode('table')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                      viewMode === 'table'
+                        ? 'bg-white text-blue-700 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    <TableIcon className="h-3.5 w-3.5" />
+                    Tabular Data
+                  </button>
+                </div>
+
+                <Badge variant="secondary" className="hidden sm:inline-flex">
                   {filteredSubmissions.length} of {formSubmissions.length} submissions
                 </Badge>
-                <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                  Schedule Year: {getScheduleYear(selectedSchedule)}
-                </Badge>
-                <Button variant="outline" onClick={exportToPDF} disabled={!filteredSubmissions.length}>
-                  <FileX className="h-4 w-4 mr-2" />
-                  Export PDF
-                </Button>
-                <Button variant="outline" onClick={exportToCSV} disabled={!filteredSubmissions.length}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Export CSV
-                </Button>
-                <Button variant="outline" onClick={() => setSelectedForm(null)}>
+
+                {viewMode === 'table' && (
+                  <>
+                    <Button variant="outline" size="sm" onClick={exportToPDF} disabled={!filteredSubmissions.length}>
+                      <FileX className="h-3.5 w-3.5 mr-1.5" />
+                      Export PDF
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={exportToCSV} disabled={!filteredSubmissions.length}>
+                      <Download className="h-3.5 w-3.5 mr-1.5" />
+                      Export CSV
+                    </Button>
+                  </>
+                )}
+                
+                <Button variant="outline" size="sm" onClick={() => setSelectedForm(null)}>
                   Back to Forms
                 </Button>
               </div>
             </div>
-
-            {/* Submissions Filter */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Filter className="h-4 w-4" />
-                  Filter Submissions
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Search table data</label>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                      <Input
-                        placeholder="Search in submitted data..."
-                        value={tableSearchFilter}
-                        onChange={(e) => setTableSearchFilter(e.target.value)}
-                        className="pl-9"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Filter by submission date</label>
-                    <Select value={submissionDateFilter} onValueChange={setSubmissionDateFilter}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select date range" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All submissions</SelectItem>
-                        <SelectItem value="today">Today</SelectItem>
-                        <SelectItem value="this_week">This week</SelectItem>
-                        <SelectItem value="this_month">This month</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex items-end">
-                    {(submissionDateFilter !== 'all' || tableSearchFilter) && (
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => {
-                          setSubmissionDateFilter('all');
-                          setTableSearchFilter('');
-                        }}
-                      >
-                        Clear filters
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-
 
             {loadingData ? (
               <div className="text-center py-8">Loading data...</div>
@@ -1034,7 +1028,69 @@ export const Reports = () => {
                   <p className="text-gray-600">No submissions for this form</p>
                 </CardContent>
               </Card>
+            ) : viewMode === 'dashboard' ? (
+              <FormVisualDashboard
+                schedule={selectedSchedule}
+                scheduleForm={selectedForm}
+                formFields={formFields}
+                formSubmissions={filteredSubmissions}
+                onSwitchToTable={() => setViewMode('table')}
+              />
             ) : (
+              <>
+                {/* Submissions Filter */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Filter className="h-4 w-4" />
+                      Filter Submissions
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Search table data</label>
+                        <div className="relative">
+                          <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                          <Input
+                            placeholder="Search in submitted data..."
+                            value={tableSearchFilter}
+                            onChange={(e) => setTableSearchFilter(e.target.value)}
+                            className="pl-9"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Filter by submission date</label>
+                        <Select value={submissionDateFilter} onValueChange={setSubmissionDateFilter}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select date range" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All submissions</SelectItem>
+                            <SelectItem value="today">Today</SelectItem>
+                            <SelectItem value="this_week">This week</SelectItem>
+                            <SelectItem value="this_month">This month</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex items-end">
+                        {(submissionDateFilter !== 'all' || tableSearchFilter) && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => {
+                              setSubmissionDateFilter('all');
+                              setTableSearchFilter('');
+                            }}
+                          >
+                            Clear filters
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               <Card>
                 <CardHeader>
                   <CardTitle>Submitted Data ({filteredSubmissions.length} entries)</CardTitle>
@@ -1200,6 +1256,7 @@ export const Reports = () => {
                   </div>
                 </CardContent>
               </Card>
+              </>
             )}
           </div>
         )}

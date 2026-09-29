@@ -38,51 +38,70 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const saved = typeof window !== 'undefined' ? localStorage.getItem('bbos_auth_user') : null;
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [profile, setProfile] = useState<Profile | null>(() => {
+    try {
+      const saved = typeof window !== 'undefined' ? localStorage.getItem('bbos_auth_profile') : null;
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [loading, setLoading] = useState(() => {
+    // If we already have stored credentials, don't show full-page loading spinner
+    return typeof window !== 'undefined' && !localStorage.getItem('bbos_auth_token');
+  });
   const [error, setError] = useState<string | null>(null);
 
-  console.log('AuthProvider render - loading:', loading, 'user:', !!user);
-
   useEffect(() => {
-    console.log('Initializing auth...');
-    
     const initializeAuth = async () => {
       try {
-        // Try to get current user session from server (session-based auth)
+        const token = localStorage.getItem('bbos_auth_token');
+        if (!token) {
+          setUser(null);
+          setProfile(null);
+          setLoading(false);
+          return;
+        }
+
+        // Validate session/token with server
         const userData = await simpleApiClient.getCurrentUser();
-        
-        console.log('Auth state changed:', 'INITIAL_SESSION', !!userData);
-        console.log('Got initial session:', !!userData);
         
         if (userData && userData.user) {
           setUser(userData.user);
           setProfile(userData.profile);
+          localStorage.setItem('bbos_auth_user', JSON.stringify(userData.user));
+          if (userData.profile) {
+            localStorage.setItem('bbos_auth_profile', JSON.stringify(userData.profile));
+          }
         } else {
-          console.log('No active session found');
+          // Token no longer valid
+          localStorage.removeItem('bbos_auth_token');
+          localStorage.removeItem('bbos_auth_user');
+          localStorage.removeItem('bbos_auth_profile');
+          setUser(null);
+          setProfile(null);
         }
-        
-        console.log('Initial auth setup complete, setting loading to false');
-        setLoading(false);
       } catch (err) {
-        console.log('No stored token found');
-        console.log('Initial auth setup complete, setting loading to false');
+        // If server returns 401, clear stored auth
+        localStorage.removeItem('bbos_auth_token');
+        localStorage.removeItem('bbos_auth_user');
+        localStorage.removeItem('bbos_auth_profile');
+        setUser(null);
+        setProfile(null);
+      } finally {
         setLoading(false);
       }
     };
 
-    // Add timeout for auth initialization
-    const timeout = setTimeout(() => {
-      console.warn('Auth initialization timeout');
-      setLoading(false);
-    }, 2000);
-
     initializeAuth();
-
-    return () => {
-      clearTimeout(timeout);
-    };
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string) => {
@@ -137,6 +156,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(null);
       setProfile(null);
       setError(null);
+      localStorage.removeItem('bbos_auth_token');
+      localStorage.removeItem('bbos_auth_user');
+      localStorage.removeItem('bbos_auth_profile');
     }
   };
 

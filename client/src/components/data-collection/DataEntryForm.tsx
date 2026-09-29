@@ -26,6 +26,8 @@ interface SubHeaderField {
   reference_data_name?: string;
   placeholder_text?: string;
   aggregate_fields?: string[];
+  validation_min?: number | null;
+  validation_max?: number | null;
   is_secondary_column?: boolean;
   has_sub_headers?: boolean;
   sub_headers?: SubHeader[];
@@ -49,6 +51,8 @@ interface FormField {
   reference_data_name?: string;
   placeholder_text?: string;
   aggregate_fields?: string[];
+  validation_min?: number | null;
+  validation_max?: number | null;
   has_sub_headers?: boolean;
   sub_headers?: SubHeader[];
   field_order?: number;
@@ -86,6 +90,94 @@ interface DataEntryFormProps {
   onCompleted?: () => void;
 }
 
+// Helper function to auto-calculate all compute/aggregate fields from raw input data
+export const autoCalculateAllAggregates = (
+  rawData: Record<string, any>,
+  formFields: FormField[]
+): Record<string, any> => {
+  const result = { ...rawData };
+
+  interface AggDef {
+    targetKey: string;
+    prefix: string;
+    aggFields: string[];
+  }
+
+  const aggDefs: AggDef[] = [];
+
+  formFields.forEach(field => {
+    if (field.has_sub_headers && field.sub_headers) {
+      field.sub_headers.forEach(subHeader => {
+        const subPrefix = `${field.field_name}_${subHeader.name}`;
+        subHeader.fields?.forEach(subField => {
+          if (subField.field_type === 'aggregate') {
+            aggDefs.push({
+              targetKey: `${subPrefix}_${subField.field_name}`,
+              prefix: subPrefix,
+              aggFields: subField.aggregate_fields || []
+            });
+          }
+          subField.sub_headers?.forEach(nested => {
+            const nestedPrefix = `${subPrefix}_${subField.field_name}_${nested.name}`;
+            nested.fields?.forEach(nField => {
+              if (nField.field_type === 'aggregate') {
+                aggDefs.push({
+                  targetKey: `${nestedPrefix}_${nField.field_name}`,
+                  prefix: nestedPrefix,
+                  aggFields: nField.aggregate_fields || []
+                });
+              }
+            });
+          });
+        });
+      });
+    } else if (field.field_type === 'aggregate') {
+      aggDefs.push({
+        targetKey: field.field_name,
+        prefix: '',
+        aggFields: field.aggregate_fields || []
+      });
+    }
+  });
+
+  // Run two passes so high-level totals that depend on sub-level aggregates are computed accurately
+  for (let pass = 0; pass < 2; pass++) {
+    for (const def of aggDefs) {
+      let sum = 0;
+      let hasValidNumbers = false;
+
+      for (const aggFieldName of def.aggFields) {
+        // Resolve field value using prefix, exact key, or fuzzy key suffix
+        let val: any = undefined;
+        if (def.prefix && result[`${def.prefix}_${aggFieldName}`] !== undefined && result[`${def.prefix}_${aggFieldName}`] !== null && result[`${def.prefix}_${aggFieldName}`] !== '') {
+          val = result[`${def.prefix}_${aggFieldName}`];
+        } else if (result[aggFieldName] !== undefined && result[aggFieldName] !== null && result[aggFieldName] !== '') {
+          val = result[aggFieldName];
+        } else {
+          const matchedKey = Object.keys(result).find(k => 
+            k === aggFieldName || 
+            (def.prefix ? k === `${def.prefix}_${aggFieldName}` : false) ||
+            k.toLowerCase() === aggFieldName.toLowerCase() ||
+            k.toLowerCase().endsWith(`_${aggFieldName.toLowerCase()}`)
+          );
+          if (matchedKey) val = result[matchedKey];
+        }
+
+        const cleanedStr = String(val ?? '').replace(/,/g, '').trim();
+        const num = parseFloat(cleanedStr);
+        if (!isNaN(num)) {
+          sum += num;
+          hasValidNumbers = true;
+        }
+      }
+
+      result[def.targetKey] = hasValidNumbers ? String(sum) : '0';
+    }
+  }
+
+  return result;
+};
+
 export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, onCompleted }: DataEntryFormProps) => {
   const { profile } = useAuth();
   const { toast } = useToast();
@@ -118,6 +210,10 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
       field_name: string;
       sub_field_name?: string;
       sub_header_name?: string;
+      field_type?: string;
+      is_aggregate?: boolean;
+      validation_min?: number | null;
+      validation_max?: number | null;
     }> = [];
     
     formFields.forEach(field => {
@@ -130,7 +226,11 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
               label: subField.field_label,
               field_name: field.field_name,
               sub_field_name: subField.field_name,
-              sub_header_name: subHeader.name
+              sub_header_name: subHeader.name,
+              field_type: subField.field_type,
+              is_aggregate: subField.field_type === 'aggregate',
+              validation_min: subField.validation_min,
+              validation_max: subField.validation_max
             });
           });
         });
@@ -139,7 +239,11 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
         expandedFields.push({
           key: field.field_name,
           label: field.field_label,
-          field_name: field.field_name
+          field_name: field.field_name,
+          field_type: field.field_type,
+          is_aggregate: field.field_type === 'aggregate',
+          validation_min: field.validation_min,
+          validation_max: field.validation_max
         });
       }
     });
@@ -151,15 +255,14 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
 
   // Function to get value from submission data based on field structure
   const getSubmissionValue = (submission: any, expandedField: any) => {
+    let rawVal: any;
     if (expandedField.sub_field_name && expandedField.sub_header_name) {
-      // For sub-header fields, the data is stored with flattened keys like:
-      // "number_of_units_Number of Units_hospitals": "12"
       const flattenedKey = `${expandedField.field_name}_${expandedField.sub_header_name}_${expandedField.sub_field_name}`;
-      return submission.data?.[flattenedKey] || '-';
+      rawVal = submission.data?.[flattenedKey];
     } else {
-      // For regular fields, get directly
-      return submission.data?.[expandedField.field_name] || '-';
+      rawVal = submission.data?.[expandedField.field_name];
     }
+    return (rawVal !== undefined && rawVal !== null && rawVal !== '') ? String(rawVal) : '-';
   };
 
   // Memoize the fetch function to prevent unnecessary re-renders
@@ -282,57 +385,7 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
         [fieldName]: value
       };
       
-      // Calculate aggregate fields when number fields change
-      const updatedWithAggregates = { ...updated };
-      
-      // Function to calculate aggregates for any field structure
-      const calculateAggregatesForFields = (fields: any[], parentPrefix = '') => {
-        fields.forEach(field => {
-          const fieldKey = parentPrefix ? `${parentPrefix}_${field.field_name}` : field.field_name;
-          
-          if (field.field_type === 'aggregate' && field.aggregate_fields?.length) {
-            let sum = 0;
-            let hasValidNumbers = false;
-            
-            field.aggregate_fields.forEach((aggregateFieldName: string) => {
-              const fullFieldName = parentPrefix ? `${parentPrefix}_${aggregateFieldName}` : aggregateFieldName;
-              const fieldValue = updatedWithAggregates[fullFieldName];
-              const numValue = parseFloat(fieldValue);
-              if (!isNaN(numValue)) {
-                sum += numValue;
-                hasValidNumbers = true;
-              }
-            });
-            
-            // Only set the aggregate value if at least one valid number exists
-            updatedWithAggregates[fieldKey] = hasValidNumbers ? sum.toString() : '';
-          }
-        });
-      };
-      
-      // Calculate aggregates for top-level fields
-      calculateAggregatesForFields(formFields);
-      
-      // Calculate aggregates for sub-header fields
-      formFields.forEach(field => {
-        if (field.has_sub_headers && field.sub_headers) {
-          field.sub_headers.forEach((subHeader: any) => {
-            const subHeaderPrefix = `${field.field_name}_${subHeader.name}`;
-            calculateAggregatesForFields(subHeader.fields, subHeaderPrefix);
-            
-            // Calculate aggregates for nested sub-header fields (e.g., Medical/Dental under Specialists)
-            subHeader.fields.forEach((subField: any) => {
-              if (subField.has_sub_headers && subField.sub_headers) {
-                subField.sub_headers.forEach((nestedSubHeader: any) => {
-                  const nestedPrefix = `${subHeaderPrefix}_${subField.field_name}_${nestedSubHeader.name}`;
-                  calculateAggregatesForFields(nestedSubHeader.fields, nestedPrefix);
-                });
-              }
-            });
-          });
-        }
-      });
-      
+      const updatedWithAggregates = autoCalculateAllAggregates(updated, formFields);
       console.log('Updated form data with aggregates:', updatedWithAggregates);
       return updatedWithAggregates;
     });
@@ -561,18 +614,22 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
   const generateCSVTemplate = () => {
     const allHeaders: string[] = [];
     
-    // Process all fields, including sub-header fields
+    // Process all fields, excluding compute/aggregate fields from template
     formFields.forEach(field => {
       if (field.has_sub_headers && field.sub_headers) {
-        // For fields with sub-headers, ONLY include the actual data entry fields (sub-header fields)
+        // For fields with sub-headers, ONLY include actual data entry fields (excluding compute fields)
         field.sub_headers.forEach(subHeader => {
           subHeader.fields.forEach(subField => {
-            allHeaders.push(subField.field_label);
+            if (subField.field_type !== 'aggregate') {
+              allHeaders.push(subField.field_label);
+            }
           });
         });
       } else {
-        // For regular fields without sub-headers (like primary fields)
-        allHeaders.push(field.field_label);
+        // For regular fields without sub-headers, exclude compute fields
+        if (field.field_type !== 'aggregate') {
+          allHeaders.push(field.field_label);
+        }
       }
     });
     
@@ -582,8 +639,8 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
     // Add a simple example row with placeholder values
     const exampleRow = allHeaders.map((header) => {
       // For non-formula columns, provide helpful placeholder text
-      if (header.toLowerCase().includes('district') || header.toLowerCase().includes('province')) {
-        return 'Enter_Location_Name';
+      if (header.toLowerCase().includes('district') || header.toLowerCase().includes('province') || header.toLowerCase().includes('psu') || header.toLowerCase().includes('name')) {
+        return 'Sample_Name';
       } else if (header.toLowerCase().includes('year') || header.toLowerCase().includes('date')) {
         return '2024';
       } else if (header.toLowerCase().includes('male') || header.toLowerCase().includes('female')) {
@@ -607,7 +664,7 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
     
     toast({
       title: "Template Downloaded!",
-      description: "CSV template downloaded with example data. Fill it out and upload using the CSV tab.",
+      description: "CSV template downloaded. Compute/sum fields are omitted and will be calculated automatically upon upload.",
     });
   };
 
@@ -622,7 +679,7 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
     }
   };
 
-  // Parse CSV data with comprehensive validation
+  // Parse CSV data with comprehensive validation and automated aggregate computation
   const parseCSVData = async (csvText: string): Promise<{ 
     entries: Record<string, any>[], 
     validationErrors: string[], 
@@ -637,19 +694,31 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
     const headers = lines[0].split(',').map(h => h.trim());
     const fieldMap: Record<string, string> = {};
     const expectedHeaders: string[] = [];
+    const computeFieldKeys = new Set<string>();
+    const computeFieldLabels = new Set<string>();
     
-    // Map CSV headers to field names and build expected headers list
+    // Map CSV headers to field names and identify compute/aggregate fields
     formFields.forEach(field => {
       if (field.has_sub_headers && field.sub_headers) {
         // Handle sub-header fields
         field.sub_headers.forEach(subHeader => {
           subHeader.fields.forEach(subField => {
             const fieldKey = `${field.field_name}_${subHeader.name}_${subField.field_name}`;
-            expectedHeaders.push(subField.field_label);
             
+            if (subField.field_type === 'aggregate') {
+              computeFieldKeys.add(fieldKey);
+              computeFieldLabels.add(subField.field_label.toLowerCase().trim());
+              computeFieldLabels.add(fieldKey.toLowerCase().trim());
+              computeFieldLabels.add(subField.field_name.toLowerCase().trim());
+            } else {
+              expectedHeaders.push(subField.field_label);
+            }
+            
+            // Allow matching header if present in CSV
             const matchingHeader = headers.find(h => 
               h.toLowerCase() === subField.field_label.toLowerCase() ||
-              h.toLowerCase() === fieldKey.toLowerCase()
+              h.toLowerCase() === fieldKey.toLowerCase() ||
+              h.toLowerCase() === subField.field_name.toLowerCase()
             );
             if (matchingHeader) {
               fieldMap[matchingHeader] = fieldKey;
@@ -658,7 +727,14 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
         });
       } else {
         // Handle regular fields
-        expectedHeaders.push(field.field_label);
+        if (field.field_type === 'aggregate') {
+          computeFieldKeys.add(field.field_name);
+          computeFieldLabels.add(field.field_label.toLowerCase().trim());
+          computeFieldLabels.add(field.field_name.toLowerCase().trim());
+        } else {
+          expectedHeaders.push(field.field_label);
+        }
+        
         const matchingHeader = headers.find(h => 
           h.toLowerCase() === field.field_label.toLowerCase() ||
           h.toLowerCase() === field.field_name.toLowerCase()
@@ -672,13 +748,13 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
     // Identify primary columns for validation
     const primaryColumns = formFields.filter(field => field.is_primary_column);
     
-    // Build list of all required fields including sub-header fields
+    // Build list of all required fields excluding compute/aggregate fields
     const requiredFields: { field_name: string; field_label: string; reference_data_name?: string }[] = [];
     formFields.forEach(field => {
       if (field.has_sub_headers && field.sub_headers) {
         field.sub_headers.forEach(subHeader => {
           subHeader.fields.forEach(subField => {
-            if (subField.is_required) {
+            if (subField.is_required && subField.field_type !== 'aggregate') {
               requiredFields.push({
                 field_name: `${field.field_name}_${subHeader.name}_${subField.field_name}`,
                 field_label: subField.field_label,
@@ -687,7 +763,7 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
             }
           });
         });
-      } else if (field.is_required) {
+      } else if (field.is_required && field.field_type !== 'aggregate') {
         requiredFields.push({
           field_name: field.field_name,
           field_label: field.field_label,
@@ -703,12 +779,14 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
     const completenessErrors: string[] = [];
     const primaryKeyTracker = new Set<string>();
 
-    // 1. COLUMN VALIDATION: Check exact column match
+    // 1. COLUMN VALIDATION: Check required non-compute columns
     const missingHeaders = expectedHeaders.filter(expected => 
       !headers.some(h => h.toLowerCase() === expected.toLowerCase())
     );
+    // Extra headers are columns that are NOT in expectedHeaders AND NOT compute fields
     const extraHeaders = headers.filter(h => 
-      !expectedHeaders.some(expected => expected.toLowerCase() === h.toLowerCase())
+      !expectedHeaders.some(expected => expected.toLowerCase() === h.toLowerCase()) &&
+      !computeFieldLabels.has(h.toLowerCase())
     );
 
     if (missingHeaders.length > 0) {
@@ -720,7 +798,7 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
 
     // If column structure is wrong, return early
     if (missingHeaders.length > 0 || extraHeaders.length > 0) {
-      return { entries: [], validationErrors, duplicateErrors: [], completenessErrors: [] };
+      return { entries: [], validationErrors, duplicateErrors, completenessErrors };
     }
 
     // 2. FETCH REFERENCE DATA for primary columns validation
@@ -740,20 +818,20 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
     for (let i = 1; i < lines.length; i++) {
       const lineNumber = i + 1;
       const values = lines[i].split(',').map(v => v.trim());
-      const entry: Record<string, any> = {};
+      const rawEntry: Record<string, any> = {};
       
       // Parse row data
       headers.forEach((header, index) => {
         if (fieldMap[header]) {
-          entry[fieldMap[header]] = values[index] || '';
+          rawEntry[fieldMap[header]] = values[index] || '';
         }
       });
       
-      if (Object.keys(entry).length === 0) continue;
+      if (Object.keys(rawEntry).length === 0) continue;
 
-      // Validate required fields
+      // Validate required non-compute fields
       const missingRequired = requiredFields.filter(field => 
-        !entry[field.field_name] || entry[field.field_name] === ''
+        !rawEntry[field.field_name] || rawEntry[field.field_name] === ''
       );
       
       if (missingRequired.length > 0) {
@@ -767,27 +845,74 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
       for (const primaryCol of primaryColumns) {
         if (primaryCol.reference_data_name && referenceDataCache[primaryCol.reference_data_name]) {
           const refData = referenceDataCache[primaryCol.reference_data_name];
-          const entryValue = entry[primaryCol.field_name];
+          const entryValue = rawEntry[primaryCol.field_name];
           
-          const validValue = refData.some(refItem => 
-            refItem.value.toLowerCase() === entryValue.toLowerCase() ||
-            refItem.key.toLowerCase() === entryValue.toLowerCase()
-          );
-          
-          if (!validValue) {
-            validationErrors.push(
-              `Row ${lineNumber}: "${entryValue}" is not available in the ${primaryCol.field_label} reference data list`
+          if (entryValue) {
+            const validValue = refData.some(refItem => 
+              refItem.value.toLowerCase() === entryValue.toLowerCase() ||
+              refItem.key.toLowerCase() === entryValue.toLowerCase()
             );
+            
+            if (!validValue) {
+              validationErrors.push(
+                `Row ${lineNumber}: "${entryValue}" is not available in the ${primaryCol.field_label} reference data list`
+              );
+            }
           }
         }
       }
 
+      // DISCARD whatever was provided in CSV for compute/aggregate fields
+      computeFieldKeys.forEach(compKey => {
+        delete rawEntry[compKey];
+      });
+
+      // AUTO-COMPUTE all aggregate fields using formFields configuration
+      const withAggregates = autoCalculateAllAggregates(rawEntry, formFields);
+
+      // Assemble final entry with strict form schema placement order
+      const finalEntry: Record<string, any> = {};
+      expandedFields.forEach(expField => {
+        finalEntry[expField.key] = withAggregates[expField.key] ?? '0';
+      });
+      // Also preserve any additional keys that might exist
+      Object.keys(withAggregates).forEach(k => {
+        if (!(k in finalEntry)) {
+          finalEntry[k] = withAggregates[k];
+        }
+      });
+
+      // 3.5. VALUE VALIDATION: Check min and max limits for each field
+      expandedFields.forEach(expField => {
+        const val = finalEntry[expField.key];
+        if (val !== undefined && val !== null && val !== '') {
+          const cleanedStr = String(val).replace(/,/g, '').trim();
+          const num = parseFloat(cleanedStr);
+          if (!isNaN(num)) {
+            const entityLabel = primaryColumns.length > 0 
+              ? ` (${primaryColumns.map(col => `${col.field_label}: "${finalEntry[col.field_name]}"`).join(', ')})`
+              : '';
+            
+            if (expField.validation_min !== undefined && expField.validation_min !== null && num < expField.validation_min) {
+              validationErrors.push(
+                `Row ${lineNumber}${entityLabel}: "${expField.label}" value (${num}) cannot be lower than minimum allowed limit of ${expField.validation_min}`
+              );
+            }
+            if (expField.validation_max !== undefined && expField.validation_max !== null && num > expField.validation_max) {
+              validationErrors.push(
+                `Row ${lineNumber}${entityLabel}: "${expField.label}" value (${num}) cannot exceed maximum allowed limit of ${expField.validation_max}`
+              );
+            }
+          }
+        }
+      });
+
       // Check for duplicates based on primary columns
       if (primaryColumns.length > 0) {
-        const primaryKeyValues = primaryColumns.map(col => entry[col.field_name] || '').join('|');
+        const primaryKeyValues = primaryColumns.map(col => finalEntry[col.field_name] || '').join('|');
         
         if (primaryKeyTracker.has(primaryKeyValues)) {
-          const primaryLabels = primaryColumns.map(col => `${col.field_label}: ${entry[col.field_name]}`).join(', ');
+          const primaryLabels = primaryColumns.map(col => `${col.field_label}: ${finalEntry[col.field_name]}`).join(', ');
           duplicateErrors.push(`Row ${lineNumber}: Duplicate entry detected (${primaryLabels})`);
           continue;
         }
@@ -795,7 +920,7 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
         primaryKeyTracker.add(primaryKeyValues);
       }
       
-      entries.push(entry);
+      entries.push(finalEntry);
     }
 
     // 4. COMPLETENESS VALIDATION: Check if all reference data items are covered
@@ -1483,6 +1608,9 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
                   <h3 className="text-lg font-medium">CSV Upload</h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     Upload a CSV file with your data. Download the template first to ensure correct format.
+                    <span className="block text-xs text-blue-600 dark:text-blue-400 font-medium mt-0.5">
+                      Note: Compute/sum fields are ignored in the CSV and will be automatically calculated upon upload.
+                    </span>
                   </p>
                 </div>
                 <Button
@@ -1671,33 +1799,51 @@ export const DataEntryForm = ({ schedule, scheduleForm, onSubmitted, onCancel, o
                     </Alert>
                   )}
 
-                  <div className="border rounded-lg overflow-hidden">
+                  <div className="border rounded-lg overflow-hidden shadow-sm">
                     <div className="max-h-96 overflow-auto">
                       <table className="w-full text-sm">
                         <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0">
                           <tr>
-                            {csvPreviewData.length > 0 && Object.keys(csvPreviewData[0]).map((header, index) => (
-                              <th key={index} className="px-4 py-2 text-left font-medium border-b">
-                                {header}
+                            {expandedFields.map((field, index) => (
+                              <th key={index} className="px-4 py-2.5 text-left font-semibold border-b whitespace-nowrap text-gray-700 dark:text-gray-200">
+                                <div className="flex items-center gap-1.5">
+                                  <span>{field.label}</span>
+                                  {field.is_aggregate && (
+                                    <span className="text-[10px] bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300 px-1.5 py-0.5 rounded font-normal">
+                                      Auto-computed
+                                    </span>
+                                  )}
+                                </div>
                               </th>
                             ))}
                           </tr>
                         </thead>
                         <tbody>
                           {csvPreviewData.slice(0, 10).map((row, rowIndex) => (
-                            <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-800'}>
-                              {Object.values(row).map((cell, cellIndex) => (
-                                <td key={cellIndex} className="px-4 py-2 border-b">
-                                  {String(cell)}
-                                </td>
-                              ))}
+                            <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-800/60'}>
+                              {expandedFields.map((field, cellIndex) => {
+                                const val = row[field.key];
+                                const displayVal = (val !== undefined && val !== null && val !== '') ? String(val) : '-';
+                                return (
+                                  <td 
+                                    key={cellIndex} 
+                                    className={`px-4 py-2 border-b whitespace-nowrap ${
+                                      field.is_aggregate 
+                                        ? 'font-semibold text-blue-900 dark:text-blue-200 bg-blue-50/50 dark:bg-blue-950/20' 
+                                        : 'text-gray-800 dark:text-gray-200'
+                                    }`}
+                                  >
+                                    {displayVal}
+                                  </td>
+                                );
+                              })}
                             </tr>
                           ))}
                         </tbody>
                       </table>
                     </div>
                     {csvPreviewData.length > 10 && (
-                      <div className="bg-gray-50 dark:bg-gray-800 px-4 py-2 text-sm text-gray-600 dark:text-gray-400 text-center">
+                      <div className="bg-gray-50 dark:bg-gray-800 px-4 py-2 text-sm text-gray-600 dark:text-gray-400 text-center border-t">
                         Showing first 10 rows of {csvPreviewData.length} total rows
                       </div>
                     )}

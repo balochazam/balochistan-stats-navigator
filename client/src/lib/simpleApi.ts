@@ -4,8 +4,10 @@ const API_BASE = '';
 class SimpleApiClient {
   private async request(endpoint: string, options: RequestInit = {}) {
     const url = `${API_BASE}${endpoint}`;
+    const token = typeof window !== 'undefined' ? localStorage.getItem('bbos_auth_token') : null;
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
       ...(options.headers as Record<string, string>),
     };
 
@@ -16,8 +18,9 @@ class SimpleApiClient {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Network error' }));
-      throw new Error(error.message || `HTTP ${response.status}`);
+      const errorData = await response.json().catch(() => ({ message: 'Network error' }));
+      const errorMsg = errorData.error || errorData.message || `HTTP ${response.status}: ${response.statusText}`;
+      throw new Error(errorMsg);
     }
 
     // Handle 204 No Content responses
@@ -43,16 +46,31 @@ class SimpleApiClient {
   }
 
   async login(email: string, password: string) {
-    return this.request('/api/auth/login', {
+    const data = await this.request('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
+
+    if (data?.session?.access_token || data?.user?.id) {
+      const token = data.session?.access_token || data.user?.id;
+      localStorage.setItem('bbos_auth_token', token);
+      if (data.user) localStorage.setItem('bbos_auth_user', JSON.stringify(data.user));
+      if (data.profile) localStorage.setItem('bbos_auth_profile', JSON.stringify(data.profile));
+    }
+
+    return data;
   }
 
   async logout() {
-    return this.request('/api/auth/logout', {
-      method: 'POST',
-    });
+    try {
+      return await this.request('/api/auth/logout', {
+        method: 'POST',
+      });
+    } finally {
+      localStorage.removeItem('bbos_auth_token');
+      localStorage.removeItem('bbos_auth_user');
+      localStorage.removeItem('bbos_auth_profile');
+    }
   }
 
   async getCurrentUser() {

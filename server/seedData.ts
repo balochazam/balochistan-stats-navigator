@@ -2,7 +2,7 @@ import { db } from './db';
 import { sdg_goals, sdg_targets, sdg_indicators, sdg_data_sources, sdg_indicator_values } from '../shared/schema';
 
 // Official UN SDG Goals data
-const sdgGoalsData = [
+export const sdgGoalsData = [
   { id: 1, title: "No Poverty", description: "End poverty in all its forms everywhere", color: "#e5243b" },
   { id: 2, title: "Zero Hunger", description: "End hunger, achieve food security and improved nutrition and promote sustainable agriculture", color: "#dda63a" },
   { id: 3, title: "Good Health and Well-being", description: "Ensure healthy lives and promote well-being for all at all ages", color: "#4c9f38" },
@@ -23,7 +23,7 @@ const sdgGoalsData = [
 ];
 
 // Complete 169 UN SDG Targets - Official Framework 2030
-const sdgTargetsData = [
+export const sdgTargetsData = [
   // SDG 1: No Poverty (7 targets)
   { target_number: "1.1", sdg_goal_id: 1, title: "Eradicate extreme poverty", description: "By 2030, eradicate extreme poverty for all people everywhere, currently measured as people living on less than $1.25 a day" },
   { target_number: "1.2", sdg_goal_id: 1, title: "Reduce poverty by half", description: "By 2030, reduce at least by half the proportion of men, women and children of all ages living in poverty in all its dimensions according to national definitions" },
@@ -232,17 +232,17 @@ const sdgTargetsData = [
 const createSdgIndicatorsData = async () => {
   // Get target IDs from database
   const targets = await db.query.sdg_targets.findMany({
-    where: (sdg_targets, { inArray }) => inArray(sdg_targets.target_number, ['1.2', '1.3', '1.4', '1.5', '1.a', '2.2', '3.1', '3.2', '4.6', '8.5', '8.6', '15.1', '16.9'])
+    where: (sdg_targets: any, { inArray }: any) => inArray(sdg_targets.target_number, ['1.2', '1.3', '1.4', '1.5', '1.a', '2.2', '3.1', '3.2', '4.6', '8.5', '8.6', '15.1', '16.9'])
   });
   
-  const targetMap = targets.reduce((acc, target) => {
+  const targetMap = targets.reduce((acc: any, target: any) => {
     acc[target.target_number] = target.id;
     return acc;
   }, {} as Record<string, string>);
 
   // Get default admin user
   const adminUser = await db.query.profiles.findFirst({
-    where: (profiles, { eq }) => eq(profiles.role, 'admin')
+    where: (profiles: any, { eq }: any) => eq(profiles.role, 'admin')
   });
 
   return [
@@ -418,7 +418,7 @@ const createSdgIndicatorsData = async () => {
 };
 
 // All data sources mentioned in your document
-const sdgDataSourcesData = [
+export const sdgDataSourcesData = [
   {
     name: "MPI Report 2014-15",
     full_name: "Multi-dimensional Poverty Index Report 2014-15", 
@@ -485,7 +485,7 @@ const sdgDataSourcesData = [
 async function getAdminUserId() {
   // Query to get the admin user ID - this will be called during seeding
   const result = await db.query.profiles.findFirst({
-    where: (profiles, { eq }) => eq(profiles.role, 'admin')
+    where: (profiles: any, { eq }: any) => eq(profiles.role, 'admin')
   });
   return result?.id || null;
 }

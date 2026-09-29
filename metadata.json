@@ -1,0 +1,7 @@
+{
+  "name": "SDG Data Management System - Balochistan Bureau of Statistics",
+  "description": "Comprehensive UN Sustainable Development Goals data management platform for Balochistan, Pakistan. Track progress on 17 SDG goals with authentic data collection and reporting.",
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

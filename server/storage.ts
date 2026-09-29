@@ -1,5 +1,6 @@
 import { eq, and, desc, asc, sql, count } from "drizzle-orm";
-import { db } from "./db.js";
+import { db, isDbConfigured } from "./db.js";
+import { MemStorage } from "./memStorage.js";
 import {
   profiles,
   departments,
@@ -166,8 +167,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getProfileByEmail(email: string): Promise<Profile | undefined> {
-    const result = await db.select().from(profiles).where(eq(profiles.email, email)).limit(1);
-    return result[0];
+    const normalized = (email || '').trim().toLowerCase();
+    const result = await db.select().from(profiles)
+      .where(sql`lower(${profiles.email}) = ${normalized}`)
+      .limit(1);
+    if (result.length > 0) return result[0];
+    
+    // Support alias for admin@bbs.gov.pk -> admin@bbos.gob.pk
+    if (normalized === 'admin@bbs.gov.pk') {
+      const aliasResult = await db.select().from(profiles)
+        .where(sql`lower(${profiles.email}) = 'admin@bbos.gob.pk'`)
+        .limit(1);
+      return aliasResult[0];
+    }
+    return undefined;
   }
 
   async createProfile(profile: InsertProfile): Promise<Profile> {
@@ -356,7 +369,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(form_fields.form_id, formId))
       .orderBy(asc(form_fields.field_order));
     
-    console.log('Raw DB result:', result.map(r => ({
+    console.log('Raw DB result:', result.map((r: any) => ({
       name: r.field_name,
       type: typeof r.sub_headers,
       sub_headers: r.sub_headers
@@ -426,7 +439,7 @@ export class DatabaseStorage implements IStorage {
     .orderBy(asc(schedule_forms.created_at));
 
     // Transform the flat structure into the nested structure expected by frontend
-    return results.map(row => ({
+    return results.map((row: any) => ({
       id: row.id,
       schedule_id: row.schedule_id,
       form_id: row.form_id,
@@ -577,13 +590,13 @@ export class DatabaseStorage implements IStorage {
     const { balochistandIndicatorData } = await import('@shared/balochistandIndicatorData');
     
     // Add has_data and progress fields based on Balochistan data AND form submissions
-    const indicatorsWithProgress = baseQuery.map(indicator => {
+    const indicatorsWithProgress = baseQuery.map((indicator: any) => {
       const balochistandData = balochistandIndicatorData.find(
         data => data.indicator_code === indicator.indicator_code
       );
       
       // Check if there's a form with submissions for this indicator
-      const hasFormData = sdgFormsWithSubmissions.some(form => 
+      const hasFormData = sdgFormsWithSubmissions.some((form: any) => 
         form.form_name.includes(indicator.indicator_code)
       );
       
@@ -662,17 +675,20 @@ export class DatabaseStorage implements IStorage {
     const { balochistandIndicatorData } = await import('@shared/balochistandIndicatorData');
     
     // Add has_data and progress fields based on Balochistan data AND form submissions
-    const indicatorsWithProgress = baseQuery.map(indicator => {
+    const indicatorsWithProgress = baseQuery.map((indicator: any) => {
       const balochistandData = balochistandIndicatorData.find(
         data => data.indicator_code === indicator.indicator_code
       );
       
       // Check if there's a form with submissions for this indicator
-      const hasFormData = sdgFormsWithSubmissions.some(form => 
+      const hasFormData = sdgFormsWithSubmissions.some((form: any) => 
         form.form_name.includes(indicator.indicator_code)
       );
       
       let progress = 0;
+      let percent_change = 0;
+      let trend_direction: 'improving' | 'declining' | 'stable' = 'stable';
+      let status_label = 'No Data';
       let has_data = false;
       
       // Set has_data to true if there's either Balochistan data OR form submissions
@@ -681,34 +697,46 @@ export class DatabaseStorage implements IStorage {
       }
       
       if (balochistandData) {
-        const baselineValue = parseFloat(String(balochistandData.baseline.value).replace(/[%,]/g, '')) || 0;
-        const progressValue = parseFloat(String(balochistandData.progress.value).replace(/[%,]/g, '')) || 0;
+        const baselineValue = parseFloat(String(balochistandData.baseline?.value ?? '').replace(/[%,]/g, '')) || 0;
+        const latestValue = parseFloat(String(balochistandData.progress?.value ?? '').replace(/[%,]/g, '')) || 0;
         
-        if (indicator.indicator_code.startsWith('1.')) {
-          // For poverty indicators, reduction is improvement
-          if (baselineValue > 0 && progressValue > 0 && baselineValue > progressValue) {
-            progress = ((baselineValue - progressValue) / baselineValue) * 100;
-          }
-        } else if (indicator.indicator_code.startsWith('2.') || indicator.indicator_code.startsWith('3.')) {
-          // For nutrition/health indicators, increase is improvement
-          if (baselineValue > 0 && progressValue > baselineValue) {
-            progress = ((progressValue - baselineValue) / baselineValue) * 100;
-          } else if (progressValue > 0) {
-            progress = (progressValue / 100) * 100; // Convert percentage to progress
-          }
-        } else if (indicator.indicator_code.startsWith('4.') || indicator.indicator_code.startsWith('5.')) {
-          // For education/gender indicators, use direct progress calculation
-          if (progressValue > baselineValue && baselineValue > 0) {
-            progress = ((progressValue - baselineValue) / baselineValue) * 100;
-          } else if (progressValue > 0) {
-            progress = progressValue; // Direct percentage
-          }
-        } else {
-          // Default calculation for other indicators
-          if (progressValue > baselineValue && baselineValue > 0) {
-            progress = ((progressValue - baselineValue) / baselineValue) * 100;
-          } else if (progressValue > 0) {
-            progress = progressValue;
+        if (baselineValue > 0) {
+          const rawDiff = latestValue - baselineValue;
+          const rawPercentChange = (rawDiff / baselineValue) * 100;
+          percent_change = Math.round(rawPercentChange * 10) / 10;
+
+          const isDecrease = indicator.improvement_direction === 'decrease';
+
+          if (isDecrease) {
+            // Lower value is better (e.g. poverty, child mortality, stunting, unemployment)
+            if (latestValue < baselineValue) {
+              trend_direction = 'improving';
+              progress = Math.min(100, Math.round(((baselineValue - latestValue) / baselineValue) * 100));
+              status_label = 'Improving';
+            } else if (latestValue > baselineValue) {
+              trend_direction = 'declining';
+              progress = 0; // Regressed / Deteriorated
+              status_label = 'Declining / Deteriorating';
+            } else {
+              trend_direction = 'stable';
+              progress = 0;
+              status_label = 'Stable';
+            }
+          } else {
+            // Higher value is better (e.g. literacy, social protection, birth registration, forest cover)
+            if (latestValue > baselineValue) {
+              trend_direction = 'improving';
+              progress = Math.min(100, Math.round(((latestValue - baselineValue) / baselineValue) * 100));
+              status_label = 'Improving';
+            } else if (latestValue < baselineValue) {
+              trend_direction = 'declining';
+              progress = 0; // Regressed
+              status_label = 'Declining / Deteriorating';
+            } else {
+              trend_direction = 'stable';
+              progress = 0;
+              status_label = 'Stable';
+            }
           }
         }
       }
@@ -716,7 +744,14 @@ export class DatabaseStorage implements IStorage {
       return {
         ...indicator,
         has_data,
-        progress: Math.min(progress, 100) // Cap at 100%
+        progress,
+        percent_change,
+        trend_direction,
+        status_label,
+        baseline_value: balochistandData?.baseline?.value || null,
+        baseline_year: balochistandData?.baseline?.year || null,
+        latest_value: balochistandData?.progress?.value || null,
+        latest_year: balochistandData?.progress?.year || null
       };
     });
 
@@ -792,8 +827,284 @@ export class DatabaseStorage implements IStorage {
     const result = await db.update(sdg_progress_calculations).set(updates).where(eq(sdg_progress_calculations.id, id)).returning();
     return result[0];
   }
-
-
 }
 
-export const storage = new DatabaseStorage();
+export class ResilientStorage implements IStorage {
+  private mem = new MemStorage();
+  private db = new DatabaseStorage();
+
+  private async execute<T>(
+    dbFn: () => Promise<T>,
+    memFn: () => Promise<T>
+  ): Promise<T> {
+    if (!isDbConfigured) {
+      return memFn();
+    }
+    try {
+      return await dbFn();
+    } catch (err: any) {
+      console.warn(`[Storage Fallback] DB operation failed (${err?.message || err}), falling back to in-memory store`);
+      return memFn();
+    }
+  }
+
+  // Profile methods
+  getProfile(id: string) {
+    return this.execute(() => this.db.getProfile(id), () => this.mem.getProfile(id));
+  }
+  getProfileByEmail(email: string) {
+    return this.execute(() => this.db.getProfileByEmail(email), () => this.mem.getProfileByEmail(email));
+  }
+  createProfile(profile: InsertProfile) {
+    return this.execute(
+      async () => {
+        const p = await this.db.createProfile(profile);
+        await this.mem.createProfile(profile);
+        return p;
+      },
+      () => this.mem.createProfile(profile)
+    );
+  }
+  updateProfile(id: string, updates: Partial<Profile>) {
+    return this.execute(
+      async () => {
+        const p = await this.db.updateProfile(id, updates);
+        await this.mem.updateProfile(id, updates);
+        return p;
+      },
+      () => this.mem.updateProfile(id, updates)
+    );
+  }
+  getAllProfiles() {
+    return this.execute(() => this.db.getAllProfiles(), () => this.mem.getAllProfiles());
+  }
+
+  // Department methods
+  getDepartments() {
+    return this.execute(() => this.db.getDepartments(), () => this.mem.getDepartments());
+  }
+  createDepartment(dept: InsertDepartment) {
+    return this.execute(
+      async () => {
+        const d = await this.db.createDepartment(dept);
+        await this.mem.createDepartment(dept);
+        return d;
+      },
+      () => this.mem.createDepartment(dept)
+    );
+  }
+  updateDepartment(id: string, updates: Partial<Department>) {
+    return this.execute(() => this.db.updateDepartment(id, updates), () => this.mem.updateDepartment(id, updates));
+  }
+  deleteDepartment(id: string) {
+    return this.execute(() => this.db.deleteDepartment(id), () => this.mem.deleteDepartment(id));
+  }
+
+  // Data Bank methods
+  getDataBanks() {
+    return this.execute(() => this.db.getDataBanks(), () => this.mem.getDataBanks());
+  }
+  getDataBank(id: string) {
+    return this.execute(() => this.db.getDataBank(id), () => this.mem.getDataBank(id));
+  }
+  createDataBank(dataBank: InsertDataBank) {
+    return this.execute(() => this.db.createDataBank(dataBank), () => this.mem.createDataBank(dataBank));
+  }
+  updateDataBank(id: string, updates: Partial<DataBank>) {
+    return this.execute(() => this.db.updateDataBank(id, updates), () => this.mem.updateDataBank(id, updates));
+  }
+  deleteDataBank(id: string) {
+    return this.execute(() => this.db.deleteDataBank(id), () => this.mem.deleteDataBank(id));
+  }
+
+  // Data Bank Entry methods
+  getDataBankEntries(dataBankId: string) {
+    return this.execute(() => this.db.getDataBankEntries(dataBankId), () => this.mem.getDataBankEntries(dataBankId));
+  }
+  createDataBankEntry(entry: InsertDataBankEntry) {
+    return this.execute(() => this.db.createDataBankEntry(entry), () => this.mem.createDataBankEntry(entry));
+  }
+  updateDataBankEntry(id: string, updates: Partial<DataBankEntry>) {
+    return this.execute(() => this.db.updateDataBankEntry(id, updates), () => this.mem.updateDataBankEntry(id, updates));
+  }
+  deleteDataBankEntry(id: string) {
+    return this.execute(() => this.db.deleteDataBankEntry(id), () => this.mem.deleteDataBankEntry(id));
+  }
+
+  // Form methods
+  getForms() {
+    return this.execute(() => this.db.getForms(), () => this.mem.getForms());
+  }
+  getForm(id: string) {
+    return this.execute(() => this.db.getForm(id), () => this.mem.getForm(id));
+  }
+  createForm(form: InsertForm) {
+    return this.execute(() => this.db.createForm(form), () => this.mem.createForm(form));
+  }
+  updateForm(id: string, updates: Partial<Form>) {
+    return this.execute(() => this.db.updateForm(id, updates), () => this.mem.updateForm(id, updates));
+  }
+  deleteForm(id: string) {
+    return this.execute(() => this.db.deleteForm(id), () => this.mem.deleteForm(id));
+  }
+
+  // Field Group methods
+  getFieldGroups(formId: string) {
+    return this.execute(() => this.db.getFieldGroups(formId), () => this.mem.getFieldGroups(formId));
+  }
+  createFieldGroup(group: InsertFieldGroup) {
+    return this.execute(() => this.db.createFieldGroup(group), () => this.mem.createFieldGroup(group));
+  }
+  updateFieldGroup(id: string, updates: Partial<FieldGroup>) {
+    return this.execute(() => this.db.updateFieldGroup(id, updates), () => this.mem.updateFieldGroup(id, updates));
+  }
+  deleteFieldGroup(id: string) {
+    return this.execute(() => this.db.deleteFieldGroup(id), () => this.mem.deleteFieldGroup(id));
+  }
+
+  // Form Field methods
+  getFormFields(formId: string) {
+    return this.execute(() => this.db.getFormFields(formId), () => this.mem.getFormFields(formId));
+  }
+  createFormField(field: InsertFormField) {
+    return this.execute(() => this.db.createFormField(field), () => this.mem.createFormField(field));
+  }
+  updateFormField(id: string, updates: Partial<FormField>) {
+    return this.execute(() => this.db.updateFormField(id, updates), () => this.mem.updateFormField(id, updates));
+  }
+  deleteFormField(id: string) {
+    return this.execute(() => this.db.deleteFormField(id), () => this.mem.deleteFormField(id));
+  }
+
+  // Schedule methods
+  getSchedules() {
+    return this.execute(() => this.db.getSchedules(), () => this.mem.getSchedules());
+  }
+  getSchedule(id: string) {
+    return this.execute(() => this.db.getSchedule(id), () => this.mem.getSchedule(id));
+  }
+  createSchedule(schedule: InsertSchedule) {
+    return this.execute(() => this.db.createSchedule(schedule), () => this.mem.createSchedule(schedule));
+  }
+  updateSchedule(id: string, updates: Partial<Schedule>) {
+    return this.execute(() => this.db.updateSchedule(id, updates), () => this.mem.updateSchedule(id, updates));
+  }
+  deleteSchedule(id: string) {
+    return this.execute(() => this.db.deleteSchedule(id), () => this.mem.deleteSchedule(id));
+  }
+
+  // Schedule Form methods
+  getScheduleForms(scheduleId: string) {
+    return this.execute(() => this.db.getScheduleForms(scheduleId), () => this.mem.getScheduleForms(scheduleId));
+  }
+  createScheduleForm(scheduleForm: InsertScheduleForm) {
+    return this.execute(() => this.db.createScheduleForm(scheduleForm), () => this.mem.createScheduleForm(scheduleForm));
+  }
+  updateScheduleForm(id: string, updates: Partial<ScheduleForm>) {
+    return this.execute(() => this.db.updateScheduleForm(id, updates), () => this.mem.updateScheduleForm(id, updates));
+  }
+  deleteScheduleForm(id: string) {
+    return this.execute(() => this.db.deleteScheduleForm(id), () => this.mem.deleteScheduleForm(id));
+  }
+
+  // Form Submission methods
+  getFormSubmissions(formId?: string, scheduleId?: string) {
+    return this.execute(() => this.db.getFormSubmissions(formId, scheduleId), () => this.mem.getFormSubmissions(formId, scheduleId));
+  }
+  createFormSubmission(submission: InsertFormSubmission) {
+    return this.execute(() => this.db.createFormSubmission(submission), () => this.mem.createFormSubmission(submission));
+  }
+  deleteFormSubmission(id: string) {
+    return this.execute(() => this.db.deleteFormSubmission(id), () => this.mem.deleteFormSubmission(id));
+  }
+
+  // Schedule Form Completion methods
+  getScheduleFormCompletions(scheduleFormId: string) {
+    return this.execute(() => this.db.getScheduleFormCompletions(scheduleFormId), () => this.mem.getScheduleFormCompletions(scheduleFormId));
+  }
+  createScheduleFormCompletion(completion: InsertScheduleFormCompletion) {
+    return this.execute(() => this.db.createScheduleFormCompletion(completion), () => this.mem.createScheduleFormCompletion(completion));
+  }
+  deleteScheduleFormCompletion(scheduleFormId: string, userId: string) {
+    return this.execute(() => this.db.deleteScheduleFormCompletion(scheduleFormId, userId), () => this.mem.deleteScheduleFormCompletion(scheduleFormId, userId));
+  }
+
+  // SDG methods
+  getSdgGoals() {
+    return this.execute(() => this.db.getSdgGoals(), () => this.mem.getSdgGoals());
+  }
+  createSdgGoal(goal: InsertSdgGoal) {
+    return this.execute(() => this.db.createSdgGoal(goal), () => this.mem.createSdgGoal(goal));
+  }
+  updateSdgGoal(id: number, updates: Partial<SdgGoal>) {
+    return this.execute(() => this.db.updateSdgGoal(id, updates), () => this.mem.updateSdgGoal(id, updates));
+  }
+
+  getSdgTargets(goalId?: number) {
+    return this.execute(() => this.db.getSdgTargets(goalId), () => this.mem.getSdgTargets(goalId));
+  }
+  getAllSdgTargets() {
+    return this.execute(() => this.db.getAllSdgTargets(), () => this.mem.getAllSdgTargets());
+  }
+  createSdgTarget(target: InsertSdgTarget) {
+    return this.execute(() => this.db.createSdgTarget(target), () => this.mem.createSdgTarget(target));
+  }
+  updateSdgTarget(id: string, updates: Partial<SdgTarget>) {
+    return this.execute(() => this.db.updateSdgTarget(id, updates), () => this.mem.updateSdgTarget(id, updates));
+  }
+  deleteSdgTarget(id: string) {
+    return this.execute(() => this.db.deleteSdgTarget(id), () => this.mem.deleteSdgTarget(id));
+  }
+
+  getSdgIndicators(targetId?: string) {
+    return this.execute(() => this.db.getSdgIndicators(targetId), () => this.mem.getSdgIndicators(targetId));
+  }
+  getAllSdgIndicators() {
+    return this.execute(() => this.db.getAllSdgIndicators(), () => this.mem.getAllSdgIndicators());
+  }
+  getSdgIndicator(id: string) {
+    return this.execute(() => this.db.getSdgIndicator(id), () => this.mem.getSdgIndicator(id));
+  }
+  createSdgIndicator(indicator: InsertSdgIndicator) {
+    return this.execute(() => this.db.createSdgIndicator(indicator), () => this.mem.createSdgIndicator(indicator));
+  }
+  updateSdgIndicator(id: string, updates: Partial<SdgIndicator>) {
+    return this.execute(() => this.db.updateSdgIndicator(id, updates), () => this.mem.updateSdgIndicator(id, updates));
+  }
+  deleteSdgIndicator(id: string) {
+    return this.execute(() => this.db.deleteSdgIndicator(id), () => this.mem.deleteSdgIndicator(id));
+  }
+
+  getSdgDataSources() {
+    return this.execute(() => this.db.getSdgDataSources(), () => this.mem.getSdgDataSources());
+  }
+  createSdgDataSource(source: InsertSdgDataSource) {
+    return this.execute(() => this.db.createSdgDataSource(source), () => this.mem.createSdgDataSource(source));
+  }
+  updateSdgDataSource(id: string, updates: Partial<SdgDataSource>) {
+    return this.execute(() => this.db.updateSdgDataSource(id, updates), () => this.mem.updateSdgDataSource(id, updates));
+  }
+
+  getSdgIndicatorValues(indicatorId: string) {
+    return this.execute(() => this.db.getSdgIndicatorValues(indicatorId), () => this.mem.getSdgIndicatorValues(indicatorId));
+  }
+  createSdgIndicatorValue(value: InsertSdgIndicatorValue) {
+    return this.execute(() => this.db.createSdgIndicatorValue(value), () => this.mem.createSdgIndicatorValue(value));
+  }
+  updateSdgIndicatorValue(id: string, updates: Partial<SdgIndicatorValue>): Promise<SdgIndicatorValue | undefined> {
+    return this.execute(() => this.db.updateSdgIndicatorValue(id, updates), () => this.mem.updateSdgIndicatorValue(id, updates));
+  }
+
+  getSdgProgressCalculations(goalId?: number) {
+    return this.execute(() => this.db.getSdgProgressCalculations(goalId), () => this.mem.getSdgProgressCalculations(goalId));
+  }
+  createSdgProgressCalculation(calc: InsertSdgProgressCalculation) {
+    return this.execute(() => this.db.createSdgProgressCalculation(calc), () => this.mem.createSdgProgressCalculation(calc));
+  }
+  updateSdgProgressCalculation(id: string, updates: Partial<SdgProgressCalculation>) {
+    return this.execute(() => this.db.updateSdgProgressCalculation(id, updates), () => this.mem.updateSdgProgressCalculation(id, updates));
+  }
+}
+
+export const storage = new ResilientStorage();
+

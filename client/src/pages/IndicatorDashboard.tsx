@@ -108,7 +108,7 @@ const DataBreakdownCard: React.FC<{
   );
 };
 
-const TimelinePath: React.FC<{ data: IndicatorTimeSeries }> = ({ data }) => {
+const TimelinePath: React.FC<{ data: any }> = ({ data }) => {
   const timeline = [
     { 
       label: 'Baseline', 
